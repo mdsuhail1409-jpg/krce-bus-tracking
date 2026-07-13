@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Network -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- GPS — required for drivers to broadcast live location -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Foreground service for background GPS broadcasting -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- Notifications — for foreground service and alert push -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@android:mipmap/sym_def_app_icon"
+        android:label="@string/app_name"
+        android:roundIcon="@android:mipmap/sym_def_app_icon"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.KRCEBus"
+        android:networkSecurityConfig="@xml/network_security_config">
+
+        <!--
+            usesCleartextTraffic is intentionally NOT set here.
+            The cloud backend uses HTTPS (wss:// for WebSocket).
+            For local development with an emulator, Android allows
+            cleartext traffic to 10.0.2.2 (localhost) by default.
+        -->
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.KRCEBus">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".service.GpsForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+    </application>
+
+</manifest>

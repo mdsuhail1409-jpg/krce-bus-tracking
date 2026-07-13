@@ -1,0 +1,51 @@
+# Virtual Environment
+venv/
+backend/venv/
+ENV/
+env/
+.env
+backend/.env
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDEs
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Android specific
+.gradle/
+local.properties
+android/local.properties
+android/.gradle/
+android/app/build/
+android/build/
+*.apk
+*.aar
+*.log
+replay_pid*.log
+hs_err_pid*.log
+
+# Flutter specific
+frontend/krce_bus_flutter/.dart_tool/
+frontend/krce_bus_flutter/.flutter-plugins
+frontend/krce_bus_flutter/.flutter-plugins-dependencies
+frontend/krce_bus_flutter/build/
+frontend/krce_bus_flutter_backup/.dart_tool/
+frontend/krce_bus_flutter_backup/.flutter-plugins
+frontend/krce_bus_flutter_backup/.flutter-plugins-dependencies
+frontend/krce_bus_flutter_backup/build/
+
+# Miscellaneous
+diff.txt
+build/
+bin/
+obj/

@@ -1,0 +1,61 @@
+name: krce_bus
+description: KRCE Smart Campus Transportation Platform - Flutter
+publish_to: 'none'
+version: 4.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Map
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # Network
+  dio: ^5.4.3
+  web_socket_channel: ^2.4.5
+
+  # Storage
+  flutter_secure_storage: ^9.0.0
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.2.3
+
+  # Location & Permissions
+  geolocator: ^11.0.0
+  permission_handler: ^11.3.1
+
+  # Notifications
+  flutter_local_notifications: ^17.1.2
+
+  # Background Service
+  flutter_background_service: ^5.0.6
+
+  # Connectivity
+  connectivity_plus: ^6.0.3
+
+  # UI
+  google_fonts: ^6.2.1
+  intl: ^0.19.0
+  cached_network_image: ^3.3.1
+
+  # Cupertino Icons
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  hive_generator: ^2.0.0
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true

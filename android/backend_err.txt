@@ -1,0 +1,80 @@
+C:\Users\suhai\Desktop\HOD PROJECT\krce_bus_github_ready\krce_bus\server.py:379: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+INFO:     Will watch for changes in these directories: ['C:\\Users\\suhai\\Desktop\\HOD PROJECT\\krce_bus_github_ready\\krce_bus']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [16468] using WatchFiles
+INFO:     Started server process [28860]
+INFO:     Waiting for application startup.
+2026-06-02 10:15:09,540 [INFO] Database ready — krce_bus.db
+2026-06-02 10:15:09,541 [INFO] KRCE Bus System started
+INFO:     Application startup complete.
+ERROR:    Traceback (most recent call last):
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 672, in run_until_complete
+    self.run_forever()
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 639, in run_forever
+    self._run_once()
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 1947, in _run_once
+    event_list = self._selector.select(timeout)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\selectors.py", line 323, in select
+    r, w, _ = self._select(self._readers, self._writers, [], timeout)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\selectors.py", line 314, in _select
+    r, w, x = select.select(r, w, w, timeout)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [WinError 10055] An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\site-packages\starlette\routing.py", line 741, in lifespan
+    await receive()
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\site-packages\uvicorn\lifespan\on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+Process SpawnProcess-1:
+Traceback (most recent call last):
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\site-packages\uvicorn\_subprocess.py", line 80, in subprocess_started
+    target(sockets=sockets)
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\site-packages\uvicorn\server.py", line 65, in run
+    return asyncio.run(self.serve(sockets=sockets))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 672, in run_until_complete
+    self.run_forever()
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 639, in run_forever
+    self._run_once()
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 1947, in _run_once
+    event_list = self._selector.select(timeout)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\selectors.py", line 323, in select
+    r, w, _ = self._select(self._readers, self._writers, [], timeout)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\suhai\AppData\Local\Programs\Python\Python312\Lib\selectors.py", line 314, in _select
+    r, w, x = select.select(r, w, w, timeout)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [WinError 10055] An operation on a socket could not be performed because the system lacked sufficient buffer space or because a queue was full
