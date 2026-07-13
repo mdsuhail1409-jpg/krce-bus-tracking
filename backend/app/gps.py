@@ -156,12 +156,14 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
     db = db_module.db
     now_ts = time.time()
     is_first_ping = bus_id not in live_buses
+    
+    current_pax = live_buses[bus_id].get("passengers", 0) if not is_first_ping else passengers
 
     if is_first_ping:
         live_buses[bus_id] = {
             "bus_id": bus_id, "driver_id": driver_id, "driver_name": driver_name,
             "lat": lat, "lon": lon, "speed": speed, "heading": heading,
-            "passengers": passengers, "updated_at": now_ts,
+            "passengers": current_pax, "updated_at": now_ts,
             "status": "moving" if speed > 2 else "idle",
             "route_geometry": [],
             "last_active": now_ts
@@ -170,7 +172,7 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
     else:
         live_buses[bus_id].update({
             "lat": lat, "lon": lon, "speed": round(speed, 1),
-            "heading": round(heading, 1), "passengers": passengers,
+            "heading": round(heading, 1),
             "updated_at": now_ts,
             "status": "moving" if speed > 2 else "idle",
             "last_active": now_ts
@@ -179,7 +181,7 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
     # Log to history collection for playback
     await db.live_bus_positions_history.insert_one({
         "bus_id": bus_id, "lat": lat, "lon": lon, "speed": speed,
-        "heading": heading, "passengers": passengers, "ts": now_ts,
+        "heading": heading, "passengers": current_pax, "ts": now_ts,
         "date": today()
     })
 
