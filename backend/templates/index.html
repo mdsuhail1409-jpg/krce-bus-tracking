@@ -882,11 +882,7 @@
                     <div class="driver-card-title">Passengers & Simulation</div>
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                         <span class="driver-stat-label">Passengers Onboard</span>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <button class="btn btn-secondary" style="padding: 4px 10px; width: auto;" onclick="adjustPassengers(-1)">-</button>
-                            <span id="driver-pax-count" style="font-weight: 700; color: #f8fafc; font-size: 1.1rem; min-width: 24px; text-align: center;">0</span>
-                            <button class="btn btn-secondary" style="padding: 4px 10px; width: auto;" onclick="adjustPassengers(1)">+</button>
-                        </div>
+                        <span id="driver-pax-count" style="font-weight: 700; color: #10b981; font-size: 1.3rem; min-width: 24px; text-align: center;">0</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; margin-top: 16px;">
                         <input type="checkbox" id="mock-simulation-check" style="cursor: pointer;" onchange="toggleMockSimulation(this.checked)">
@@ -1011,6 +1007,33 @@
             showLogin();
         }
 
+        async function demoBoardBus(busId) {
+            if (!userProfile.rfid_card) {
+                showToast("Error", "No RFID card associated with your profile.", "error");
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/api/rfid/tap`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        rfid_card: userProfile.rfid_card,
+                        bus_id: busId
+                    })
+                });
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                showToast(data.tap_type === 'boarded' ? 'Boarded Bus' : 'Exited Bus', `Successfully simulated ${data.tap_type} for ${data.student_name}.`, 'success');
+                loadAttendance();
+                loadBusRoutes();
+            } catch(e) {
+                showToast("Tap Failed", "Could not simulate boarding tap.", "error");
+            }
+        }
+
         async function initDriverPanel() {
             const busId = userProfile.bus_id;
             if (!busId) {
@@ -1027,6 +1050,8 @@
                     driverBus = await res.json();
                     document.getElementById('driver-bus-route').innerText = driverBus.route_name || 'N/A';
                     document.getElementById('driver-bus-number').innerText = driverBus.number || 'N/A';
+                    driverPax = (driverBus.live && driverBus.live.status !== 'offline') ? (driverBus.live.passengers || 0) : 0;
+                    document.getElementById('driver-pax-count').innerText = driverPax;
                 }
             } catch(e) {
                 console.error("Failed to load driver bus details:", e);
@@ -1348,6 +1373,13 @@
                                 <span><i class="fa-solid fa-users"></i> Boarded: ${bus.boarded_today || 0} / ${bus.capacity}</span>
                                 <span><i class="fa-solid fa-gauge-high"></i> Speed: ${bus.live ? bus.live.speed : 0} km/h</span>
                             </div>
+                            ${userProfile.role === 'student' && userProfile.rfid_card ? `
+                            <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+                                <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem; width: auto;" onclick="event.stopPropagation(); demoBoardBus('${bus.id}')">
+                                    <i class="fa-solid fa-address-card"></i> Board/Exit (Demo)
+                                </button>
+                            </div>
+                            ` : ''}
                         </div>
                     `;
                     container.appendChild(card);
@@ -1512,6 +1544,17 @@
                         showToast(`📢 ${data.title}`, data.message, data.alert_type === 'delay' ? 'error' : 'warning');
                         // Refresh alerts list
                         loadAlerts();
+                    } else if (data.type === 'pax_update') {
+                        if (userProfile.role === 'driver' && driverBus && data.bus_id === driverBus.id) {
+                            driverPax = data.passengers;
+                            document.getElementById('driver-pax-count').innerText = driverPax;
+                            showToast(
+                                data.tap_type === 'boarded' ? 'Student Boarded' : 'Student Exited',
+                                `${data.student_name} has ${data.tap_type} your bus.`,
+                                data.tap_type === 'boarded' ? 'success' : 'warning'
+                            );
+                        }
+                        loadBusRoutes();
                     }
                 } catch(e) {
                     console.error('Error parsing WS message', e);

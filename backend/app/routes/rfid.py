@@ -36,9 +36,27 @@ async def rfid_tap(req: RfidTap, u=Depends(current_user)):
         "lat": req.lat, "lon": req.lon, "date": td
     })
 
+    new_pax = 0
     if req.bus_id in live_buses:
         delta = 1 if tap_type == "boarded" else -1
         live_buses[req.bus_id]["passengers"] = max(
             0, live_buses[req.bus_id].get("passengers", 0) + delta
         )
+        new_pax = live_buses[req.bus_id]["passengers"]
+
+    from app.state import ws_pool
+    import json
+    ws_payload = json.dumps({
+        "type": "pax_update",
+        "bus_id": req.bus_id,
+        "passengers": new_pax,
+        "student_name": stu["name"],
+        "tap_type": tap_type
+    })
+    for cid, cws in list(ws_pool.items()):
+        try:
+            await cws.send_text(ws_payload)
+        except Exception:
+            pass
+
     return {"status": "ok", "tap_type": tap_type, "student_name": stu["name"]}
