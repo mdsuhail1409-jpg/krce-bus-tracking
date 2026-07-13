@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRCE Bus Tracking Portal</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-primary: #6366f1;
+            --accent-hover: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --font-family: 'Outfit', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-family);
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+        }
+
+        /* Login Layout */
+        #login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex: 1;
+            padding: 20px;
+            background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15), transparent 40%),
+                        radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.1), transparent 40%);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 32px;
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        .logo-area {
+            margin-bottom: 24px;
+        }
+        .logo-icon {
+            font-size: 3rem;
+            color: var(--accent-primary);
+            margin-bottom: 12px;
+            filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
+        }
+        .logo-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff 60%, var(--accent-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .input-wrapper {
+            position: relative;
+        }
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        .form-control {
+            width: 100%;
+            padding: 12px 16px 12px 42px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--bg-tertiary);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px 24px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        }
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        .auth-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: #fca5a5;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Portal Layout */
+        #portal-container {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            height: 100vh;
+        }
+
+        header.portal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 100;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header-logo i {
+            font-size: 1.6rem;
+            color: var(--accent-primary);
+        }
+        .header-logo h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .user-info {
+            text-align: right;
+        }
+        .user-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .user-role {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .logout-btn {
+            background: transparent;
+            border: 1px solid var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: var(--danger);
+            color: #ef4444;
+        }
+
+        /* Main Workspace Grid */
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        @media (max-width: 968px) {
+            .workspace {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 350px;
+            }
+        }
+
+        /* Map Section */
+        .map-section {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 10;
+        }
+
+        /* Custom Leaflet Dark Mode Map Styling */
+        .leaflet-container {
+            background: #111e2f !important;
+        }
+
+        /* Sidebar Info Panel */
+        .info-panel {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        @media (max-width: 968px) {
+            .info-panel {
+                border-left: none;
+                border-top: 1px solid var(--glass-border);
+            }
+        }
+
+        /* Tab Headers */
+        .tabs-header {
+            display: flex;
+            background: rgba(15, 23, 42, 0.4);
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 14px 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .tab-btn.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        /* Tab Content */
+        .tabs-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .tab-pane {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* Components: Active Alert Banner */
+        .alert-card {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warning);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .alert-card.info {
+            background: rgba(99, 102, 241, 0.1);
+            border-left-color: var(--accent-primary);
+        }
+        .alert-card.delay {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: var(--danger);
+        }
+        .alert-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+        .alert-msg {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        .alert-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            display: block;
+            text-align: right;
+        }
+
+        /* Bus List Cards */
+        .bus-item {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .bus-item:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+            background: rgba(15, 23, 42, 0.7);
+        }
+        .bus-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .bus-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .bus-status-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+        .bus-status-badge.online {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+        .bus-status-badge.offline {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-secondary);
+        }
+        .bus-details {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .bus-metric {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+        }
+        .bus-metric span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Attendance Table */
+        .attendance-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .attendance-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+        }
+        .attendance-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+        .attendance-icon.boarded {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+        .attendance-icon.left {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+        .attendance-info {
+            flex: 1;
+        }
+        .attendance-status {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .attendance-stop {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .attendance-time {
+            text-align: right;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Global Notification Toasts */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 320px;
+        }
+        .toast {
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-left: 4px solid var(--accent-primary);
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.warning { border-left-color: var(--warning); }
+        .toast-icon {
+            font-size: 1.2rem;
+            color: var(--accent-primary);
+        }
+        .toast.success .toast-icon { color: var(--success); }
+        .toast.error .toast-icon { color: var(--danger); }
+        .toast.warning .toast-icon { color: var(--warning); }
+        .toast-body {
+            flex: 1;
+        }
+        .toast-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+        .toast-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Custom Leaflet Map Markers */
+        .bus-marker-icon {
+            background: var(--accent-primary);
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+        .bus-marker-icon.online {
+            background: var(--success);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+        }
+        .bus-marker-icon.delay {
+            background: var(--danger);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+        }
+
+        /* Campus Marker Styling */
+        .campus-marker-icon {
+            background: #ffffff;
+            border: 3px solid var(--accent-primary);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+        }
+
+        /* Driver Console Styles */
+        .driver-panel-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .driver-card {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .driver-card-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        .driver-stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        .driver-stat-row:last-child {
+            margin-bottom: 0;
+        }
+        .driver-stat-label {
+            color: var(--text-secondary);
+        }
+        .driver-stat-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        .broadcast-toggle-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .broadcast-toggle-btn.off {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid var(--glass-border);
+        }
+        .broadcast-toggle-btn.off:hover {
+            background: #334155;
+        }
+        .broadcast-toggle-btn.on {
+            background: var(--success);
+            color: white;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+        .broadcast-toggle-btn.on:hover {
+            background: #059669;
+        }
+        .sos-btn {
+            width: 100%;
+            background: var(--danger);
+            color: white;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 12px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        .sos-btn:hover {
+            background: #dc2626;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--success);
+            margin-right: 4px;
+            animation: pulse-glow 1.5s infinite;
+        }
+        @keyframes pulse-glow {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px var(--success); }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notifications Area -->
+    <div class="toast-container" id="toast-area"></div>
+
+    <!-- 1. LOGIN CONTAINER -->
+    <div id="login-container">
+        <div class="login-card glass-panel">
+            <div class="logo-area">
+                <i class="fa-solid fa-bus-simple logo-icon"></i>
+                <h2 class="logo-title">KRCE Bus Track</h2>
+                <p class="logo-subtitle">Kumaraguru College of Technology</p>
+            </div>
+            
+            <div class="auth-error" id="auth-error-box">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span id="auth-error-msg">Invalid email or password</span>
+            </div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fa-regular fa-envelope input-icon"></i>
+                        <input type="email" id="email" class="form-control" placeholder="yourname@krce.ac.in" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="margin-top: 10px;">
+                    Sign In <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. PORTAL CONTAINER -->
+    <div id="portal-container">
+        <header class="portal-header">
+            <div class="header-logo">
+                <i class="fa-solid fa-bus-simple"></i>
+                <h1>KRCE Bus Tracker</h1>
+            </div>
+            <div class="user-profile">
+                <div class="user-info">
+                    <div class="user-name" id="user-name-display">Student</div>
+                    <div class="user-role" id="user-role-display">Student Role</div>
+                </div>
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <div class="workspace">
+            <!-- Map View (Left Panel) -->
+            <div class="map-section">
+                <div id="map"></div>
+                <!-- Route Information Panel -->
+                <div id="route-info-panel" class="glass-panel" style="display: none; position: absolute; bottom: 20px; left: 20px; right: 20px; z-index: 999; padding: 16px; background: rgba(30, 41, 59, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-weight: 700; color: #f8fafc; font-size: 1rem;"><i class="fa-solid fa-route" style="color: #6366f1; margin-right: 6px;"></i> <span id="route-panel-name">Route Name</span></span>
+                        <button onclick="clearActiveRoute()" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 1.1rem;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 12px; font-size: 0.85rem; color: #94a3b8;">
+                        <div><strong>Bus:</strong> <span id="route-panel-bus" style="color: #f8fafc;">B01</span></div>
+                        <div><strong>Driver:</strong> <span id="route-panel-driver" style="color: #f8fafc;">Driver</span></div>
+                        <div><strong>Speed:</strong> <span id="route-panel-speed" style="color: #f8fafc;">0 km/h</span></div>
+                        <div><strong>Current Stop:</strong> <span id="route-panel-currstop" style="color: #f8fafc;">Start</span></div>
+                        <div><strong>Next Stop:</strong> <span id="route-panel-nextstop" style="color: #f8fafc;">Next</span></div>
+                        <div><strong>ETA to College:</strong> <span id="route-panel-eta" style="color: #10b981; font-weight: 700;">—</span></div>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                            <span>Completed: <span id="route-progress-pct-completed" style="color: #10b981; font-weight:600;">0%</span></span>
+                            <span>Remaining: <span id="route-progress-pct-remaining" style="color: #3b82f6; font-weight:600;">100%</span></span>
+                        </div>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; display: flex;">
+                            <div id="route-progress-bar-completed" style="width: 0%; height: 100%; background: #10b981; transition: width 0.4s;"></div>
+                            <div id="route-progress-bar-remaining" style="width: 100%; height: 100%; background: #3b82f6; transition: width 0.4s;"></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8;">
+                        <div>Total Distance: <span id="route-panel-total-dist">0 km</span></div>
+                        <div>Distance Covered: <span id="route-panel-covered-dist">0 km</span></div>
+                        <div>Distance Remaining: <span id="route-panel-remaining-dist">0 km</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Sidebar (Right Panel) -->
+            <div class="info-panel" id="passenger-info-panel">
+                <div class="tabs-header">
+                    <button class="tab-btn active" onclick="switchTab('tab-live')">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        <span>Live Buses</span>
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('tab-attendance')">
+                        <i class="fa-solid fa-clipboard-user"></i>
+                        <span>Attendance</span>
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('tab-alerts')">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>Alerts Feed</span>
+                    </button>
+                </div>
+
+                <div class="tabs-content">
+                    <!-- Tab 1: Live Bus Status -->
+                    <div class="tab-pane active" id="tab-live">
+                        <div id="bus-list-container">
+                            <p style="color: var(--text-secondary); text-align: center; margin-top: 20px;">
+                                <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading active routes...
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Attendance History -->
+                    <div class="tab-pane" id="tab-attendance">
+                        <div class="attendance-list" id="attendance-container">
+                            <p style="color: var(--text-secondary); text-align: center; margin-top: 20px;">
+                                <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading history...
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Alerts Feed -->
+                    <div class="tab-pane" id="tab-alerts">
+                        <div id="alerts-container">
+                            <p style="color: var(--text-secondary); text-align: center; margin-top: 20px;">
+                                <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Fetching notification feed...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Driver Control Panel -->
+            <div class="info-panel" id="driver-info-panel" style="display: none; padding: 20px; overflow-y: auto;">
+                <div class="driver-panel-title">
+                    <i class="fa-solid fa-gauge"></i>
+                    <span>Driver Control Panel</span>
+                </div>
+
+                <div class="driver-card">
+                    <div class="driver-card-title">Assigned Vehicle</div>
+                    <div class="driver-stat-row">
+                        <span class="driver-stat-label">Bus Route</span>
+                        <span class="driver-stat-value" id="driver-bus-route">Loading...</span>
+                    </div>
+                    <div class="driver-stat-row">
+                        <span class="driver-stat-label">Bus Number</span>
+                        <span class="driver-stat-value" id="driver-bus-number">Loading...</span>
+                    </div>
+                </div>
+
+                <div class="driver-card">
+                    <div class="driver-card-title">GPS Broadcast Control</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                        <span class="driver-stat-label">Status</span>
+                        <span id="broadcast-status-badge" class="bus-status-badge offline" style="margin-left: 8px;">Inactive</span>
+                    </div>
+                    <button id="toggle-broadcast-btn" class="broadcast-toggle-btn off" onclick="toggleGpsBroadcast()">
+                        <i class="fa-solid fa-play"></i> Start Broadcasting
+                    </button>
+                </div>
+
+                <div class="driver-card">
+                    <div class="driver-card-title">Passengers & Simulation</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <span class="driver-stat-label">Passengers Onboard</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button class="btn btn-secondary" style="padding: 4px 10px; width: auto;" onclick="adjustPassengers(-1)">-</button>
+                            <span id="driver-pax-count" style="font-weight: 700; color: #f8fafc; font-size: 1.1rem; min-width: 24px; text-align: center;">0</span>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; width: auto;" onclick="adjustPassengers(1)">+</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 16px;">
+                        <input type="checkbox" id="mock-simulation-check" style="cursor: pointer;" onchange="toggleMockSimulation(this.checked)">
+                        <label for="mock-simulation-check" class="driver-stat-label" style="cursor: pointer; font-size: 0.82rem; user-select: none;">Enable Route Simulation (Demo Mode)</label>
+                    </div>
+                </div>
+
+                <button class="sos-btn" onclick="sendDriverEmergency()">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Send SOS Emergency Alert
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script>
+        // State variables
+        let map;
+        let busMarkers = {};
+        let activeTab = 'tab-live';
+        let wsConn = null;
+        let token = localStorage.getItem('krce_token');
+        let userProfile = null;
+        
+        let activeBusId = null;
+        let routePolylines = { completed: null, remaining: null };
+        let routeMarkers = { start: null, destination: null, stops: [] };
+        
+        // Base API endpoints
+        const API_BASE = window.location.origin;
+        const WS_BASE = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host;
+
+        // Initialize portal check on load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (token) {
+                try {
+                    userProfile = parseJwt(token);
+                    // Check if token has expired
+                    const exp = userProfile.exp * 1000;
+                    if (Date.now() >= exp) {
+                        logout();
+                    } else {
+                        showPortal();
+                    }
+                } catch(e) {
+                    logout();
+                }
+            } else {
+                showLogin();
+            }
+        });
+
+        // Parse JWT Utility
+        function parseJwt(token) {
+            var base64Url = token.split('.')[1];
+            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        // Display Helpers
+        function showLogin() {
+            document.getElementById('login-container').style.display = 'flex';
+            document.getElementById('portal-container').style.display = 'none';
+        }
+
+        let gpsBroadcasting = false;
+        let gpsInterval = null;
+        let mockSimulationActive = false;
+        let mockSimIndex = 0;
+        let driverPax = 0;
+        let driverBus = null;
+
+        // Mock coordinates path for simulation
+        const mockRoutePath = [
+            [10.9310, 78.8130], // Samayapuram
+            [10.9250, 78.7980],
+            [10.9200, 78.7800],
+            [10.9240, 78.7600],
+            [10.927669, 78.7410] // KRCE Campus
+        ];
+
+        function showPortal() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('portal-container').style.display = 'flex';
+            
+            // Set profile text
+            document.getElementById('user-name-display').innerText = userProfile.name || 'User';
+            document.getElementById('user-role-display').innerText = userProfile.role || 'Guest';
+
+            if (userProfile.role === 'driver') {
+                document.getElementById('passenger-info-panel').style.display = 'none';
+                document.getElementById('driver-info-panel').style.display = 'flex';
+                initMap();
+                initDriverPanel();
+            } else {
+                document.getElementById('passenger-info-panel').style.display = 'flex';
+                document.getElementById('driver-info-panel').style.display = 'none';
+                initMap();
+                loadBusRoutes();
+                loadAttendance();
+                loadAlerts();
+            }
+
+            // Connect WebSocket
+            connectWebSocket();
+        }
+
+        function logout() {
+            stopGpsBroadcast();
+            localStorage.removeItem('krce_token');
+            token = null;
+            userProfile = null;
+            if (wsConn) {
+                wsConn.close();
+            }
+            showLogin();
+        }
+
+        async function initDriverPanel() {
+            const busId = userProfile.bus_id;
+            if (!busId) {
+                document.getElementById('driver-bus-route').innerText = 'None';
+                document.getElementById('driver-bus-number').innerText = 'Unassigned';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/buses/${busId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    driverBus = await res.json();
+                    document.getElementById('driver-bus-route').innerText = driverBus.route_name || 'N/A';
+                    document.getElementById('driver-bus-number').innerText = driverBus.number || 'N/A';
+                }
+            } catch(e) {
+                console.error("Failed to load driver bus details:", e);
+                document.getElementById('driver-bus-route').innerText = 'Route A';
+                document.getElementById('driver-bus-number').innerText = 'Bus-01';
+            }
+        }
+
+        function toggleGpsBroadcast() {
+            if (gpsBroadcasting) {
+                stopGpsBroadcast();
+            } else {
+                startGpsBroadcast();
+            }
+        }
+
+        function startGpsBroadcast() {
+            gpsBroadcasting = true;
+            const btn = document.getElementById('toggle-broadcast-btn');
+            btn.className = "broadcast-toggle-btn on";
+            btn.innerHTML = `<i class="fa-solid fa-stop"></i> Stop Broadcasting`;
+            
+            const badge = document.getElementById('broadcast-status-badge');
+            badge.className = "bus-status-badge online";
+            badge.innerHTML = `<span class="pulse-dot"></span> Active`;
+
+            showToast("Broadcast Started", "GPS Broadcasting is now active.", "success");
+
+            // Start sending GPS coordinates every 5 seconds
+            sendGpsTick();
+            gpsInterval = setInterval(sendGpsTick, 5000);
+        }
+
+        function stopGpsBroadcast() {
+            gpsBroadcasting = false;
+            if (gpsInterval) {
+                clearInterval(gpsInterval);
+                gpsInterval = null;
+            }
+            
+            const btn = document.getElementById('toggle-broadcast-btn');
+            btn.className = "broadcast-toggle-btn off";
+            btn.innerHTML = `<i class="fa-solid fa-play"></i> Start Broadcasting`;
+            
+            const badge = document.getElementById('broadcast-status-badge');
+            badge.className = "bus-status-badge offline";
+            badge.innerHTML = `Inactive`;
+
+            showToast("Broadcast Stopped", "GPS Broadcasting is inactive.", "info");
+        }
+
+        function adjustPassengers(amount) {
+            driverPax = Math.max(0, driverPax + amount);
+            document.getElementById('driver-pax-count').innerText = driverPax;
+            if (gpsBroadcasting) {
+                sendGpsTick();
+            }
+        }
+
+        function toggleMockSimulation(checked) {
+            mockSimulationActive = checked;
+            if (checked) {
+                mockSimIndex = 0;
+                showToast("Mock Simulator Enabled", "Using pre-defined route path for movement simulation.", "success");
+            } else {
+                showToast("Mock Simulator Disabled", "Reverted to real browser GPS.", "info");
+            }
+            if (gpsBroadcasting) {
+                sendGpsTick();
+            }
+        }
+
+        function sendGpsTick() {
+            let lat = 10.927669;
+            let lon = 78.7410;
+            let speed = 0;
+            let heading = 0;
+
+            if (mockSimulationActive) {
+                const coords = mockRoutePath[mockSimIndex];
+                lat = coords[0];
+                lon = coords[1];
+                speed = mockSimIndex === mockRoutePath.length - 1 ? 0 : 35;
+                heading = 270;
+                mockSimIndex = (mockSimIndex + 1) % mockRoutePath.length;
+            } else {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition((pos) => {
+                        lat = pos.coords.latitude;
+                        lon = pos.coords.longitude;
+                        speed = pos.coords.speed || 0;
+                        heading = pos.coords.heading || 0;
+                        dispatchGpsPayload(lat, lon, speed, heading);
+                    }, (err) => {
+                        console.warn("Geolocation API error, using default coords:", err);
+                        dispatchGpsPayload(lat, lon, speed, heading);
+                    });
+                    return;
+                }
+            }
+
+            dispatchGpsPayload(lat, lon, speed, heading);
+        }
+
+        function dispatchGpsPayload(lat, lon, speed, heading) {
+            if (!wsConn || wsConn.readyState !== WebSocket.OPEN) {
+                fetch(`${API_BASE}/api/driver/gps`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        lat: lat,
+                        lon: lon,
+                        speed: speed,
+                        heading: heading,
+                        passengers: driverPax
+                    })
+                }).catch(err => console.error("HTTP GPS broadcast failed:", err));
+                return;
+            }
+
+            const payload = {
+                type: "gps",
+                lat: lat,
+                lon: lon,
+                speed: speed,
+                heading: heading,
+                passengers: driverPax
+            };
+            wsConn.send(JSON.stringify(payload));
+        }
+
+        async function sendDriverEmergency() {
+            if (!confirm("Are you sure you want to broadcast an SOS EMERGENCY alert? This will immediately notify all administrators and students.")) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/driver/emergency`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: "SOS Emergency! Bus driver has reported an issue. Please contact driver or assistance immediately."
+                    })
+                });
+
+                if (res.ok) {
+                    showToast("Emergency Sent", "SOS emergency alert has been broadcasted successfully.", "error");
+                } else {
+                    showToast("Failed to Send", "Failed to broadcast emergency alert.", "error");
+                }
+            } catch(e) {
+                console.error("SOS call failed:", e);
+                showToast("Connection Error", "Could not send emergency SOS alert.", "error");
+            }
+        }
+
+        // Toast Messages
+        function showToast(title, desc, type='info') {
+            const area = document.getElementById('toast-area');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let iconClass = 'fa-circle-info';
+            if (type === 'success') iconClass = 'fa-circle-check';
+            if (type === 'error') iconClass = 'fa-circle-exclamation';
+            if (type === 'warning') iconClass = 'fa-triangle-exclamation';
+
+            toast.innerHTML = `
+                <i class="fa-solid ${iconClass} toast-icon"></i>
+                <div class="toast-body">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-desc">${desc}</div>
+                </div>
+            `;
+            area.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // Login Handler
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailVal = document.getElementById('email').value;
+            const passwordVal = document.getElementById('password').value;
+            const errBox = document.getElementById('auth-error-box');
+
+            try {
+                // Post Login
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailVal, password: passwordVal })
+                });
+
+                const data = await response.json();
+                const tokenVal = data.token || data.access_token;
+                if (response.ok && tokenVal) {
+                    token = tokenVal;
+                    localStorage.setItem('krce_token', token);
+                    userProfile = parseJwt(token);
+                    showToast('Welcome!', `Logged in successfully as ${userProfile.name}.`, 'success');
+                    showPortal();
+                } else {
+                    errBox.style.display = 'flex';
+                    document.getElementById('auth-error-msg').innerText = data.detail || 'Invalid email or password';
+                }
+            } catch(err) {
+                errBox.style.display = 'flex';
+                document.getElementById('auth-error-msg').innerText = 'Server error. Please try again.';
+            }
+        });
+
+        // Tab Switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            
+            // Find button trigger
+            const btns = document.querySelectorAll('.tab-btn');
+            if (tabId === 'tab-live') btns[0].classList.add('active');
+            if (tabId === 'tab-attendance') btns[1].classList.add('active');
+            if (tabId === 'tab-alerts') btns[2].classList.add('active');
+        }
+
+        // Initialize Leaflet Map
+        function initMap() {
+            if (map) return; // Prevent double init
+            
+            // Center around KRCE campus
+            const campusLat = 10.927669;
+            const campusLon = 78.7410;
+            
+            map = L.map('map', {
+                zoomControl: true,
+                attributionControl: false
+            }).setView([campusLat, campusLon], 13);
+
+            // Leaflet standard Dark tiles
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            // Add Campus Marker
+            const campusIcon = L.divIcon({
+                className: 'campus-marker-icon',
+                html: '<i class="fa-solid fa-graduation-cap"></i>',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+            
+            L.marker([campusLat, campusLon], { icon: campusIcon })
+             .addTo(map)
+             .bindPopup("<b>K. Ramakrishnan College of Engineering</b><br>Trichy, Tamil Nadu");
+        }
+
+        // Load Bus Routes
+        async function loadBusRoutes() {
+            const container = document.getElementById('bus-list-container');
+            try {
+                const res = await fetch(`${API_BASE}/api/buses`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error();
+                const buses = await res.json();
+                
+                if (buses.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No buses configured.</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                buses.forEach(bus => {
+                    const isOnline = bus.live && bus.live.status !== 'offline';
+                    const busStatus = isOnline ? 'online' : 'offline';
+                    
+                    // Add/update map marker
+                    updateMapMarker(bus);
+
+                    if (activeBusId === bus.id && bus.live) {
+                        drawRouteOSRM(bus, bus.live);
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = 'bus-item';
+                    card.onclick = () => {
+                        if (bus.live && bus.live.lat) {
+                            activeBusId = bus.id;
+                            map.setView([bus.live.lat, bus.live.lon], 14);
+                            busMarkers[bus.id].openPopup();
+                            drawRouteOSRM(bus, bus.live);
+                            loadBusRoutes(); // Re-render markers instantly to show yellow
+                        } else {
+                            showToast('Bus Offline', `${bus.number} is currently offline and at KRCE Campus.`, 'info');
+                        }
+                    };
+
+                    card.innerHTML = `
+                        <div class="bus-header">
+                            <span class="bus-name">${bus.number} - ${bus.route_name}</span>
+                            <span class="bus-status-badge ${busStatus}">${busStatus}</span>
+                        </div>
+                        <div class="bus-details">
+                            <div class="bus-metric">
+                                <span><i class="fa-solid fa-user-tie"></i> Driver: ${bus.driver_name || 'N/A'}</span>
+                                <span><i class="fa-solid fa-phone"></i> ${bus.driver_phone || 'N/A'}</span>
+                            </div>
+                            <div class="bus-metric" style="margin-top: 8px;">
+                                <span><i class="fa-solid fa-users"></i> Boarded: ${bus.boarded_today || 0} / ${bus.capacity}</span>
+                                <span><i class="fa-solid fa-gauge-high"></i> Speed: ${bus.live ? bus.live.speed : 0} km/h</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch(e) {
+                container.innerHTML = '<p style="color: var(--danger); text-align: center; padding: 20px;">Failed to load routes.</p>';
+            }
+        }
+
+        // Update bus marker position on map
+        function updateMapMarker(bus) {
+            const busId = bus.id;
+            const live = bus.live;
+            
+            // Default position to campus if offline or missing
+            const lat = (live && live.lat) ? live.lat : 10.927669;
+            const lon = (live && live.lon) ? live.lon : 78.7410;
+            const isOnline = live && live.status !== 'offline';
+
+            let markerClass = isOnline ? 'online' : '';
+            let markerBg = '';
+            if (activeBusId === busId) {
+                markerClass = 'selected';
+                markerBg = 'background: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.7);';
+            }
+
+            const markerHtml = `<div class="bus-marker-icon ${markerClass}" style="${markerBg}">${bus.number.split('-')[1] || bus.number}</div>`;
+            const customIcon = L.divIcon({
+                className: 'custom-bus-marker',
+                html: markerHtml,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            if (busMarkers[busId]) {
+                // Smooth transition if marker exists
+                busMarkers[busId].setLatLng([lat, lon]);
+                busMarkers[busId].setIcon(customIcon);
+            } else {
+                // Create marker
+                const marker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
+                busMarkers[busId] = marker;
+            }
+
+            // Update Popup text
+            const popupContent = `
+                <div style="color: #0f172a; font-family: Outfit; font-size: 0.9rem;">
+                    <strong style="font-size: 1rem; color: #6366f1;">${bus.number} (${bus.route_name})</strong><br>
+                    <b>Status:</b> <span style="color: ${isOnline ? '#10b981' : '#64748b'}">${isOnline ? 'Active Tracking' : 'Offline'}</span><br>
+                    <b>Driver:</b> ${bus.driver_name || 'Unassigned'}<br>
+                    <b>Speed:</b> ${live ? live.speed : 0} km/h<br>
+                    <b>Passengers:</b> ${live ? live.passengers : 0} onboard
+                </div>
+            `;
+            busMarkers[busId].bindPopup(popupContent);
+        }
+
+        // Load Attendance Tap History
+        async function loadAttendance() {
+            const container = document.getElementById('attendance-container');
+            const isParent = userProfile.role === 'parent';
+            const endpoint = isParent ? `${API_BASE}/api/my/child-attendance` : `${API_BASE}/api/my/attendance`;
+            
+            try {
+                const res = await fetch(endpoint, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error();
+                const records = await res.json();
+
+                if (records.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No tap records found.</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                records.forEach(rec => {
+                    const isBoarded = rec.tap_type === 'boarded';
+                    const title = isBoarded ? 'Boarded Bus' : 'Left Bus';
+                    const icon = isBoarded ? 'fa-bus' : 'fa-door-open';
+                    const statusClass = isBoarded ? 'boarded' : 'left';
+                    const tapTimeStr = new Date(rec.tap_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    const div = document.createElement('div');
+                    div.className = 'attendance-item';
+                    div.innerHTML = `
+                        <div class="attendance-icon ${statusClass}">
+                            <i class="fa-solid ${icon}"></i>
+                        </div>
+                        <div class="attendance-info">
+                            <div class="attendance-status">${title} ${rec.child_name ? `(${rec.child_name})` : ''}</div>
+                            <div class="attendance-stop">At ${rec.stop_name || 'KRCE Campus'} • ${rec.bus_number || 'Bus'}</div>
+                        </div>
+                        <div class="attendance-time">
+                            <div>${tapTimeStr}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary);">${rec.date}</div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch(e) {
+                container.innerHTML = '<p style="color: var(--danger); text-align: center; padding: 20px;">Failed to load attendance logs.</p>';
+            }
+        }
+
+        // Load Broadcast Alerts
+        async function loadAlerts() {
+            const container = document.getElementById('alerts-container');
+            try {
+                const res = await fetch(`${API_BASE}/api/alerts`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                // Note: FastAPI fallback for public alerts or admin alerts
+                if (!res.ok) throw new Error();
+                const alerts = await res.json();
+
+                if (alerts.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No active alerts.</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                alerts.forEach(alert => {
+                    const div = document.createElement('div');
+                    div.className = `alert-card ${alert.alert_type || 'info'}`;
+                    const timeStr = new Date(alert.sent_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+                    
+                    div.innerHTML = `
+                        <div class="alert-title">${alert.title}</div>
+                        <div class="alert-msg">${alert.message}</div>
+                        <span class="alert-time"><i class="fa-regular fa-clock"></i> ${timeStr}</span>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch(e) {
+                container.innerHTML = '<p style="color: var(--danger); text-align: center; padding: 20px;">Failed to load alert feed.</p>';
+            }
+        }
+
+        // WebSocket real-time updates handler
+        function connectWebSocket() {
+            if (wsConn) {
+                wsConn.close();
+            }
+
+            wsConn = new WebSocket(`${WS_BASE}/ws?token=${token}`);
+
+            wsConn.onopen = () => {
+                console.log('WS Connection established');
+            };
+
+            wsConn.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'gps_update') {
+                        // Refresh bus location in memory & update markers/details
+                        loadBusRoutes();
+                    } else if (data.type === 'alert') {
+                        // Show popup notification toast
+                        showToast(`📢 ${data.title}`, data.message, data.alert_type === 'delay' ? 'error' : 'warning');
+                        // Refresh alerts list
+                        loadAlerts();
+                    }
+                } catch(e) {
+                    console.error('Error parsing WS message', e);
+                }
+            };
+
+            wsConn.onclose = () => {
+                console.log('WS Connection closed, retrying in 5 seconds...');
+                setTimeout(connectWebSocket, 5000);
+            };
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  OSM ROUTE INTEGRATION FUNCTIONS
+        // ═══════════════════════════════════════════════════════════════════
+        const STOP_COORDS = {
+            "KRCE Campus": [10.927669, 78.7410],
+            "Samayapuram": [10.9310, 78.8130],
+            "Woraiyur Bus Stand": [10.7905, 78.7047],
+            "Woraiyur Town": [10.7920, 78.7020],
+            "Gandhi Market": [10.8190, 78.6990],
+            "Panjappur": [10.7516, 78.6830],
+            "Srirangam": [10.8631, 78.6933],
+            "Cauvery Bridge": [10.8416, 78.7010],
+            "K.K. Nagar": [10.8176, 78.6960],
+            "Thuvakudi": [10.8730, 78.7680],
+            "Ariyamangalam": [10.8280, 78.7380],
+            "Cantonment": [10.8116, 78.6860],
+            "Collector Office": [10.8080, 78.6820],
+            "Palakarai": [10.8120, 78.6930],
+            "Chatram Bus Stand": [10.8096, 78.6964],
+            "Central": [10.8050, 78.6840],
+            "Junction": [10.8020, 78.6810],
+            "Thillai Nagar": [10.8240, 78.6890],
+            "Mannarpuram": [10.8182, 78.7030],
+            "Rockfort": [10.8300, 78.6970],
+            "Chinthamani": [10.8350, 78.7020]
+        };
+
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // meters
+            const phi1 = lat1 * Math.PI/180;
+            const phi2 = lat2 * Math.PI/180;
+            const deltaPhi = (lat2-lat1) * Math.PI/180;
+            const deltaLambda = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        async function drawRouteOSRM(bus, live) {
+            clearRouteOverlays();
+
+            const stops = bus.stops || [];
+            if (stops.length === 0) return;
+
+            const stopsCoords = [];
+            stops.forEach(name => {
+                if (STOP_COORDS[name]) {
+                    stopsCoords.push({
+                        name: name,
+                        lat: STOP_COORDS[name][0],
+                        lon: STOP_COORDS[name][1]
+                    });
+                }
+            });
+
+            if (stopsCoords.length === 0) return;
+
+            const busLat = live.lat;
+            const busLon = live.lon;
+
+            let closestIdx = 0;
+            let minD = Infinity;
+            for (let i = 0; i < stopsCoords.length; i++) {
+                let d = getDistance(busLat, busLon, stopsCoords[i].lat, stopsCoords[i].lon);
+                if (d < minD) {
+                    minD = d;
+                    closestIdx = i;
+                }
+            }
+
+            const completedStops = stopsCoords.slice(0, closestIdx + 1);
+            const remainingStops = stopsCoords.slice(closestIdx);
+
+            let completedCoords = [];
+            if (completedStops.length > 0) {
+                let completedWaypoints = completedStops.map(s => `${s.lon},${s.lat}`).join(';');
+                completedWaypoints += `;${busLon},${busLat}`;
+                try {
+                    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${completedWaypoints}?overview=full&geometries=geojson`);
+                    const data = await res.json();
+                    if (data.routes && data.routes.length > 0) {
+                        completedCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    }
+                } catch(e) {
+                    completedCoords = completedStops.map(s => [s.lat, s.lon]);
+                    completedCoords.push([busLat, busLon]);
+                }
+            }
+
+            let remainingCoords = [];
+            let remainingWaypoints = `${busLon},${busLat}`;
+            if (remainingStops.length > 0) {
+                remainingWaypoints += ';' + remainingStops.map(s => `${s.lon},${s.lat}`).join(';');
+            }
+            if (stopsCoords[stopsCoords.length - 1].name !== "KRCE Campus") {
+                remainingWaypoints += `;${STOP_COORDS["KRCE Campus"][1]},${STOP_COORDS["KRCE Campus"][0]}`;
+            }
+
+            let remainingDistance = 0;
+            let remainingDuration = 0;
+            try {
+                const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${remainingWaypoints}?overview=full&geometries=geojson`);
+                const data = await res.json();
+                if (data.routes && data.routes.length > 0) {
+                    remainingCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    remainingDistance = data.routes[0].distance;
+                    remainingDuration = data.routes[0].duration;
+                }
+            } catch(e) {
+                remainingCoords = [[busLat, busLon]];
+                remainingStops.forEach(s => remainingCoords.push([s.lat, s.lon]));
+                remainingCoords.push([STOP_COORDS["KRCE Campus"][0], STOP_COORDS["KRCE Campus"][1]]);
+            }
+
+            // Draw Completed segment (GREEN)
+            if (completedCoords.length > 0) {
+                routePolylines.completed = L.polyline(completedCoords, {
+                    color: '#10b981',
+                    weight: 6,
+                    opacity: 0.85
+                }).addTo(map);
+            }
+
+            // Draw Remaining segment (BLUE)
+            if (remainingCoords.length > 0) {
+                routePolylines.remaining = L.polyline(remainingCoords, {
+                    color: '#3b82f6',
+                    weight: 6,
+                    opacity: 0.85,
+                    dashArray: '5, 10'
+                }).addTo(map);
+            }
+
+            // Start marker (Green Flag)
+            const startStop = stopsCoords[0];
+            if (startStop) {
+                const greenFlagIcon = L.divIcon({
+                    className: 'start-marker-icon',
+                    html: '<i class="fa-solid fa-flag" style="color: #10b981; font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>',
+                    iconSize: [24, 24],
+                    iconAnchor: [6, 20]
+                });
+                routeMarkers.start = L.marker([startStop.lat, startStop.lon], { icon: greenFlagIcon })
+                    .addTo(map)
+                    .bindPopup(`<b>Start Stop: ${startStop.name}</b><br>Departure: 07:45 AM`);
+            }
+
+            // Destination marker (Red Flag)
+            const redFlagIcon = L.divIcon({
+                className: 'dest-marker-icon',
+                html: '<i class="fa-solid fa-flag" style="color: #ef4444; font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>',
+                iconSize: [24, 24],
+                iconAnchor: [6, 20]
+            });
+            routeMarkers.destination = L.marker([STOP_COORDS["KRCE Campus"][0], STOP_COORDS["KRCE Campus"][1]], { icon: redFlagIcon })
+                .addTo(map)
+                .bindPopup(`<b>Destination: KRCE Campus</b><br>Arrival ETA: ${formatETA(remainingDuration)}`);
+
+            // Orange Bus Stop Markers
+            stopsCoords.forEach((stop, index) => {
+                if (index === 0) return;
+                
+                const orangeIcon = L.divIcon({
+                    className: 'stop-marker-icon',
+                    html: `<div style="width: 18px; height: 18px; background: #f97316; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: bold;">${index}</div>`,
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                });
+
+                const d = getDistance(busLat, busLon, stop.lat, stop.lon);
+                const distanceText = d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${d.toFixed(0)} m`;
+                const etaText = formatETA(d / 8.3);
+
+                const marker = L.marker([stop.lat, stop.lon], { icon: orangeIcon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <b>Stop #${index}: ${stop.name}</b><br>
+                        Distance from Bus: ${distanceText}<br>
+                        ETA: ${etaText}
+                    `);
+                routeMarkers.stops.push(marker);
+            });
+
+            // Update Panel stats
+            updateRouteInfoPanel(bus, live, remainingDistance, remainingDuration, completedStops.length, stopsCoords.length);
+        }
+
+        function formatETA(durationSeconds) {
+            if (!durationSeconds || durationSeconds <= 0) return "Arrived";
+            const minutes = Math.round(durationSeconds / 60);
+            if (minutes < 60) return `${minutes} mins`;
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${hours}h ${mins}m`;
+        }
+
+        function updateRouteInfoPanel(bus, live, remainingDistance, remainingDuration, completedCount, totalStops) {
+            document.getElementById('route-panel-name').innerText = bus.route_name || bus.routeName || "Route";
+            document.getElementById('route-panel-bus').innerText = bus.number;
+            document.getElementById('route-panel-driver').innerText = bus.driver_name || "Unassigned";
+            document.getElementById('route-panel-speed').innerText = `${live.speed} km/h`;
+            
+            // Assume 15km fallback total route length if not measurable
+            const totalDistMeters = 15000;
+            const remainingDistMeters = remainingDistance || 0;
+            const coveredDistMeters = Math.max(0, totalDistMeters - remainingDistMeters);
+
+            document.getElementById('route-panel-total-dist').innerText = `${(totalDistMeters / 1000).toFixed(1)} km`;
+            document.getElementById('route-panel-covered-dist').innerText = `${(coveredDistMeters / 1000).toFixed(1)} km`;
+            document.getElementById('route-panel-remaining-dist').innerText = `${(remainingDistMeters / 1000).toFixed(1)} km`;
+            document.getElementById('route-panel-eta').innerText = formatETA(remainingDuration);
+
+            // Stops info
+            const nextStopName = (bus.stops && bus.stops[completedCount]) ? bus.stops[completedCount] : "KRCE Campus";
+            const currStopName = (bus.stops && bus.stops[completedCount - 1]) ? bus.stops[completedCount - 1] : "Start";
+            document.getElementById('route-panel-currstop').innerText = currStopName;
+            document.getElementById('route-panel-nextstop').innerText = nextStopName;
+
+            const progressPct = Math.min(100, Math.round((coveredDistMeters / totalDistMeters) * 100));
+            const remainingPct = 100 - progressPct;
+
+            document.getElementById('route-progress-pct-completed').innerText = `${progressPct}%`;
+            document.getElementById('route-progress-pct-remaining').innerText = `${remainingPct}%`;
+
+            document.getElementById('route-progress-bar-completed').style.width = `${progressPct}%`;
+            document.getElementById('route-progress-bar-remaining').style.width = `${remainingPct}%`;
+
+            document.getElementById('route-info-panel').style.display = 'block';
+        }
+
+        function clearRouteOverlays() {
+            if (routePolylines.completed) {
+                map.removeLayer(routePolylines.completed);
+                routePolylines.completed = null;
+            }
+            if (routePolylines.remaining) {
+                map.removeLayer(routePolylines.remaining);
+                routePolylines.remaining = null;
+            }
+            if (routeMarkers.start) {
+                map.removeLayer(routeMarkers.start);
+                routeMarkers.start = null;
+            }
+            if (routeMarkers.destination) {
+                map.removeLayer(routeMarkers.destination);
+                routeMarkers.destination = null;
+            }
+            routeMarkers.stops.forEach(m => map.removeLayer(m));
+            routeMarkers.stops = [];
+        }
+
+        function clearActiveRoute() {
+            clearRouteOverlays();
+            activeBusId = null;
+            document.getElementById('route-info-panel').style.display = 'none';
+            loadBusRoutes(); // Re-render default icons
+        }
+    </script>
+</body>
+</html>

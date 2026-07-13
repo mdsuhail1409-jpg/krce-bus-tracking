@@ -1,0 +1,44 @@
+"""
+KRCE Bus Tracking System — RFID routes.
+POST /api/rfid/tap
+"""
+
+import uuid
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.auth import current_user
+from app.models import RfidTap
+from app.state import live_buses
+from app.utils import today, now_str
+from app import database as db_module
+
+router = APIRouter()
+
+
+@router.post("/api/rfid/tap")
+async def rfid_tap(req: RfidTap, u=Depends(current_user)):
+    db = db_module.db
+    stu = await db.users.find_one({"rfid_card": req.rfid_card, "is_active": 1}, {"_id": 0, "id": 1, "name": 1})
+    if not stu:
+        raise HTTPException(404, "RFID card not registered")
+
+    td = today()
+    last_tap = await db.attendance.find_one(
+        {"user_id": stu["id"], "date": td},
+        {"_id": 0, "tap_type": 1},
+        sort=[("tap_time", -1)]
+    )
+    tap_type = "exited" if (last_tap and last_tap["tap_type"] == "boarded") else "boarded"
+
+    await db.attendance.insert_one({
+        "id": str(uuid.uuid4()), "user_id": stu["id"], "bus_id": req.bus_id,
+        "tap_type": tap_type, "tap_time": now_str(), "stop_name": req.stop_name,
+        "lat": req.lat, "lon": req.lon, "date": td
+    })
+
+    if req.bus_id in live_buses:
+        delta = 1 if tap_type == "boarded" else -1
+        live_buses[req.bus_id]["passengers"] = max(
+            0, live_buses[req.bus_id].get("passengers", 0) + delta
+        )
+    return {"status": "ok", "tap_type": tap_type, "student_name": stu["name"]}
