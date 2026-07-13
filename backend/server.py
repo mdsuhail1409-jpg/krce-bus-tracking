@@ -1381,7 +1381,7 @@ async def websocket_ep(ws: WebSocket, token: str = Query(...)):
 # ═══════════════════════════════════════════════════════════════════
 @app.get("/", response_class=HTMLResponse)
 async def root(req: Request):
-    return templates.TemplateResponse("passenger.html", {"request": req})
+    return templates.TemplateResponse("index.html", {"request": req})
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(req: Request):
