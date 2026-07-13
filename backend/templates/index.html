@@ -1527,9 +1527,15 @@
             }
 
             wsConn = new WebSocket(`${WS_BASE}/ws?token=${token}`);
+            let wsPingInterval = null;
 
             wsConn.onopen = () => {
                 console.log('WS Connection established');
+                wsPingInterval = setInterval(() => {
+                    if (wsConn && wsConn.readyState === WebSocket.OPEN) {
+                        wsConn.send(JSON.stringify({ type: 'ping' }));
+                    }
+                }, 1000);
             };
 
             wsConn.onmessage = (event) => {
@@ -1562,6 +1568,9 @@
             };
 
             wsConn.onclose = () => {
+                if (wsPingInterval) {
+                    clearInterval(wsPingInterval);
+                }
                 console.log('WS Connection closed, retrying in 5 seconds...');
                 setTimeout(connectWebSocket, 5000);
             };

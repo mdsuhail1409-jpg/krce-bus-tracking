@@ -1718,7 +1718,16 @@
             }
             const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const WS_BASE = IS_LOCAL ? window.location.origin.replace(/^http/, 'ws') : 'wss://krce-bus-tracking.onrender.com';
+            let wsPingInterval = null;
             wsConn = new WebSocket(`${WS_BASE}/ws?token=${token}`);
+
+            wsConn.onopen = () => {
+                wsPingInterval = setInterval(() => {
+                    if (wsConn && wsConn.readyState === WebSocket.OPEN) {
+                        wsConn.send(JSON.stringify({ type: 'ping' }));
+                    }
+                }, 1000);
+            };
 
             wsConn.onmessage = (event) => {
                 try {
@@ -1747,6 +1756,9 @@
             };
 
             wsConn.onclose = () => {
+                if (wsPingInterval) {
+                    clearInterval(wsPingInterval);
+                }
                 setTimeout(connectWebSocket, 5000);
             };
         }
