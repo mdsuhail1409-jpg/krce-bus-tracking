@@ -919,8 +919,8 @@
         
         // Base API endpoints
         const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_BASE = IS_LOCAL ? window.location.origin : 'https://krce-bus-backend.onrender.com';
-        const WS_BASE = IS_LOCAL ? ((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host) : 'wss://krce-bus-backend.onrender.com';
+        const API_BASE = IS_LOCAL ? window.location.origin : 'https://krce-bus-tracking.onrender.com';
+        const WS_BASE = IS_LOCAL ? ((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host) : 'wss://krce-bus-tracking.onrender.com';
 
         // Initialize portal check on load
         window.addEventListener('DOMContentLoaded', () => {

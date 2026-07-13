@@ -1602,7 +1602,7 @@
         let globalBuses = [];
 
         const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_BASE = IS_LOCAL ? window.location.origin : 'https://krce-bus-backend.onrender.com';
+        const API_BASE = IS_LOCAL ? window.location.origin : 'https://krce-bus-tracking.onrender.com';
 
         // Fallback Mock Data for Premium Frontend Feel
         const mockStats = {
@@ -1717,7 +1717,7 @@
                 try { wsConn.close(); } catch(e){}
             }
             const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const WS_BASE = IS_LOCAL ? window.location.origin.replace(/^http/, 'ws') : 'wss://krce-bus-backend.onrender.com';
+            const WS_BASE = IS_LOCAL ? window.location.origin.replace(/^http/, 'ws') : 'wss://krce-bus-tracking.onrender.com';
             wsConn = new WebSocket(`${WS_BASE}/ws?token=${token}`);
 
             wsConn.onmessage = (event) => {
