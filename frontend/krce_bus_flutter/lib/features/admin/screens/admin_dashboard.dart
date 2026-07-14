@@ -6,6 +6,9 @@ import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'users_screen.dart';
+import 'registrations_screen.dart';
+import '../widgets/send_alert_dialog.dart';
 
 class AdminDashboard extends ConsumerStatefulWidget {
   const AdminDashboard({super.key});
@@ -110,6 +113,101 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                               color: Colors.white, size: 40),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Admin Controls
+                    const Text('Admin Controls',
+                        style: TextStyle(
+                            color: AppColors.textColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16)),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const UsersScreen()),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceColor,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.borderColor),
+                              ),
+                              child: const Column(
+                                children: [
+                                  Icon(Icons.supervised_user_circle, color: AppColors.accentCyan, size: 28),
+                                  SizedBox(height: 8),
+                                  Text('Users', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text('Manage roles', style: TextStyle(color: AppColors.mutedText, fontSize: 10), textAlign: TextAlign.center),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final result = await Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const RegistrationsScreen()),
+                              );
+                              if (result == true) {
+                                _fetchAll();
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceColor,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.borderColor),
+                              ),
+                              child: const Column(
+                                children: [
+                                  Icon(Icons.how_to_reg, color: AppColors.accentPurple, size: 28),
+                                  SizedBox(height: 8),
+                                  Text('Approvals', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text('Review pending', style: TextStyle(color: AppColors.mutedText, fontSize: 10), textAlign: TextAlign.center),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final result = await showDialog<bool>(
+                                context: context,
+                                builder: (_) => SendAlertDialog(buses: _buses),
+                              );
+                              if (result == true) {
+                                _fetchAll();
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceColor,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.borderColor),
+                              ),
+                              child: const Column(
+                                children: [
+                                  Icon(Icons.campaign, color: AppColors.errorRed, size: 28),
+                                  SizedBox(height: 8),
+                                  Text('Broadcast', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text('Send alerts', style: TextStyle(color: AppColors.mutedText, fontSize: 10), textAlign: TextAlign.center),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 20),
 

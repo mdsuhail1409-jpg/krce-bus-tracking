@@ -142,4 +142,73 @@ class ApiService {
         options: Options(headers: _authHeader(token)));
     return GenericResponse.fromJson(res.data);
   }
+
+  // ── Admin Users ───────────────────────────────────────────
+  Future<List<User>> getAdminUsers(String token, {String role = ""}) async {
+    final res = await _dio.get('/api/admin/users',
+        queryParameters: role.isNotEmpty ? {'role': role} : null,
+        options: Options(headers: _authHeader(token)));
+    return (res.data as List).map((e) => User.fromJson(e)).toList();
+  }
+
+  Future<GenericResponse> toggleUser(String token, String userId) async {
+    final res = await _dio.post('/api/admin/users/$userId/toggle',
+        options: Options(headers: _authHeader(token)));
+    return GenericResponse.fromJson(res.data);
+  }
+
+  // ── Admin Registrations ────────────────────────────────────
+  Future<List<Registration>> getAdminRegistrations(String token, {String status = "pending"}) async {
+    final res = await _dio.get('/api/admin/registrations',
+        queryParameters: {'status': status},
+        options: Options(headers: _authHeader(token)));
+    return (res.data as List).map((e) => Registration.fromJson(e)).toList();
+  }
+
+  Future<GenericResponse> actionRegistration(
+      String token, {
+      required String regId,
+      required String action,
+      required String notes,
+      String? rfidCard,
+      String? busId,
+  }) async {
+    final res = await _dio.post('/api/admin/registrations/action',
+        data: {
+          'reg_id': regId,
+          'action': action,
+          'notes': notes,
+          'rfid_card': rfidCard,
+          'bus_id': busId,
+        },
+        options: Options(headers: _authHeader(token)));
+    return GenericResponse.fromJson(res.data);
+  }
+
+  // ── Admin Alerts ──────────────────────────────────────────
+  Future<GenericResponse> sendAlert(
+      String token, {
+      required String title,
+      required String message,
+      required String alertType,
+      required String targetRole,
+      String? targetBus,
+  }) async {
+    final res = await _dio.post('/api/admin/alerts',
+        data: {
+          'title': title,
+          'message': message,
+          'alert_type': alertType,
+          'target_role': targetRole,
+          'target_bus': targetBus,
+        },
+        options: Options(headers: _authHeader(token)));
+    return GenericResponse.fromJson(res.data);
+  }
+
+  Future<GenericResponse> resolveAlert(String token, String alertId) async {
+    final res = await _dio.post('/api/admin/alerts/$alertId/resolve',
+        options: Options(headers: _authHeader(token)));
+    return GenericResponse.fromJson(res.data);
+  }
 }

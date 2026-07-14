@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
 import 'dart:ui' as ui;
-import 'dart:math';
 import '../../../core/config/app_config.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
@@ -104,7 +102,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     with TickerProviderStateMixin {
   static const _campus = LatLng(AppConfig.collegeLat, AppConfig.collegeLon);
 
-  final MapController _mapCtrl = MapController();
+  GoogleMapController? _mapCtrl;
   List<Bus> _buses = [];
   Map<String, LatLng> _animatedPositions = {};
   Map<String, AnimationController> _animControllers = {};
@@ -115,6 +113,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
   LatLng? _myLocation;
   Timer? _pollTimer;
 
+  // Cache for marker icons
+  BitmapDescriptor? _campusIcon;
+  final Map<String, BitmapDescriptor> _busIcons = {};
+
   // Route state
   List<LatLng> _completedRoute = [];
   List<LatLng> _remainingRoute = [];
@@ -123,9 +125,41 @@ class _MapScreenState extends ConsumerState<MapScreen>
   Bus? _trackedBus;
   bool _showRoutePanel = false;
 
+  static const String _darkMapStyle = '''
+  [
+    {
+      "elementType": "geometry",
+      "stylers": [{"color": "#212121"}]
+    },
+    {
+      "elementType": "labels.icon",
+      "stylers": [{"visibility": "off"}]
+    },
+    {
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#757575"}]
+    },
+    {
+      "elementType": "labels.text.stroke",
+      "stylers": [{"color": "#212121"}]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry.fill",
+      "stylers": [{"color": "#2c2c2c"}]
+    },
+    {
+      "featureType": "water",
+      "elementType": "geometry",
+      "stylers": [{"color": "#000000"}]
+    }
+  ]
+  ''';
+
   @override
   void initState() {
     super.initState();
+    _initMarkerIcons();
     _startPolling();
     _getMyLocation();
   }
@@ -136,7 +170,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
     for (final c in _animControllers.values) {
       c.dispose();
     }
+    _mapCtrl?.dispose();
     super.dispose();
+  }
+
+  Future<void> _initMarkerIcons() async {
+    final campusIcon = await _getCampusMarkerIcon();
+    if (mounted) {
+      setState(() {
+        _campusIcon = campusIcon;
+      });
+    }
   }
 
   void _startPolling() {
@@ -155,6 +199,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
         _errorMsg = null;
       });
       _updateAnimatedPositions(buses);
+      _updateBusIcons(buses);
       if (_trackedBus != null) {
         final updated = buses.firstWhere(
           (b) => b.id == _trackedBus!.id,
@@ -198,6 +243,25 @@ class _MapScreenState extends ConsumerState<MapScreen>
         }
       });
       ctrl.forward();
+    }
+  }
+
+  Future<void> _updateBusIcons(List<Bus> buses) async {
+    for (final bus in buses) {
+      if (bus.live == null) continue;
+      final isOnline = bus.live!.status != 'offline';
+      final label = bus.number.contains('-')
+          ? bus.number.split('-').last
+          : bus.number;
+      final key = '${bus.id}_${isOnline}_$label';
+      if (!_busIcons.containsKey(key)) {
+        final icon = await _getBusMarkerIcon(label, isOnline);
+        if (mounted) {
+          setState(() {
+            _busIcons[key] = icon;
+          });
+        }
+      }
     }
   }
 
@@ -260,115 +324,135 @@ class _MapScreenState extends ConsumerState<MapScreen>
     return '${mins ~/ 60}h ${mins % 60}m';
   }
 
+  Future<BitmapDescriptor> _getCampusMarkerIcon() async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    const size = Size(96, 96);
+    
+    final paint = Paint()..isAntiAlias = true;
+    paint.color = Colors.white;
+    canvas.drawCircle(const Offset(48, 48), 48, paint);
+    
+    paint.color = const Color(0xFF8B5CF6);
+    canvas.drawCircle(const Offset(48, 48), 42, paint);
+    
+    paint.color = Colors.white;
+    canvas.drawCircle(const Offset(48, 48), 19, paint);
+
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(96, 96);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    final bytes = byteData!.buffer.asUint8List();
+    return BitmapDescriptor.fromBytes(bytes);
+  }
+
+  Future<BitmapDescriptor> _getBusMarkerIcon(String label, bool isOnline) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    const size = Size(140, 100);
+    final painter = BusMarkerPainter(label: label, isOnline: isOnline);
+    painter.paint(canvas, size);
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(140, 100);
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    final bytes = byteData!.buffer.asUint8List();
+    return BitmapDescriptor.fromBytes(bytes);
+  }
+
+  Set<Marker> _buildMarkers() {
+    final markers = <Marker>{};
+
+    // Campus marker
+    markers.add(Marker(
+      markerId: const MarkerId('campus'),
+      position: _campus,
+      icon: _campusIcon ?? BitmapDescriptor.defaultMarker,
+    ));
+
+    // My location marker
+    if (_myLocation != null) {
+      markers.add(Marker(
+        markerId: const MarkerId('my_location'),
+        position: _myLocation!,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+      ));
+    }
+
+    // Bus markers
+    for (final bus in _buses) {
+      if (bus.live == null) continue;
+      final pos = _animatedPositions[bus.id] ?? LatLng(bus.live!.lat, bus.live!.lon);
+      final isOnline = bus.live!.status != 'offline';
+      final label = bus.number.contains('-')
+          ? bus.number.split('-').last
+          : bus.number;
+      final key = '${bus.id}_${isOnline}_$label';
+
+      markers.add(Marker(
+        markerId: MarkerId(bus.id),
+        position: pos,
+        icon: _busIcons[key] ?? BitmapDescriptor.defaultMarker,
+        onTap: () => _drawRoute(bus),
+      ));
+    }
+
+    return markers;
+  }
+
+  Set<Polyline> _buildPolylines() {
+    final polylines = <Polyline>{};
+
+    if (_completedRoute.isNotEmpty) {
+      polylines.add(Polyline(
+        polylineId: const PolylineId('completed_route'),
+        points: _completedRoute,
+        color: AppColors.successGreen,
+        width: 6,
+      ));
+    }
+
+    if (_remainingRoute.isNotEmpty) {
+      polylines.add(Polyline(
+        polylineId: const PolylineId('remaining_route'),
+        points: _remainingRoute,
+        color: AppColors.indigoPrimary,
+        width: 6,
+      ));
+    }
+
+    return polylines;
+  }
+
+  void _updateMapStyle() {
+    if (_mapCtrl != null) {
+      if (_isDarkMode) {
+        _mapCtrl!.setMapStyle(_darkMapStyle);
+      } else {
+        _mapCtrl!.setMapStyle(null);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
           // ── Map ──────────────────────────────────────────
-          FlutterMap(
-            mapController: _mapCtrl,
-            options: MapOptions(
-              initialCenter: _campus,
-              initialZoom: 12.5,
+          GoogleMap(
+            initialCameraPosition: const CameraPosition(
+              target: _campus,
+              zoom: 12.5,
             ),
-            children: [
-              // Tile layer
-              TileLayer(
-                urlTemplate: _isDarkMode
-                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                subdomains: _isDarkMode
-                    ? const ['a', 'b', 'c', 'd']
-                    : const [''],
-                userAgentPackageName: 'com.krce.bus',
-              ),
-
-              // Completed route (green)
-              if (_completedRoute.length > 1)
-                PolylineLayer(polylines: [
-                  Polyline(
-                    points: _completedRoute,
-                    color: AppColors.successGreen,
-                    strokeWidth: 6,
-                  )
-                ]),
-
-              // Remaining route (blue dashed)
-              if (_remainingRoute.length > 1)
-                PolylineLayer(polylines: [
-                  Polyline(
-                    points: _remainingRoute,
-                    color: AppColors.indigoPrimary,
-                    strokeWidth: 6,
-                    isDotted: true,
-                  )
-                ]),
-
-              // My location
-              if (_myLocation != null)
-                MarkerLayer(markers: [
-                  Marker(
-                    point: _myLocation!,
-                    width: 20,
-                    height: 20,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.blue.withOpacity(0.4),
-                              blurRadius: 8)
-                        ],
-                      ),
-                    ),
-                  )
-                ]),
-
-              // Campus marker
-              MarkerLayer(markers: [
-                Marker(
-                  point: _campus,
-                  width: 50,
-                  height: 50,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.indigoPrimary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                    ),
-                    child: const Icon(Icons.school,
-                        color: Colors.white, size: 24),
-                  ),
-                ),
-              ]),
-
-              // Bus markers
-              MarkerLayer(
-                markers: _buses.where((b) => b.live != null).map((bus) {
-                  final pos = _animatedPositions[bus.id] ??
-                      LatLng(bus.live!.lat, bus.live!.lon);
-                  final isOnline = bus.live!.status != 'offline';
-                  final label = bus.number.contains('-')
-                      ? bus.number.split('-').last
-                      : bus.number;
-                  return Marker(
-                    point: pos,
-                    width: 70,
-                    height: 56,
-                    child: GestureDetector(
-                      onTap: () => _drawRoute(bus),
-                      child: CustomPaint(
-                        painter: BusMarkerPainter(
-                            label: label, isOnline: isOnline),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+            zoomControlsEnabled: false,
+            compassEnabled: true,
+            myLocationButtonEnabled: false,
+            markers: _buildMarkers(),
+            polylines: _buildPolylines(),
+            onMapCreated: (controller) {
+              _mapCtrl = controller;
+              _updateMapStyle();
+            },
           ),
 
           // ── Error Banner ─────────────────────────────────
@@ -396,15 +480,19 @@ class _MapScreenState extends ConsumerState<MapScreen>
               children: [
                 _mapFab(
                     icon: Icons.layers,
-                    onTap: () =>
-                        setState(() => _isDarkMode = !_isDarkMode)),
+                    onTap: () {
+                      setState(() => _isDarkMode = !_isDarkMode);
+                      _updateMapStyle();
+                    }),
                 const SizedBox(height: 10),
                 _mapFab(
                     icon: Icons.my_location,
                     onTap: () {
                       _getMyLocation();
-                      if (_myLocation != null) {
-                        _mapCtrl.move(_myLocation!, 16);
+                      if (_myLocation != null && _mapCtrl != null) {
+                        _mapCtrl!.animateCamera(
+                          CameraUpdate.newLatLngZoom(_myLocation!, 16),
+                        );
                       }
                     }),
                 const SizedBox(height: 10),
@@ -465,9 +553,13 @@ class _MapScreenState extends ConsumerState<MapScreen>
                     ..._buses.take(3).map((b) => _BusListItem(
                           bus: b,
                           onTap: () {
-                            if (b.live != null) {
-                              _mapCtrl.move(
-                                  LatLng(b.live!.lat, b.live!.lon), 14);
+                            if (b.live != null && _mapCtrl != null) {
+                              _mapCtrl!.animateCamera(
+                                CameraUpdate.newLatLngZoom(
+                                  LatLng(b.live!.lat, b.live!.lon),
+                                  14,
+                                ),
+                              );
                               _drawRoute(b);
                             }
                           },
@@ -531,7 +623,6 @@ class _RouteInfoPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOnline = bus.live?.status != 'offline' && bus.live != null;
     final totalDist = 15000.0;
     final coveredDist = (totalDist - remainingDist).clamp(0, totalDist);
     final progress = (coveredDist / totalDist).clamp(0.0, 1.0);

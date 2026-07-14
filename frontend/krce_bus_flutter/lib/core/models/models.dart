@@ -287,3 +287,81 @@ class GenericResponse {
         message: json['message'],
       );
 }
+
+class Registration {
+  final String id;
+  final String name;
+  final String email;
+  final String role;
+  final String? collegeId;
+  final String? rfidCard;
+  final String? busId;
+  final String? parentOf;
+  final String? phone;
+  final String status;
+
+  Registration({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    this.collegeId,
+    this.rfidCard,
+    this.busId,
+    this.parentOf,
+    this.phone,
+    required this.status,
+  });
+
+  factory Registration.fromJson(Map<String, dynamic> json) => Registration(
+        id: json['id'] ?? '',
+        name: json['name'] ?? '',
+        email: json['email'] ?? '',
+        role: json['role'] ?? 'student',
+        collegeId: json['college_id'],
+        rfidCard: json['rfid_card'],
+        busId: json['bus_id'],
+        parentOf: json['parent_of'],
+        phone: json['phone'],
+        status: json['status'] ?? 'pending',
+      );
+}
+
+class User {
+  final String id;
+  final String name;
+  final String email;
+  final String role;
+  final String? collegeId;
+  final String? rfidCard;
+  final String? busId;
+  final String? parentOf;
+  final String? phone;
+  final int isActive;
+
+  User({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    this.collegeId,
+    this.rfidCard,
+    this.busId,
+    this.parentOf,
+    this.phone,
+    required this.isActive,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) => User(
+        id: json['id'] ?? '',
+        name: json['name'] ?? '',
+        email: json['email'] ?? '',
+        role: json['role'] ?? 'student',
+        collegeId: json['college_id'],
+        rfidCard: json['rfid_card'],
+        busId: json['bus_id'],
+        parentOf: json['parent_of'],
+        phone: json['phone'],
+        isActive: json['is_active'] ?? 1,
+      );
+}

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
@@ -65,23 +64,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // OSM Map Background
-          FlutterMap(
-            options: const MapOptions(
-              initialCenter: _collegeLatLng,
-              initialZoom: 15,
-              interactionOptions: InteractionOptions(
-                flags: InteractiveFlag.none,
-              ),
+          GoogleMap(
+            initialCameraPosition: const CameraPosition(
+              target: _collegeLatLng,
+              zoom: 15,
             ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                subdomains: const ['a', 'b', 'c', 'd'],
-                userAgentPackageName: 'com.krce.bus',
-              ),
-            ],
+            zoomControlsEnabled: false,
+            compassEnabled: false,
+            myLocationButtonEnabled: false,
+            onMapCreated: (controller) {
+              controller.setMapStyle('''
+              [
+                {
+                  "elementType": "geometry",
+                  "stylers": [{"color": "#212121"}]
+                },
+                {
+                  "elementType": "labels.icon",
+                  "stylers": [{"visibility": "off"}]
+                },
+                {
+                  "elementType": "labels.text.fill",
+                  "stylers": [{"color": "#757575"}]
+                },
+                {
+                  "elementType": "labels.text.stroke",
+                  "stylers": [{"color": "#212121"}]
+                },
+                {
+                  "featureType": "road",
+                  "elementType": "geometry.fill",
+                  "stylers": [{"color": "#2c2c2c"}]
+                },
+                {
+                  "featureType": "water",
+                  "elementType": "geometry",
+                  "stylers": [{"color": "#000000"}]
+                }
+              ]
+              ''');
+            },
           ),
 
           // Dark overlay
