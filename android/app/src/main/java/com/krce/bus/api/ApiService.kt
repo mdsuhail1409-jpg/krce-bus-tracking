@@ -87,6 +87,45 @@ interface ApiService {
         @Body req: RfidTapReq
     ): RfidTapRes
 
+    @GET("/api/admin/drivers")
+    suspend fun getDrivers(@Header("Authorization") token: String): List<com.krce.bus.models.Driver>
+
+    @GET("/api/admin/users")
+    suspend fun getUsers(@Header("Authorization") token: String): List<com.krce.bus.models.User>
+
+    @GET("/api/admin/registrations")
+    suspend fun getRegistrations(@Header("Authorization") token: String): List<com.krce.bus.models.Registration>
+
+    @POST("/api/admin/registrations/{id}/approve")
+    suspend fun approveRegistration(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): GenericResponse
+
+    @POST("/api/admin/registrations/{id}/reject")
+    suspend fun rejectRegistration(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): GenericResponse
+
+    @POST("/api/admin/users/{id}/deactivate")
+    suspend fun deactivateUser(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): GenericResponse
+
+    @POST("/api/admin/alerts")
+    suspend fun sendAlert(
+        @Header("Authorization") token: String,
+        @Body req: com.krce.bus.models.CreateAlertReq
+    ): GenericResponse
+
+    @POST("/api/admin/alerts/{id}/resolve")
+    suspend fun resolveAlert(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): GenericResponse
+
     companion object {
         // URL is read from BuildConfig — set via gradle.properties (production)
         // or local.properties (dev). No hardcoded IPs anywhere.

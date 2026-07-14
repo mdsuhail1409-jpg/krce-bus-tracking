@@ -124,5 +124,55 @@ data class AdminStats(
     @SerializedName("pending_regs") val pendingRegs: Int,
     @SerializedName("total_drivers") val totalDrivers: Int,
     @SerializedName("active_alerts") val activeAlerts: Int,
-    @SerializedName("live_buses") val liveBuses: Int
+    @SerializedName("live_buses") val liveBuses: Int,
+    @SerializedName("bus_capacities") val busCapacities: List<BusCapacity>? = null
+)
+
+data class BusCapacity(
+    @SerializedName("bus_id") val busId: String,
+    @SerializedName("bus_number") val busNumber: String,
+    @SerializedName("route_name") val routeName: String,
+    val boarded: Int,
+    val capacity: Int
+)
+
+data class Driver(
+    val id: String,
+    val name: String,
+    val phone: String,
+    @SerializedName("license_no") val licenseNo: String?,
+    @SerializedName("assigned_bus") val assignedBus: String?,
+    @SerializedName("route_coverage") val routeCoverage: String?,
+    val status: String
+)
+
+data class User(
+    val id: String,
+    val name: String,
+    val email: String,
+    @SerializedName("college_id") val collegeId: String?,
+    val role: String,
+    @SerializedName("bus_id") val busId: String?,
+    @SerializedName("rfid_card") val rfidCard: String?,
+    val status: String,
+    val phone: String?
+)
+
+data class Registration(
+    val id: String,
+    @SerializedName("request_date") val requestDate: String,
+    @SerializedName("applicant_name") val applicantName: String,
+    @SerializedName("email_address") val email: String,
+    @SerializedName("phone_number") val phone: String,
+    @SerializedName("requested_role") val requestedRole: String,
+    @SerializedName("college_id") val collegeId: String?,
+    val status: String
+)
+
+data class CreateAlertReq(
+    val title: String,
+    val message: String,
+    @SerializedName("alert_type") val alertType: String,
+    @SerializedName("target_role") val targetRole: String = "Everyone",
+    @SerializedName("target_bus") val targetBus: String? = null
 )

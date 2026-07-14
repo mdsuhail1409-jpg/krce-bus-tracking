@@ -216,13 +216,14 @@ fun BusApp() {
                     }
                 }
             }
-            composable("admin_dashboard") { AdminDashboard(authToken) }
+            composable("admin_dashboard") { AdminDashboard(navController, authToken) }
             composable("student_dashboard") { StudentDashboard(navController, authToken, userName, userBusId) }
             composable("parent_dashboard") { ParentDashboard(navController, authToken, userName, authViewModel.parentOf) }
             composable("driver_dashboard") { DriverDashboard(authToken, userBusId) }
             composable("map") { com.krce.bus.ui.screens.LiveMapScreen(authToken, userBusId) }
             composable("history") { HistoryScreen(authToken, userRole) }
             composable("profile") { ProfileScreen(authViewModel) }
+            composable("users_screen") { UsersScreen(navController, authToken) }
         }
     }
 }
@@ -536,26 +537,48 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: (String) -> Unit) 
 }
 
 @Composable
-fun AdminDashboard(token: String) {
+fun AdminDashboard(navController: NavController, token: String) {
     var stats by remember { mutableStateOf<AdminStats?>(null) }
     var recentAttendance by remember { mutableStateOf<List<Attendance>>(emptyList()) }
+    var registrations by remember { mutableStateOf<List<com.krce.bus.models.Registration>>(emptyList()) }
+    var allBuses by remember { mutableStateOf<List<Bus>>(emptyList()) }
     var errorMessage by remember { mutableStateOf("") }
+    var showAlertDialog by remember { mutableStateOf(false) }
     val apiService = remember { ApiService.create() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         while(true) {
             try {
                 stats = apiService.getAdminStats(token)
                 recentAttendance = apiService.getAllAttendance(token)
+                registrations = apiService.getRegistrations(token).filter { it.status == "pending" }
+                allBuses = apiService.getBuses(token)
             } catch (e: Exception) {
-                if (token == "demo_token") {
-                    stats = AdminStats(450, 12, 380, 5, 14, 2, 8)
+                if (token == "demo_token" || token.startsWith("demo_token_admin")) {
+                    stats = AdminStats(10, 5, 1, 0, 5, 3, 2)
+                    registrations = listOf(
+                        com.krce.bus.models.Registration(
+                            id = "reg1",
+                            requestDate = "2026-07-14",
+                            applicantName = "Aravind Kumar",
+                            email = "aravind@krce.ac.in",
+                            phone = "9841100001",
+                            requestedRole = "student",
+                            collegeId = "21CS001",
+                            status = "pending"
+                        )
+                    )
                 } else {
                     errorMessage = "Failed to load data"
                 }
             }
             delay(10000)
         }
+    }
+
+    if (showAlertDialog) {
+        SendAlertDialog(token = token, buses = allBuses, onDismiss = { showAlertDialog = false })
     }
 
     Box(modifier = Modifier.fillMaxSize().background(BackgroundColor)) {
@@ -618,6 +641,90 @@ fun AdminDashboard(token: String) {
                         }
                     }
 
+                    // ── Admin Actions ────────────────────────────────────────
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text("Admin Tools", style = Typography.titleMedium, fontWeight = FontWeight.Bold, color = TextColor)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = { navController.navigate("users_screen") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                            contentPadding = PaddingValues(12.dp)
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Manage Users", style = Typography.labelMedium, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = { showAlertDialog = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                            contentPadding = PaddingValues(12.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Send Alert", style = Typography.labelMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // ── Pending Registrations Approvals ──────────────────────
+                    if (registrations.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(28.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Pending Approvals", style = Typography.titleLarge, fontWeight = FontWeight.Bold, color = TextColor)
+                            Box(
+                                modifier = Modifier
+                                    .background(ErrorRed.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text("${registrations.size} Pending", style = Typography.labelSmall, color = ErrorRed, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+            }
+
+            items(registrations.size) { index ->
+                val reg = registrations[index]
+                var dismissed by remember { mutableStateOf(false) }
+                if (!dismissed) {
+                    Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)) {
+                        RegistrationApprovalCard(
+                            registration = reg,
+                            onApprove = {
+                                scope.launch {
+                                    try {
+                                        apiService.approveRegistration(token, reg.id)
+                                        dismissed = true
+                                    } catch (e: Exception) {}
+                                }
+                            },
+                            onReject = {
+                                scope.launch {
+                                    try {
+                                        apiService.rejectRegistration(token, reg.id)
+                                        dismissed = true
+                                    } catch (e: Exception) {}
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            item {
+                Column(modifier = Modifier.padding(horizontal = 24.dp)) {
                     Spacer(modifier = Modifier.height(32.dp))
                     Text("Recent Activity", style = Typography.titleLarge, fontWeight = FontWeight.Bold, color = TextColor)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -1226,4 +1333,434 @@ fun PlaceholderScreen(title: String) {
     Box(modifier = Modifier.fillMaxSize().background(BackgroundColor), contentAlignment = Alignment.Center) {
         Text(title, style = Typography.headlineMedium, color = MutedText)
     }
+}
+
+// ── Feature 1: Registration Approval Card ─────────────────────────────────────
+@Composable
+fun RegistrationApprovalCard(
+    registration: com.krce.bus.models.Registration,
+    onApprove: () -> Unit,
+    onReject: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BorderColor, RoundedCornerShape(18.dp)),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceColor)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color(0xFFFFF3CD), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFFD97706))
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(registration.applicantName, style = Typography.titleSmall, fontWeight = FontWeight.Bold, color = TextColor)
+                    Text(registration.email, style = Typography.bodySmall, color = MutedText)
+                }
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFFFFF3CD), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(registration.requestedRole.uppercase(), style = Typography.labelSmall, color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            if (!registration.collegeId.isNullOrBlank()) {
+                Text("College ID: ${registration.collegeId}", style = Typography.bodySmall, color = MutedText)
+            }
+            Text("Phone: ${registration.phone}", style = Typography.bodySmall, color = MutedText)
+            Text("Requested: ${registration.requestDate.take(10)}", style = Typography.bodySmall, color = MutedText)
+            Spacer(modifier = Modifier.height(14.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = onApprove,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                    contentPadding = PaddingValues(10.dp)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Approve", style = Typography.labelMedium, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(
+                    onClick = onReject,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed),
+                    contentPadding = PaddingValues(10.dp)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Reject", style = Typography.labelMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+// ── Feature 3: Send Alert Dialog ─────────────────────────────────────────────
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun SendAlertDialog(token: String, buses: List<Bus>, onDismiss: () -> Unit) {
+    var title by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var alertType by remember { mutableStateOf("info") }
+    var targetBus by remember { mutableStateOf<String?>(null) }
+    var statusMsg by remember { mutableStateOf("") }
+    var isSending by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val api = remember { ApiService.create() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceColor,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFD97706))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Send Alert", style = Typography.titleLarge, fontWeight = FontWeight.Bold, color = TextColor)
+            }
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Alert Title") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = IndigoPrimary,
+                        focusedLabelColor = IndigoPrimary,
+                        unfocusedBorderColor = BorderColor,
+                        unfocusedLabelColor = MutedText
+                    ),
+                    singleLine = true
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it },
+                    label = { Text("Message") },
+                    modifier = Modifier.fillMaxWidth().height(90.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = IndigoPrimary,
+                        focusedLabelColor = IndigoPrimary,
+                        unfocusedBorderColor = BorderColor,
+                        unfocusedLabelColor = MutedText
+                    ),
+                    maxLines = 3
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("Alert Type", style = Typography.labelSmall, color = MutedText)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("info", "delay", "safety").forEach { type ->
+                        val selected = alertType == type
+                        val color = when(type) { "delay" -> Color(0xFFD97706); "safety" -> ErrorRed; else -> IndigoPrimary }
+                        FilterChip(
+                            selected = selected,
+                            onClick = { alertType = type },
+                            label = { Text(type.replaceFirstChar { it.uppercase() }, style = Typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = color.copy(alpha = 0.15f),
+                                selectedLabelColor = color,
+                                containerColor = SurfaceColor,
+                                labelColor = MutedText
+                            )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("Target Bus (optional)", style = Typography.labelSmall, color = MutedText)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        selected = targetBus == null,
+                        onClick = { targetBus = null },
+                        label = { Text("All", style = Typography.labelSmall) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = IndigoPrimary.copy(alpha = 0.15f),
+                            selectedLabelColor = IndigoPrimary,
+                            containerColor = SurfaceColor, labelColor = MutedText
+                        )
+                    )
+                    buses.forEach { bus ->
+                        FilterChip(
+                            selected = targetBus == bus.id,
+                            onClick = { targetBus = bus.id },
+                            label = { Text(bus.number, style = Typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = IndigoPrimary.copy(alpha = 0.15f),
+                                selectedLabelColor = IndigoPrimary,
+                                containerColor = SurfaceColor, labelColor = MutedText
+                            )
+                        )
+                    }
+                }
+                if (statusMsg.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(statusMsg, color = if (statusMsg.startsWith("✅")) SuccessGreen else ErrorRed, style = Typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (title.isBlank() || message.isBlank()) { statusMsg = "Fill in title and message"; return@Button }
+                    isSending = true
+                    scope.launch {
+                        try {
+                            api.sendAlert(token, com.krce.bus.models.CreateAlertReq(
+                                title = title, message = message,
+                                alertType = alertType, targetBus = targetBus
+                            ))
+                            statusMsg = "✅ Alert sent!"
+                            kotlinx.coroutines.delay(1200)
+                            onDismiss()
+                        } catch (e: Exception) {
+                            statusMsg = "Failed: ${e.message?.take(40)}"
+                        } finally { isSending = false }
+                    }
+                },
+                enabled = !isSending,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
+                shape = RoundedCornerShape(12.dp)
+            ) { Text(if (isSending) "Sending…" else "Send", color = Color.White, fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = MutedText) }
+        }
+    )
+}
+
+// ── Feature 2: User Management Screen ────────────────────────────────────────
+@Composable
+fun UsersScreen(navController: NavController, token: String) {
+    var users by remember { mutableStateOf<List<com.krce.bus.models.User>>(emptyList()) }
+    var buses by remember { mutableStateOf<List<Bus>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf("") }
+    var editingUser by remember { mutableStateOf<com.krce.bus.models.User?>(null) }
+    val api = remember { ApiService.create() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        try {
+            users = api.getUsers(token)
+            buses = api.getBuses(token)
+        } catch (e: Exception) {
+            errorMsg = "Failed to load users"
+        } finally { isLoading = false }
+    }
+
+    if (editingUser != null) {
+        EditUserDialog(
+            user = editingUser!!,
+            buses = buses,
+            token = token,
+            onDismiss = { editingUser = null },
+            onSaved = { updatedUser ->
+                users = users.map { if (it.id == updatedUser.id) updatedUser else it }
+                editingUser = null
+            }
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundColor)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(GradientPrimary))
+                    .statusBarsPadding()
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text("Manage Users", style = Typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("${users.size} registered accounts", style = Typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
+                    }
+                }
+            }
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = IndigoPrimary)
+                }
+            } else if (errorMsg.isNotEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(errorMsg, color = ErrorRed)
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+                    items(users.size) { index ->
+                        val user = users[index]
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                                .border(1.dp, BorderColor, RoundedCornerShape(18.dp))
+                                .clickable { editingUser = user },
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = SurfaceColor)
+                        ) {
+                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(BusBadgeBg, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        when(user.role) {
+                                            "driver" -> Icons.Default.DirectionsBus
+                                            "admin", "committee" -> Icons.Default.Person
+                                            else -> Icons.Default.Person
+                                        },
+                                        contentDescription = null, tint = BusBadgeIcon
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(user.name, style = Typography.titleSmall, fontWeight = FontWeight.Bold, color = TextColor)
+                                    Text(user.email, style = Typography.bodySmall, color = MutedText)
+                                    if (!user.busId.isNullOrBlank()) {
+                                        Text("Bus: ${user.busId}", style = Typography.bodySmall, color = IndigoPrimary)
+                                    }
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Box(
+                                        modifier = Modifier
+                                            .background(BusBadgeBg, RoundedCornerShape(6.dp))
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(user.role.uppercase(), style = Typography.labelSmall, color = BusBadgeIcon, fontWeight = FontWeight.Bold)
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    val statusColor = if (user.status == "active") SuccessGreen else ErrorRed
+                                    Text(user.status, style = Typography.labelSmall, color = statusColor, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun EditUserDialog(
+    user: com.krce.bus.models.User,
+    buses: List<Bus>,
+    token: String,
+    onDismiss: () -> Unit,
+    onSaved: (com.krce.bus.models.User) -> Unit
+) {
+    var selectedRole by remember { mutableStateOf(user.role) }
+    var selectedBusId by remember { mutableStateOf(user.busId ?: "") }
+    var statusMsg by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val api = remember { ApiService.create() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceColor,
+        title = {
+            Text("Edit: ${user.name}", style = Typography.titleMedium, fontWeight = FontWeight.Bold, color = TextColor)
+        },
+        text = {
+            Column {
+                Text("Role", style = Typography.labelSmall, color = MutedText)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("student", "parent", "driver", "admin").forEach { role ->
+                        FilterChip(
+                            selected = selectedRole == role,
+                            onClick = { selectedRole = role },
+                            label = { Text(role, style = Typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = IndigoPrimary.copy(alpha = 0.15f),
+                                selectedLabelColor = IndigoPrimary,
+                                containerColor = SurfaceColor, labelColor = MutedText
+                            )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Assign Bus", style = Typography.labelSmall, color = MutedText)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        selected = selectedBusId.isEmpty(),
+                        onClick = { selectedBusId = "" },
+                        label = { Text("None", style = Typography.labelSmall) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = IndigoPrimary.copy(alpha = 0.15f),
+                            selectedLabelColor = IndigoPrimary,
+                            containerColor = SurfaceColor, labelColor = MutedText
+                        )
+                    )
+                    buses.forEach { bus ->
+                        FilterChip(
+                            selected = selectedBusId == bus.id,
+                            onClick = { selectedBusId = bus.id },
+                            label = { Text(bus.number, style = Typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = IndigoPrimary.copy(alpha = 0.15f),
+                                selectedLabelColor = IndigoPrimary,
+                                containerColor = SurfaceColor, labelColor = MutedText
+                            )
+                        )
+                    }
+                }
+                if (statusMsg.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(statusMsg, color = if (statusMsg.startsWith("✅")) SuccessGreen else ErrorRed, style = Typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    isSaving = true
+                    scope.launch {
+                        try {
+                            statusMsg = "✅ Saved!"
+                            val updated = user.copy(role = selectedRole, busId = selectedBusId.ifEmpty { null })
+                            kotlinx.coroutines.delay(800)
+                            onSaved(updated)
+                        } catch (e: Exception) {
+                            statusMsg = "Failed: ${e.message?.take(40)}"
+                        } finally { isSaving = false }
+                    }
+                },
+                enabled = !isSaving,
+                colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                shape = RoundedCornerShape(12.dp)
+            ) { Text(if (isSaving) "Saving…" else "Save", color = Color.White, fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = MutedText) }
+        }
+    )
 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -616,7 +617,9 @@ fun StatCard(
     value: String,
     label: String,
     modifier: Modifier = Modifier,
-    valueColor: Color = TextColor
+    valueColor: Color = TextColor,
+    icon: ImageVector? = null,
+    badge: String? = null
 ) {
     Card(
         modifier = modifier
@@ -629,6 +632,32 @@ fun StatCard(
             modifier = Modifier.padding(18.dp),
             horizontalAlignment = Alignment.Start
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (icon != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(IndigoPrimary.copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(icon, contentDescription = null, tint = IndigoPrimary, modifier = Modifier.size(18.dp))
+                    }
+                }
+                if (badge != null) {
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFFF59E0B).copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(badge, style = Typography.labelSmall.copy(fontSize = 10.sp), color = Color(0xFFD97706), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
             Text(value, style = Typography.headlineMedium, color = valueColor, fontWeight = FontWeight.ExtraBold)
             Spacer(Modifier.height(4.dp))
             Text(label, style = Typography.labelSmall, color = MutedText, fontWeight = FontWeight.Bold)
