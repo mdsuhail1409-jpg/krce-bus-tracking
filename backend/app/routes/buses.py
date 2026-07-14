@@ -13,11 +13,33 @@ from app import database as db_module
 router = APIRouter()
 
 
+async def check_parent_bus_access(db, u, bus_id: str):
+    if u.get("role") == "parent":
+        parent_of = u.get("parent_of")
+        if not parent_of:
+            raise HTTPException(403, "Access Denied: No child associated with your parent account.")
+        child = await db.users.find_one({"college_id": parent_of}, {"_id": 0, "bus_id": 1})
+        if not child or child.get("bus_id") != bus_id:
+            raise HTTPException(403, "Access Denied: You are not authorized to track this bus.")
+
+
 @router.get("/api/buses")
 async def get_buses(u=Depends(current_user)):
     db = db_module.db
     td = today()
-    cursor = db.buses.find({"is_active": 1}, {"_id": 0})
+
+    # If parent, only fetch their child's assigned bus
+    if u.get("role") == "parent":
+        parent_of = u.get("parent_of")
+        if not parent_of:
+            return []
+        child = await db.users.find_one({"college_id": parent_of}, {"_id": 0, "bus_id": 1})
+        if not child or not child.get("bus_id"):
+            return []
+        cursor = db.buses.find({"id": child["bus_id"], "is_active": 1}, {"_id": 0})
+    else:
+        cursor = db.buses.find({"is_active": 1}, {"_id": 0})
+
     buses = await cursor.to_list(length=None)
 
     # Batch boarded_today counts
@@ -48,6 +70,9 @@ async def get_buses(u=Depends(current_user)):
 
 @router.get("/api/buses/{bus_id}/live")
 async def bus_live(bus_id: str, u=Depends(current_user)):
+    db = db_module.db
+    await check_parent_bus_access(db, u, bus_id)
+    
     bus_live_data = live_buses.get(bus_id)
     if bus_live_data:
         bus_live_clean = bus_live_data.copy()
@@ -59,6 +84,8 @@ async def bus_live(bus_id: str, u=Depends(current_user)):
 @router.get("/api/buses/{bus_id}/passengers")
 async def bus_passengers(bus_id: str, u=Depends(current_user)):
     db = db_module.db
+    await check_parent_bus_access(db, u, bus_id)
+
     td = today()
     cursor = db.attendance.find(
         {"bus_id": bus_id, "date": td, "tap_type": "boarded"}, {"_id": 0}
@@ -81,6 +108,8 @@ async def bus_passengers(bus_id: str, u=Depends(current_user)):
 @router.get("/api/buses/{bus_id}")
 async def get_bus_details(bus_id: str, u=Depends(current_user)):
     db = db_module.db
+    await check_parent_bus_access(db, u, bus_id)
+
     bus = await db.buses.find_one({"id": bus_id}, {"_id": 0})
     if not bus:
         raise HTTPException(404, "Bus not found")
