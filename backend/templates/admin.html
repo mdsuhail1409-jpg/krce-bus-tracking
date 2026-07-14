@@ -6,8 +6,7 @@
     <title>TransitAdmin — Control Center</title>
     <!-- Google Fonts: Outfit -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Google Maps Integration (No stylesheet import needed) -->
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
@@ -1588,13 +1587,14 @@
         </div>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Google Maps JS -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBgybbeZKCnwUSRKc0JHw7a6CZBnD6ZJkU&libraries=geometry"></script>
 
     <!-- CORE LOGIC & REST INTERACTION -->
     <script>
         let map;
         let busMarkers = {};
+        let activeInfoWindow = null;
         let token = localStorage.getItem('krce_token');
         let userProfile = null;
         let activeRegTab = 'pending';
@@ -1865,21 +1865,117 @@
         // ═══════════════════════════════════════════════════════════════════
         //  2. LIVE MAP INITIALIZATION & UPDATE
         // ═══════════════════════════════════════════════════════════════════
+        // Custom HTML Marker using google.maps.OverlayView
+        class CustomHTMLMarker extends google.maps.OverlayView {
+            constructor(position, html, className, map, onClick, iconSize, anchor) {
+                super();
+                this.position = position;
+                this.html = html;
+                this.className = className;
+                this.onClick = onClick;
+                this.iconSize = iconSize || [28, 28];
+                this.anchor = anchor || [this.iconSize[0] / 2, this.iconSize[1] / 2];
+                this.div = null;
+                this.setMap(map);
+            }
+
+            onAdd() {
+                const div = document.createElement('div');
+                div.className = this.className;
+                div.style.position = 'absolute';
+                div.innerHTML = this.html;
+                this.div = div;
+
+                if (this.onClick) {
+                    div.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.onClick();
+                    });
+                }
+
+                const panes = this.getPanes();
+                panes.overlayImage.appendChild(div);
+            }
+
+            draw() {
+                if (!this.div) return;
+                const projection = this.getProjection();
+                const position = projection.fromLatLngToDivPixel(this.position);
+                if (position) {
+                    this.div.style.left = (position.x - this.anchor[0]) + 'px';
+                    this.div.style.top = (position.y - this.anchor[1]) + 'px';
+                }
+            }
+
+            onRemove() {
+                if (this.div) {
+                    this.div.parentNode.removeChild(this.div);
+                    this.div = null;
+                }
+            }
+
+            setPosition(position) {
+                this.position = position;
+                this.draw();
+            }
+        }
+
+        const darkMapStyle = [
+            { "elementType": "geometry", "stylers": [{ "color": "#0f172a" }] },
+            { "elementType": "labels.text.stroke", "stylers": [{ "color": "#0f172a" }] },
+            { "elementType": "labels.text.fill", "stylers": [{ "color": "#94a3b8" }] },
+            { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [{ "color": "#cbd5e1" }] },
+            { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#cbd5e1" }] },
+            { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] },
+            { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#64748b" }] },
+            { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] },
+            { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#334155" }] },
+            { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#94a3b8" }] },
+            { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#334155" }] },
+            { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#475569" }] },
+            { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#cbd5e1" }] },
+            { "featureType": "transit", "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] },
+            { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [{ "color": "#cbd5e1" }] },
+            { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#020617" }] },
+            { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#475569" }] },
+            { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [{ "color": "#020617" }] }
+        ];
+
         function initMap() {
             if (map) {
-                map.invalidateSize();
                 return;
             }
-            map = L.map('admin-map', { attributionControl: false }).setView([10.927669, 78.7410], 12);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-            
-            // Add KRCE Campus Maker
-            const campusIcon = L.divIcon({
-                className: 'campus-marker-icon',
-                html: '<i data-lucide="graduation-cap" style="width: 16px; height: 16px; color: white; display: block; margin: 5px;"></i>',
-                iconSize: [30, 30]
+            map = new google.maps.Map(document.getElementById('admin-map'), {
+                center: { lat: 10.927669, lng: 78.7410 },
+                zoom: 12,
+                styles: darkMapStyle,
+                disableDefaultUI: true,
+                zoomControl: true
             });
-            L.marker([10.927669, 78.7410], { icon: campusIcon }).addTo(map).bindPopup("<b>KRCE Campus</b><br>K. Ramakrishnan College");
+            
+            // Add KRCE Campus Marker
+            const campusMarker = new CustomHTMLMarker(
+                new google.maps.LatLng(10.927669, 78.7410),
+                '<i data-lucide="graduation-cap" style="width: 16px; height: 16px; color: white; display: block; margin: 5px;"></i>',
+                'campus-marker-icon',
+                map,
+                () => {
+                    campusMarker.openPopup();
+                },
+                [30, 30],
+                [15, 15]
+            );
+            
+            const campusInfoWindow = new google.maps.InfoWindow({
+                content: "<b>KRCE Campus</b><br>K. Ramakrishnan College"
+            });
+            campusMarker.infoWindow = campusInfoWindow;
+            campusMarker.openPopup = () => {
+                if (activeInfoWindow) activeInfoWindow.close();
+                campusInfoWindow.setPosition(campusMarker.position);
+                campusInfoWindow.open(map);
+                activeInfoWindow = campusInfoWindow;
+            };
             
             updateLiveMapMarkers();
             lucide.createIcons();
@@ -1905,7 +2001,7 @@
                     offlineCount++;
                     // Remove marker from map if it exists
                     if (busMarkers[b.id]) {
-                        map.removeLayer(busMarkers[b.id]);
+                        busMarkers[b.id].setMap(null);
                         delete busMarkers[b.id];
                     }
 
@@ -1941,14 +2037,28 @@
                 // DivIcon Marker
                 const htmlMarker = `<div class="bus-marker-icon ${isOnline ? 'online' : ''}">${b.number.replace('Bus-', '')}</div>`;
                 if (busMarkers[b.id]) {
-                    busMarkers[b.id].setLatLng([lat, lon]);
+                    busMarkers[b.id].setPosition(new google.maps.LatLng(lat, lon));
+                    busMarkers[b.id].html = htmlMarker;
+                    if (busMarkers[b.id].div) {
+                        busMarkers[b.id].div.innerHTML = htmlMarker;
+                    }
                 } else {
-                    busMarkers[b.id] = L.marker([lat, lon], {
-                        icon: L.divIcon({ html: htmlMarker, className: 'custom-bus-marker', iconSize: [28, 28] })
-                    }).addTo(map);
+                    busMarkers[b.id] = new CustomHTMLMarker(
+                        new google.maps.LatLng(lat, lon),
+                        htmlMarker,
+                        'custom-bus-marker',
+                        map,
+                        () => {
+                            map.setCenter({ lat: lat, lng: lon });
+                            map.setZoom(14);
+                            busMarkers[b.id].openPopup();
+                        },
+                        [28, 28],
+                        [14, 14]
+                    );
                 }
                 
-                busMarkers[b.id].bindPopup(`
+                const popupContent = `
                     <div style="color: #0b0f19; font-family: Outfit, sans-serif; font-size: 0.85rem;">
                         <strong>${b.number}</strong> (${b.plate_number || b.number})<br>
                         <strong>Route:</strong> ${b.route_name}<br>
@@ -1956,13 +2066,24 @@
                         <strong>Speed:</strong> ${speed} km/h<br>
                         <strong>Occupancy:</strong> ${b.boarded_today}/${b.capacity}
                     </div>
-                `);
+                `;
+                const infoWindow = new google.maps.InfoWindow({
+                    content: popupContent
+                });
+                busMarkers[b.id].infoWindow = infoWindow;
+                busMarkers[b.id].openPopup = () => {
+                    if (activeInfoWindow) activeInfoWindow.close();
+                    infoWindow.setPosition(busMarkers[b.id].position);
+                    infoWindow.open(map);
+                    activeInfoWindow = infoWindow;
+                };
 
                 // Sidebar active list item
                 const div = document.createElement('div');
                 div.className = 'fleet-item';
                 div.onclick = () => {
-                    map.setView([lat, lon], 14);
+                    map.setCenter({ lat: lat, lng: lon });
+                    map.setZoom(14);
                     busMarkers[b.id].openPopup();
                 };
                 div.innerHTML = `
@@ -2049,7 +2170,7 @@
                             <button class="table-action-btn danger" title="Remove Bus" onclick="deleteBus('${b.id}')">
                                 <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
                             </button>
-                            <button class="table-action-btn primary" title="Locate Bus on Map" onclick="triggerNav('sect-map'); map.setView([${live ? live.lat : 10.927669}, ${live ? live.lon : 78.7410}], 14);">
+                            <button class="table-action-btn primary" title="Locate Bus on Map" onclick="triggerNav('sect-map'); map.setCenter({ lat: ${live ? live.lat : 10.927669}, lng: ${live ? live.lon : 78.7410} }); map.setZoom(14);">
                                 <i data-lucide="map-pin" style="width:16px; height:16px;"></i>
                             </button>
                         </div>

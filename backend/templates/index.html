@@ -6,8 +6,7 @@
     <title>KRCE Bus Tracking Portal</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Google Maps Integration (No stylesheet import needed) -->
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -715,7 +714,7 @@
             <div class="logo-area">
                 <i class="fa-solid fa-bus-simple logo-icon"></i>
                 <h2 class="logo-title">KRCE Bus Track</h2>
-                <p class="logo-subtitle">Kumaraguru College of Technology</p>
+                <p class="logo-subtitle">K. Ramakrishnan College of Engineering</p>
             </div>
             
             <div class="auth-error" id="auth-error-box">
@@ -897,13 +896,14 @@
         </div>
     </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Google Maps JS -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBgybbeZKCnwUSRKc0JHw7a6CZBnD6ZJkU&libraries=geometry"></script>
     
     <script>
         // State variables
         let map;
         let busMarkers = {};
+        let activeInfoWindow = null;
         let activeTab = 'tab-live';
         let wsConn = null;
         let token = localStorage.getItem('krce_token');
@@ -1287,7 +1287,83 @@
             if (tabId === 'tab-alerts') btns[2].classList.add('active');
         }
 
-        // Initialize Leaflet Map
+        // Custom HTML Marker using google.maps.OverlayView
+        class CustomHTMLMarker extends google.maps.OverlayView {
+            constructor(position, html, className, map, onClick, iconSize, anchor) {
+                super();
+                this.position = position;
+                this.html = html;
+                this.className = className;
+                this.onClick = onClick;
+                this.iconSize = iconSize || [30, 30];
+                this.anchor = anchor || [this.iconSize[0] / 2, this.iconSize[1] / 2];
+                this.div = null;
+                this.setMap(map);
+            }
+
+            onAdd() {
+                const div = document.createElement('div');
+                div.className = this.className;
+                div.style.position = 'absolute';
+                div.innerHTML = this.html;
+                this.div = div;
+
+                if (this.onClick) {
+                    div.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.onClick();
+                    });
+                }
+
+                const panes = this.getPanes();
+                panes.overlayImage.appendChild(div);
+            }
+
+            draw() {
+                if (!this.div) return;
+                const projection = this.getProjection();
+                const position = projection.fromLatLngToDivPixel(this.position);
+                if (position) {
+                    this.div.style.left = (position.x - this.anchor[0]) + 'px';
+                    this.div.style.top = (position.y - this.anchor[1]) + 'px';
+                }
+            }
+
+            onRemove() {
+                if (this.div) {
+                    this.div.parentNode.removeChild(this.div);
+                    this.div = null;
+                }
+            }
+
+            setPosition(position) {
+                this.position = position;
+                this.draw();
+            }
+        }
+
+        const darkMapStyle = [
+            { "elementType": "geometry", "stylers": [{ "color": "#0f172a" }] },
+            { "elementType": "labels.text.stroke", "stylers": [{ "color": "#0f172a" }] },
+            { "elementType": "labels.text.fill", "stylers": [{ "color": "#94a3b8" }] },
+            { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [{ "color": "#cbd5e1" }] },
+            { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#cbd5e1" }] },
+            { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] },
+            { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#64748b" }] },
+            { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] },
+            { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#334155" }] },
+            { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#94a3b8" }] },
+            { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#334155" }] },
+            { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#475569" }] },
+            { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#cbd5e1" }] },
+            { "featureType": "transit", "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] },
+            { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [{ "color": "#cbd5e1" }] },
+            { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#020617" }] },
+            { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#475569" }] },
+            { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [{ "color": "#020617" }] }
+        ];
+
+        // Initialize Google Map
         function initMap() {
             if (map) return; // Prevent double init
             
@@ -1295,27 +1371,38 @@
             const campusLat = 10.927669;
             const campusLon = 78.7410;
             
-            map = L.map('map', {
-                zoomControl: true,
-                attributionControl: false
-            }).setView([campusLat, campusLon], 13);
-
-            // Leaflet standard Dark tiles
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19
-            }).addTo(map);
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: campusLat, lng: campusLon },
+                zoom: 13,
+                styles: darkMapStyle,
+                disableDefaultUI: true,
+                zoomControl: true
+            });
 
             // Add Campus Marker
-            const campusIcon = L.divIcon({
-                className: 'campus-marker-icon',
-                html: '<i class="fa-solid fa-graduation-cap"></i>',
-                iconSize: [36, 36],
-                iconAnchor: [18, 18]
+            const campusMarker = new CustomHTMLMarker(
+                new google.maps.LatLng(campusLat, campusLon),
+                '<i class="fa-solid fa-graduation-cap"></i>',
+                'campus-marker-icon',
+                map,
+                () => {
+                    campusMarker.openPopup();
+                },
+                [36, 36],
+                [18, 18]
+            );
+            
+            const campusInfoWindow = new google.maps.InfoWindow({
+                content: "<b>K. Ramakrishnan College of Engineering</b><br>Trichy, Tamil Nadu"
             });
             
-            L.marker([campusLat, campusLon], { icon: campusIcon })
-             .addTo(map)
-             .bindPopup("<b>K. Ramakrishnan College of Engineering</b><br>Trichy, Tamil Nadu");
+            campusMarker.infoWindow = campusInfoWindow;
+            campusMarker.openPopup = () => {
+                if (activeInfoWindow) activeInfoWindow.close();
+                campusInfoWindow.setPosition(campusMarker.position);
+                campusInfoWindow.open(map);
+                activeInfoWindow = campusInfoWindow;
+            };
         }
 
         // Load Bus Routes
@@ -1350,7 +1437,8 @@
                     card.onclick = () => {
                         if (bus.live && bus.live.lat) {
                             activeBusId = bus.id;
-                            map.setView([bus.live.lat, bus.live.lon], 14);
+                            map.setCenter({ lat: bus.live.lat, lng: bus.live.lon });
+                            map.setZoom(14);
                             busMarkers[bus.id].openPopup();
                             drawRouteOSRM(bus, bus.live);
                             loadBusRoutes(); // Re-render markers instantly to show yellow
@@ -1407,20 +1495,34 @@
             }
 
             const markerHtml = `<div class="bus-marker-icon ${markerClass}" style="${markerBg}">${bus.number.split('-')[1] || bus.number}</div>`;
-            const customIcon = L.divIcon({
-                className: 'custom-bus-marker',
-                html: markerHtml,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            });
 
             if (busMarkers[busId]) {
                 // Smooth transition if marker exists
-                busMarkers[busId].setLatLng([lat, lon]);
-                busMarkers[busId].setIcon(customIcon);
+                busMarkers[busId].setPosition(new google.maps.LatLng(lat, lon));
+                busMarkers[busId].html = markerHtml;
+                if (busMarkers[busId].div) {
+                    busMarkers[busId].div.innerHTML = markerHtml;
+                }
             } else {
                 // Create marker
-                const marker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
+                const marker = new CustomHTMLMarker(
+                    new google.maps.LatLng(lat, lon),
+                    markerHtml,
+                    'custom-bus-marker',
+                    map,
+                    () => {
+                        if (live && live.lat) {
+                            activeBusId = bus.id;
+                            map.setCenter({ lat: live.lat, lng: live.lon });
+                            map.setZoom(14);
+                            marker.openPopup();
+                            drawRouteOSRM(bus, live);
+                            loadBusRoutes();
+                        }
+                    },
+                    [30, 30],
+                    [15, 15]
+                );
                 busMarkers[busId] = marker;
             }
 
@@ -1434,7 +1536,17 @@
                     <b>Passengers:</b> ${live ? live.passengers : 0} onboard
                 </div>
             `;
-            busMarkers[busId].bindPopup(popupContent);
+            
+            const infoWindow = new google.maps.InfoWindow({
+                content: popupContent
+            });
+            busMarkers[busId].infoWindow = infoWindow;
+            busMarkers[busId].openPopup = () => {
+                if (activeInfoWindow) activeInfoWindow.close();
+                infoWindow.setPosition(busMarkers[busId].position);
+                infoWindow.open(map);
+                activeInfoWindow = infoWindow;
+            };
         }
 
         // Load Attendance Tap History
@@ -1694,71 +1806,126 @@
 
             // Draw Completed segment (GREEN)
             if (completedCoords.length > 0) {
-                routePolylines.completed = L.polyline(completedCoords, {
-                    color: '#10b981',
-                    weight: 6,
-                    opacity: 0.85
-                }).addTo(map);
+                routePolylines.completed = new google.maps.Polyline({
+                    path: completedCoords.map(c => ({ lat: c[0], lng: c[1] })),
+                    strokeColor: '#10b981',
+                    strokeOpacity: 0.85,
+                    strokeWeight: 6,
+                    map: map
+                });
             }
 
-            // Draw Remaining segment (BLUE)
+            // Draw Remaining segment (BLUE dashed)
             if (remainingCoords.length > 0) {
-                routePolylines.remaining = L.polyline(remainingCoords, {
-                    color: '#3b82f6',
-                    weight: 6,
-                    opacity: 0.85,
-                    dashArray: '5, 10'
-                }).addTo(map);
+                const lineSymbol = {
+                    path: 'M 0,-1 0,1',
+                    strokeOpacity: 1,
+                    scale: 3
+                };
+                routePolylines.remaining = new google.maps.Polyline({
+                    path: remainingCoords.map(c => ({ lat: c[0], lng: c[1] })),
+                    strokeColor: '#3b82f6',
+                    strokeOpacity: 0,
+                    icons: [{
+                        icon: lineSymbol,
+                        offset: '0',
+                        repeat: '15px'
+                    }],
+                    map: map
+                });
             }
 
             // Start marker (Green Flag)
             const startStop = stopsCoords[0];
             if (startStop) {
-                const greenFlagIcon = L.divIcon({
-                    className: 'start-marker-icon',
-                    html: '<i class="fa-solid fa-flag" style="color: #10b981; font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>',
-                    iconSize: [24, 24],
-                    iconAnchor: [6, 20]
+                const startMarker = new CustomHTMLMarker(
+                    new google.maps.LatLng(startStop.lat, startStop.lon),
+                    '<i class="fa-solid fa-flag" style="color: #10b981; font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>',
+                    'start-marker-icon',
+                    map,
+                    () => {
+                        startMarker.openPopup();
+                    },
+                    [24, 24],
+                    [6, 20]
+                );
+                
+                const startInfoWindow = new google.maps.InfoWindow({
+                    content: `<b>Start Stop: ${startStop.name}</b><br>Departure: 07:45 AM`
                 });
-                routeMarkers.start = L.marker([startStop.lat, startStop.lon], { icon: greenFlagIcon })
-                    .addTo(map)
-                    .bindPopup(`<b>Start Stop: ${startStop.name}</b><br>Departure: 07:45 AM`);
+                startMarker.infoWindow = startInfoWindow;
+                startMarker.openPopup = () => {
+                    if (activeInfoWindow) activeInfoWindow.close();
+                    startInfoWindow.setPosition(startMarker.position);
+                    startInfoWindow.open(map);
+                    activeInfoWindow = startInfoWindow;
+                };
+                routeMarkers.start = startMarker;
             }
 
             // Destination marker (Red Flag)
-            const redFlagIcon = L.divIcon({
-                className: 'dest-marker-icon',
-                html: '<i class="fa-solid fa-flag" style="color: #ef4444; font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>',
-                iconSize: [24, 24],
-                iconAnchor: [6, 20]
+            const destMarker = new CustomHTMLMarker(
+                new google.maps.LatLng(STOP_COORDS["KRCE Campus"][0], STOP_COORDS["KRCE Campus"][1]),
+                '<i class="fa-solid fa-flag" style="color: #ef4444; font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>',
+                'dest-marker-icon',
+                map,
+                () => {
+                    destMarker.openPopup();
+                },
+                [24, 24],
+                [6, 20]
+            );
+            
+            const destInfoWindow = new google.maps.InfoWindow({
+                content: `<b>Destination: KRCE Campus</b><br>Arrival ETA: ${formatETA(remainingDuration)}`
             });
-            routeMarkers.destination = L.marker([STOP_COORDS["KRCE Campus"][0], STOP_COORDS["KRCE Campus"][1]], { icon: redFlagIcon })
-                .addTo(map)
-                .bindPopup(`<b>Destination: KRCE Campus</b><br>Arrival ETA: ${formatETA(remainingDuration)}`);
+            destMarker.infoWindow = destInfoWindow;
+            destMarker.openPopup = () => {
+                if (activeInfoWindow) activeInfoWindow.close();
+                destInfoWindow.setPosition(destMarker.position);
+                destInfoWindow.open(map);
+                activeInfoWindow = destInfoWindow;
+            };
+            routeMarkers.destination = destMarker;
 
             // Orange Bus Stop Markers
             stopsCoords.forEach((stop, index) => {
                 if (index === 0) return;
                 
-                const orangeIcon = L.divIcon({
-                    className: 'stop-marker-icon',
-                    html: `<div style="width: 18px; height: 18px; background: #f97316; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: bold;">${index}</div>`,
-                    iconSize: [18, 18],
-                    iconAnchor: [9, 9]
-                });
+                const stopHtml = `<div style="width: 18px; height: 18px; background: #f97316; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: bold;">${index}</div>`;
 
                 const d = getDistance(busLat, busLon, stop.lat, stop.lon);
                 const distanceText = d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${d.toFixed(0)} m`;
                 const etaText = formatETA(d / 8.3);
 
-                const marker = L.marker([stop.lat, stop.lon], { icon: orangeIcon })
-                    .addTo(map)
-                    .bindPopup(`
+                const stopMarker = new CustomHTMLMarker(
+                    new google.maps.LatLng(stop.lat, stop.lon),
+                    stopHtml,
+                    'stop-marker-icon',
+                    map,
+                    () => {
+                        stopMarker.openPopup();
+                    },
+                    [18, 18],
+                    [9, 9]
+                );
+
+                const stopInfoWindow = new google.maps.InfoWindow({
+                    content: `
                         <b>Stop #${index}: ${stop.name}</b><br>
                         Distance from Bus: ${distanceText}<br>
                         ETA: ${etaText}
-                    `);
-                routeMarkers.stops.push(marker);
+                    `
+                });
+                stopMarker.infoWindow = stopInfoWindow;
+                stopMarker.openPopup = () => {
+                    if (activeInfoWindow) activeInfoWindow.close();
+                    stopInfoWindow.setPosition(stopMarker.position);
+                    stopInfoWindow.open(map);
+                    activeInfoWindow = stopInfoWindow;
+                };
+
+                routeMarkers.stops.push(stopMarker);
             });
 
             // Update Panel stats
@@ -1810,22 +1977,22 @@
 
         function clearRouteOverlays() {
             if (routePolylines.completed) {
-                map.removeLayer(routePolylines.completed);
+                routePolylines.completed.setMap(null);
                 routePolylines.completed = null;
             }
             if (routePolylines.remaining) {
-                map.removeLayer(routePolylines.remaining);
+                routePolylines.remaining.setMap(null);
                 routePolylines.remaining = null;
             }
             if (routeMarkers.start) {
-                map.removeLayer(routeMarkers.start);
+                routeMarkers.start.setMap(null);
                 routeMarkers.start = null;
             }
             if (routeMarkers.destination) {
-                map.removeLayer(routeMarkers.destination);
+                routeMarkers.destination.setMap(null);
                 routeMarkers.destination = null;
             }
-            routeMarkers.stops.forEach(m => map.removeLayer(m));
+            routeMarkers.stops.forEach(m => m.setMap(null));
             routeMarkers.stops = [];
         }
 

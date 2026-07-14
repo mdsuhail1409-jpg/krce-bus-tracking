@@ -16,8 +16,18 @@ router = APIRouter()
 @router.get("/api/buses")
 async def get_buses(u=Depends(current_user)):
     db = db_module.db
+    td = today()
     cursor = db.buses.find({"is_active": 1}, {"_id": 0})
     buses = await cursor.to_list(length=None)
+
+    # Batch boarded_today counts
+    pipeline = [
+        {"$match": {"date": td, "tap_type": "boarded"}},
+        {"$group": {"_id": "$bus_id", "cnt": {"$sum": 1}}}
+    ]
+    count_docs = await db.attendance.aggregate(pipeline).to_list(length=None)
+    count_map = {c["_id"]: c["cnt"] for c in count_docs}
+
     for bus in buses:
         bus_live = live_buses.get(bus["id"])
         if bus_live:
@@ -26,6 +36,7 @@ async def get_buses(u=Depends(current_user)):
             bus["live"] = bus_live_clean
         else:
             bus["live"] = None
+        bus["boarded_today"] = count_map.get(bus["id"], 0)
     return buses
 
 
@@ -67,6 +78,11 @@ async def get_bus_details(bus_id: str, u=Depends(current_user)):
     bus = await db.buses.find_one({"id": bus_id}, {"_id": 0})
     if not bus:
         raise HTTPException(404, "Bus not found")
+    
+    td = today()
+    boarded_count = await db.attendance.count_documents({"bus_id": bus_id, "date": td, "tap_type": "boarded"})
+    bus["boarded_today"] = boarded_count
+
     bus_live_data = live_buses.get(bus_id)
     if bus_live_data:
         bus_live_clean = bus_live_data.copy()
