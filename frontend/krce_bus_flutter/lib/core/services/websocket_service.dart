@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 
 typedef WsMessageCallback = void Function(Map<String, dynamic> data);
@@ -20,9 +21,20 @@ class WebSocketService {
     _connect();
   }
 
-  void _connect() {
+  Future<void> _connect() async {
     try {
-      final uri = Uri.parse('${AppConfig.wsBaseUrl}/ws?token=$_token');
+      final prefs = await SharedPreferences.getInstance();
+      final customUrl = prefs.getString('custom_api_url') ?? '';
+      
+      String wsBaseUrl = AppConfig.wsBaseUrl;
+      if (customUrl.isNotEmpty) {
+        // Convert http/https to ws/wss
+        wsBaseUrl = customUrl
+            .replaceFirst('https://', 'wss://')
+            .replaceFirst('http://', 'ws://');
+      }
+
+      final uri = Uri.parse('$wsBaseUrl/ws?token=$_token');
       _channel = WebSocketChannel.connect(uri);
       _sub = _channel!.stream.listen(
         (data) {

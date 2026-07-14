@@ -3,8 +3,8 @@
 // ============================================================
 class AppConfig {
   // Change this to your server IP / domain
-  static const String apiBaseUrl = 'http://10.245.235.53:8000';
-  static const String wsBaseUrl = 'ws://10.245.235.53:8000';
+  static const String apiBaseUrl = 'https://krce-bus-production.onrender.com';
+  static const String wsBaseUrl = 'wss://krce-bus-production.onrender.com';
 
   // KRCE Campus coordinates
   static const double collegeLat = 10.927669;

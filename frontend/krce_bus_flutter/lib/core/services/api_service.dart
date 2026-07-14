@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../models/models.dart';
 
@@ -11,6 +12,18 @@ class ApiService {
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       headers: {'Content-Type': 'application/json'},
+    ));
+
+    // Dynamic base URL interceptor
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final prefs = await SharedPreferences.getInstance();
+        final customUrl = prefs.getString('custom_api_url') ?? '';
+        if (customUrl.isNotEmpty) {
+          options.baseUrl = customUrl;
+        }
+        return handler.next(options);
+      },
     ));
 
     _dio.interceptors.add(LogInterceptor(

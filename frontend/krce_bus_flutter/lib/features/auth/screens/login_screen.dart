@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../widgets/glass_card.dart';
@@ -85,6 +86,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
           // Dark overlay
           Container(color: Colors.black.withOpacity(0.55)),
+
+          // Settings button in top-right corner
+          Positioned(
+            top: 16,
+            right: 16,
+            child: SafeArea(
+              child: IconButton(
+                icon: const Icon(Icons.settings, color: Colors.white70),
+                onPressed: () => _showServerSettingsDialog(context),
+              ),
+            ),
+          ),
 
           // Login form
           SafeArea(
@@ -249,6 +262,71 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showServerSettingsDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentUrl = prefs.getString('custom_api_url') ?? '';
+    final ctrl = TextEditingController(text: currentUrl);
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Server Connection'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter custom backend URL (leave blank to use default production Render server):',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              style: const TextStyle(color: Colors.black87),
+              decoration: const InputDecoration(
+                hintText: 'https://example.com or http://ip:port',
+                hintStyle: TextStyle(color: Colors.black38),
+                labelText: 'Backend URL',
+                labelStyle: TextStyle(color: Colors.black87),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              String enteredUrl = ctrl.text.trim();
+              if (enteredUrl.isNotEmpty &&
+                  !enteredUrl.startsWith('http://') &&
+                  !enteredUrl.startsWith('https://')) {
+                enteredUrl = 'http://$enteredUrl';
+              }
+              await prefs.setString('custom_api_url', enteredUrl);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      enteredUrl.isEmpty
+                          ? 'Reset to default production URL'
+                          : 'Server URL set to: $enteredUrl',
+                    ),
+                  ),
+                );
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
           ),
         ],
       ),
