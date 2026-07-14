@@ -33,6 +33,10 @@
             cleartext traffic to 10.0.2.2 (localhost) by default.
         -->
 
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBgybbeZKCnwUSRKc0JHw7a6CZBnD6ZJkU" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

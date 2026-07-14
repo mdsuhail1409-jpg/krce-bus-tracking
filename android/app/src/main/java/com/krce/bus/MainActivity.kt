@@ -61,12 +61,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Initialize OSMDroid
-        org.osmdroid.config.Configuration.getInstance().load(
-            applicationContext,
-            android.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        )
-        
         requestRequiredPermissions()
         setContent {
             BusTheme {
@@ -306,29 +300,97 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: (String) -> Unit) 
     val coroutineScope = rememberCoroutineScope()
     val apiService = remember { ApiService.create() }
 
-    val collegeLatLng = org.osmdroid.util.GeoPoint(10.927669, 78.7410)
+    val darkMapJson = """
+    [
+      {
+        "elementType": "geometry",
+        "stylers": [
+          {
+            "color": "#212121"
+          }
+        ]
+      },
+      {
+        "elementType": "labels.icon",
+        "stylers": [
+          {
+            "visibility": "off"
+          }
+        ]
+      },
+      {
+        "elementType": "labels.text.fill",
+        "stylers": [
+          {
+            "color": "#757575"
+          }
+        ]
+      },
+      {
+        "elementType": "labels.text.stroke",
+        "stylers": [
+          {
+            "color": "#212121"
+          }
+        ]
+      },
+      {
+        "featureType": "administrative",
+        "elementType": "geometry",
+        "stylers": [
+          {
+            "color": "#757575"
+          }
+        ]
+      },
+      {
+        "featureType": "poi",
+        "elementType": "geometry",
+        "stylers": [
+          {
+            "color": "#181818"
+          }
+        ]
+      },
+      {
+        "featureType": "road",
+        "elementType": "geometry.fill",
+        "stylers": [
+          {
+            "color": "#2c2c2c"
+          }
+        ]
+      },
+      {
+        "featureType": "water",
+        "elementType": "geometry",
+        "stylers": [
+          {
+            "color": "#000000"
+          }
+        ]
+      }
+    ]
+    """.trimIndent()
+
+    val collegeLatLng = com.google.android.gms.maps.model.LatLng(10.927669, 78.7410)
+    val cameraPositionState = com.google.maps.android.compose.rememberCameraPositionState {
+        position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(collegeLatLng, 15f)
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Map in background
-        androidx.compose.ui.viewinterop.AndroidView(
-            factory = { ctx ->
-                org.osmdroid.views.MapView(ctx).apply {
-                    setMultiTouchControls(false)
-                    controller.setZoom(15.0)
-                    controller.setCenter(collegeLatLng)
-                    val darkTileSource = org.osmdroid.tileprovider.tilesource.XYTileSource(
-                        "CartoDbDarkMatter",
-                        0, 20, 256, ".png",
-                        arrayOf(
-                            "https://a.basemaps.cartocdn.com/dark_all/",
-                            "https://b.basemaps.cartocdn.com/dark_all/",
-                            "https://c.basemaps.cartocdn.com/dark_all/"
-                        )
-                    )
-                    setTileSource(darkTileSource)
-                }
-            },
-            modifier = Modifier.fillMaxSize()
+        com.google.maps.android.compose.GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            uiSettings = com.google.maps.android.compose.MapUiSettings(
+                zoomControlsEnabled = false,
+                compassEnabled = false,
+                myLocationButtonEnabled = false,
+                mapToolbarEnabled = false
+            ),
+            properties = com.google.maps.android.compose.MapProperties(
+                mapStyleOptions = com.google.android.gms.maps.model.MapStyleOptions(darkMapJson)
+            )
         )
 
         // Translucent overlay to dim the map for readability of login form

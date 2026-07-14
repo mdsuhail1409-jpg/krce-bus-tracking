@@ -90,8 +90,9 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
-    // OSM (OpenStreetMap)
-    implementation("org.osmdroid:osmdroid-android:6.1.18")
+    // Google Maps SDK & Compose integration
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.maps.android:maps-compose:4.3.3")
     
     // GPS Tracking
     implementation("com.google.android.gms:play-services-location:21.1.0")

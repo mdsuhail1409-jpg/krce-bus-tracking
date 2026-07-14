@@ -22,31 +22,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.location.LocationServices
 import com.krce.bus.api.ApiService
 import com.krce.bus.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import com.google.gson.Gson
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.tileprovider.tilesource.XYTileSource
-import org.osmdroid.util.BoundingBox
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polyline
-import org.osmdroid.views.overlay.ScaleBarOverlay
-import org.osmdroid.views.overlay.compass.CompassOverlay
-import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.maps.android.compose.*
 
 data class OSRMRouteResult(
-    val points: List<GeoPoint>,
+    val points: List<LatLng>,
     val durationText: String,
     val distanceText: String
 )
@@ -56,6 +51,7 @@ data class OSRMRouteResult(
 fun LiveMapScreen(authToken: String, busId: String?) {
     val context = LocalContext.current
     val apiService = remember { ApiService.create() }
+    val coroutineScope = rememberCoroutineScope()
     var liveBuses by remember { mutableStateOf<List<com.krce.bus.models.Bus>>(emptyList()) }
     var errorMessage by remember { mutableStateOf("") }
     
@@ -76,7 +72,7 @@ fun LiveMapScreen(authToken: String, busId: String?) {
         }
     }
 
-    val collegeLatLng = GeoPoint(10.927669, 78.7410) // Actual KRCE campus coordinates
+    val collegeLatLng = LatLng(10.927669, 78.7410) // Actual KRCE campus coordinates
 
     // Keep track of the currently selected/tracked bus
     var selectedBusId by remember { mutableStateOf(busId) }
@@ -86,10 +82,10 @@ fun LiveMapScreen(authToken: String, busId: String?) {
     val trackedLive = trackedBus?.live
 
     // Smoothly animated marker position
-    var animatedBusLatLng by remember { mutableStateOf<GeoPoint?>(null) }
+    var animatedBusLatLng by remember { mutableStateOf<LatLng?>(null) }
     LaunchedEffect(trackedLive) {
         trackedLive?.let { live ->
-            val target = GeoPoint(live.lat, live.lon)
+            val target = LatLng(live.lat, live.lon)
             val start = animatedBusLatLng ?: target
             val steps = 20
             val stepTime = 1000L / steps
@@ -97,7 +93,7 @@ fun LiveMapScreen(authToken: String, busId: String?) {
                 val fraction = i.toFloat() / steps
                 val lat = start.latitude + (target.latitude - start.latitude) * fraction
                 val lon = start.longitude + (target.longitude - start.longitude) * fraction
-                animatedBusLatLng = GeoPoint(lat, lon)
+                animatedBusLatLng = LatLng(lat, lon)
                 delay(stepTime)
             }
             animatedBusLatLng = target
@@ -122,26 +118,108 @@ fun LiveMapScreen(authToken: String, busId: String?) {
 
     // Fused Location Client for "Locate Me"
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
-    var mapRef by remember { mutableStateOf<MapView?>(null) }
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(collegeLatLng, 12.5f)
+    }
 
     // Fit Bounds state
     var hasCentered by remember { mutableStateOf(false) }
     LaunchedEffect(animatedBusLatLng) {
         animatedBusLatLng?.let { busPoint ->
-            val mapView = mapRef
-            if (mapView != null && !hasCentered) {
+            if (!hasCentered) {
                 try {
-                    val box = BoundingBox.fromGeoPoints(listOf(collegeLatLng, busPoint))
-                    mapView.zoomToBoundingBox(box, true, 150)
+                    val bounds = LatLngBounds.builder()
+                        .include(collegeLatLng)
+                        .include(busPoint)
+                        .build()
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngBounds(bounds, 150),
+                        1000
+                    )
                     hasCentered = true
                 } catch (e: Exception) {
-                    mapView.controller.animateTo(busPoint)
-                    mapView.controller.setZoom(14.0)
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(busPoint, 14f),
+                        1000
+                    )
                     hasCentered = true
                 }
             }
         }
     }
+
+    val darkMapJson = """
+    [
+      {
+        "elementType": "geometry",
+        "stylers": [
+          {
+            "color": "#212121"
+          }
+        ]
+      },
+      {
+        "elementType": "labels.icon",
+        "stylers": [
+          {
+            "visibility": "off"
+          }
+        ]
+      },
+      {
+        "elementType": "labels.text.fill",
+        "stylers": [
+          {
+            "color": "#757575"
+          }
+        ]
+      },
+      {
+        "elementType": "labels.text.stroke",
+        "stylers": [
+          {
+            "color": "#212121"
+          }
+        ]
+      },
+      {
+        "featureType": "administrative",
+        "elementType": "geometry",
+        "stylers": [
+          {
+            "color": "#757575"
+          }
+        ]
+      },
+      {
+        "featureType": "poi",
+        "elementType": "geometry",
+        "stylers": [
+          {
+            "color": "#181818"
+          }
+        ]
+      },
+      {
+        "featureType": "road",
+        "elementType": "geometry.fill",
+        "stylers": [
+          {
+            "color": "#2c2c2c"
+          }
+        ]
+      },
+      {
+        "featureType": "water",
+        "elementType": "geometry",
+        "stylers": [
+          {
+            "color": "#000000"
+          }
+        ]
+      }
+    ]
+    """.trimIndent()
 
     Scaffold { padding ->
         Box(
@@ -149,112 +227,61 @@ fun LiveMapScreen(authToken: String, busId: String?) {
                 .padding(if (isFullscreen) PaddingValues(0.dp) else padding)
                 .fillMaxSize()
         ) {
-            // OSMDroid Map Container
-            AndroidView(
-                factory = { ctx ->
-                    MapView(ctx).apply {
-                        setMultiTouchControls(true)
-                        zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
-                        controller.setZoom(12.5)
-                        controller.setCenter(collegeLatLng)
-                        
-                        // Add Scale Bar Overlay
-                        val scaleBar = ScaleBarOverlay(this).apply {
-                            setAlignBottom(true)
-                            setScaleBarOffset(10, 50)
-                        }
-                        overlays.add(scaleBar)
-
-                        // Add Compass Overlay
-                        val compass = CompassOverlay(ctx, InternalCompassOrientationProvider(ctx), this).apply {
-                            enableCompass()
-                        }
-                        overlays.add(compass)
-
-                        // Add My Location Overlay (user device GPS pointer)
-                        val myLocation = MyLocationNewOverlay(GpsMyLocationProvider(ctx), this).apply {
-                            enableMyLocation()
-                        }
-                        overlays.add(myLocation)
-                        
-                        mapRef = this
-                    }
-                },
+            // Google Map Container
+            GoogleMap(
                 modifier = Modifier.fillMaxSize(),
-                update = { mapView ->
-                    // Apply Dark / Light layer
-                    if (isMapDarkMode) {
-                        val darkTileSource = XYTileSource(
-                            "CartoDark",
-                            0, 19, 256, ".png",
-                            arrayOf(
-                                "https://a.basemaps.cartocdn.com/dark_all/",
-                                "https://b.basemaps.cartocdn.com/dark_all/",
-                                "https://c.basemaps.cartocdn.com/dark_all/"
-                            )
+                cameraPositionState = cameraPositionState,
+                uiSettings = MapUiSettings(
+                    zoomControlsEnabled = false,
+                    compassEnabled = true,
+                    myLocationButtonEnabled = false,
+                    mapToolbarEnabled = false
+                ),
+                properties = MapProperties(
+                    mapStyleOptions = if (isMapDarkMode) MapStyleOptions(darkMapJson) else null,
+                    isMyLocationEnabled = true
+                )
+            ) {
+                // College Campus Marker
+                Marker(
+                    state = rememberMarkerState(position = collegeLatLng),
+                    title = "K. Ramakrishnan College of Engineering",
+                    snippet = "Campus Main Gate",
+                    icon = BitmapDescriptorFactory.fromBitmap(createCampusMarkerIcon(context))
+                )
+
+                // Bus Markers
+                liveBuses.forEach { bus ->
+                    bus.live?.let { live ->
+                        val busPos = if (bus.id == selectedBusId && animatedBusLatLng != null) {
+                            animatedBusLatLng!!
+                        } else {
+                            LatLng(live.lat, live.lon)
+                        }
+
+                        Marker(
+                            state = rememberMarkerState(position = busPos),
+                            title = "Bus ${bus.number}",
+                            snippet = "Route: ${bus.routeName} | Speed: ${live.speed.toInt()} km/h",
+                            icon = BitmapDescriptorFactory.fromBitmap(createBusMarkerIcon(context, bus.number, live.status != "offline")),
+                            onClick = {
+                                selectedBusId = bus.id
+                                hasCentered = false // Refit bounds
+                                true
+                            }
                         )
-                        mapView.setTileSource(darkTileSource)
-                    } else {
-                        mapView.setTileSource(TileSourceFactory.MAPNIK)
                     }
-
-                    // Clear previous overlays except dynamic defaults (Scale, Compass & MyLocation)
-                    val baseOverlays = mapView.overlays.filter { 
-                        it is ScaleBarOverlay || it is CompassOverlay || it is MyLocationNewOverlay 
-                    }
-                    mapView.overlays.clear()
-                    mapView.overlays.addAll(baseOverlays)
-
-                    // Draw College Campus Marker
-                    val collegeMarker = Marker(mapView).apply {
-                        position = collegeLatLng
-                        title = "K. Ramakrishnan College of Engineering"
-                        snippet = "Campus Main Gate"
-                        icon = createCampusMarkerIcon(context)
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    }
-                    mapView.overlays.add(collegeMarker)
-
-                    // Draw Bus Markers
-                    liveBuses.forEach { bus ->
-                        bus.live?.let { live ->
-                            // Use animated position for tracked bus, snapped for others
-                            val busPos = if (bus.id == selectedBusId && animatedBusLatLng != null) {
-                                animatedBusLatLng!!
-                            } else {
-                                GeoPoint(live.lat, live.lon)
-                            }
-                            
-                            val busMarker = Marker(mapView).apply {
-                                position = busPos
-                                title = "Bus ${bus.number}"
-                                snippet = "Route: ${bus.routeName} | Speed: ${live.speed.toInt()} km/h"
-                                val isOnline = live.status != "offline"
-                                icon = createBusMarkerIcon(context, bus.number, isOnline)
-                                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                                setOnMarkerClickListener { _, _ ->
-                                    selectedBusId = bus.id
-                                    hasCentered = false // Refit bounds
-                                    true
-                                }
-                            }
-                            mapView.overlays.add(busMarker)
-                        }
-                    }
-
-                    // Draw Route line
-                    directionsResult?.let { result ->
-                        val routeLine = Polyline(mapView).apply {
-                            setPoints(result.points)
-                            outlinePaint.color = android.graphics.Color.parseColor("#1F3E97")
-                            outlinePaint.strokeWidth = 10f
-                        }
-                        mapView.overlays.add(routeLine)
-                    }
-
-                    mapView.invalidate()
                 }
-            )
+
+                // Route polyline
+                directionsResult?.let { result ->
+                    Polyline(
+                        points = result.points,
+                        color = Color(0xFF1F3E97),
+                        width = 10f
+                    )
+                }
+            }
 
             // Top overlay card (Title / Error message if any)
             Column(
@@ -306,9 +333,13 @@ fun LiveMapScreen(authToken: String, busId: String?) {
                         try {
                             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                                 if (location != null) {
-                                    val userPoint = GeoPoint(location.latitude, location.longitude)
-                                    mapRef?.controller?.animateTo(userPoint)
-                                    mapRef?.controller?.setZoom(16.0)
+                                    val userPoint = LatLng(location.latitude, location.longitude)
+                                    coroutineScope.launch {
+                                        cameraPositionState.animate(
+                                            CameraUpdateFactory.newLatLngZoom(userPoint, 16f),
+                                            1000
+                                        )
+                                    }
                                 }
                             }
                         } catch (e: Exception) {
@@ -508,12 +539,12 @@ suspend fun fetchOSRMRoute(originLat: Double, originLon: Double, destLat: Double
                     
                     val geometry = route.getAsJsonObject("geometry")
                     val coordinates = geometry.getAsJsonArray("coordinates")
-                    val points = ArrayList<GeoPoint>()
+                    val points = ArrayList<LatLng>()
                     coordinates.forEach { elem ->
                         val coord = elem.asJsonArray
                         val lon = coord.get(0).asDouble
                         val lat = coord.get(1).asDouble
-                        points.add(GeoPoint(lat, lon))
+                        points.add(LatLng(lat, lon))
                     }
                     
                     // Format distance
@@ -542,7 +573,7 @@ suspend fun fetchOSRMRoute(originLat: Double, originLon: Double, destLat: Double
     }
 }
 
-fun createCampusMarkerIcon(context: android.content.Context): android.graphics.drawable.BitmapDrawable {
+fun createCampusMarkerIcon(context: Context): android.graphics.Bitmap {
     val size = 96
     val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
@@ -560,10 +591,10 @@ fun createCampusMarkerIcon(context: android.content.Context): android.graphics.d
     paint.color = android.graphics.Color.WHITE
     canvas.drawCircle(size / 2f, size / 2f, size / 5f, paint)
     
-    return android.graphics.drawable.BitmapDrawable(context.resources, bitmap)
+    return bitmap
 }
 
-fun createBusMarkerIcon(context: android.content.Context, busNumber: String, isOnline: Boolean): android.graphics.drawable.BitmapDrawable {
+fun createBusMarkerIcon(context: Context, busNumber: String, isOnline: Boolean): android.graphics.Bitmap {
     val width = 140
     val height = 100
     val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
@@ -615,5 +646,5 @@ fun createBusMarkerIcon(context: android.content.Context, busNumber: String, isO
     val textY = height - 22f - ((paint.descent() + paint.ascent()) / 2f)
     canvas.drawText(label, width / 2f, textY, paint)
 
-    return android.graphics.drawable.BitmapDrawable(context.resources, bitmap)
+    return bitmap
 }
