@@ -906,7 +906,7 @@
         let activeInfoWindow = null;
         let activeTab = 'tab-live';
         let wsConn = null;
-        let token = localStorage.getItem('krce_token');
+        let token = sessionStorage.getItem('krce_token');
         let userProfile = null;
         
         let activeBusId = null;
@@ -914,9 +914,9 @@
         let routeMarkers = { start: null, destination: null, stops: [] };
         
         // Base API endpoints
-        const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_BASE = IS_LOCAL ? window.location.origin : 'https://krce-bus-tracking.onrender.com';
-        const WS_BASE = IS_LOCAL ? ((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host) : 'wss://krce-bus-tracking.onrender.com';
+        const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+        const API_BASE = IS_LOCAL ? (window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin) : 'https://krce-bus-tracking.onrender.com';
+        const WS_BASE = IS_LOCAL ? (window.location.protocol === 'file:' ? 'ws://localhost:8000' : ((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host)) : 'wss://krce-bus-tracking.onrender.com';
 
         // Initialize portal check on load
         window.addEventListener('DOMContentLoaded', () => {
@@ -998,7 +998,7 @@
 
         function logout() {
             stopGpsBroadcast();
-            localStorage.removeItem('krce_token');
+            sessionStorage.removeItem('krce_token');
             token = null;
             userProfile = null;
             if (wsConn) {
@@ -1259,7 +1259,7 @@
                 const tokenVal = data.token || data.access_token;
                 if (response.ok && tokenVal) {
                     token = tokenVal;
-                    localStorage.setItem('krce_token', token);
+                    sessionStorage.setItem('krce_token', token);
                     userProfile = parseJwt(token);
                     showToast('Welcome!', `Logged in successfully as ${userProfile.name}.`, 'success');
                     showPortal();
@@ -1634,8 +1634,10 @@
 
         // WebSocket real-time updates handler
         function connectWebSocket() {
+            if (!token) return;
             if (wsConn) {
-                wsConn.close();
+                wsConn.onclose = null;
+                try { wsConn.close(); } catch(e){}
             }
 
             wsConn = new WebSocket(`${WS_BASE}/ws?token=${token}`);
@@ -1683,8 +1685,11 @@
                 if (wsPingInterval) {
                     clearInterval(wsPingInterval);
                 }
-                console.log('WS Connection closed, retrying in 5 seconds...');
-                setTimeout(connectWebSocket, 5000);
+                console.log('WS Connection closed');
+                if (token) {
+                    console.log('WS retrying in 5 seconds...');
+                    setTimeout(connectWebSocket, 5000);
+                }
             };
         }
 

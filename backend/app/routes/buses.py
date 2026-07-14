@@ -29,6 +29,12 @@ async def get_buses(u=Depends(current_user)):
     count_map = {c["_id"]: c["cnt"] for c in count_docs}
 
     for bus in buses:
+        driver = None
+        if bus.get("driver_id"):
+            driver = await db.users.find_one({"id": bus["driver_id"]}, {"_id": 0, "name": 1, "phone": 1})
+        bus["driver_name"]  = driver["name"]  if driver else None
+        bus["driver_phone"] = driver["phone"] if driver else None
+
         bus_live = live_buses.get(bus["id"])
         if bus_live:
             bus_live_clean = bus_live.copy()
@@ -79,6 +85,12 @@ async def get_bus_details(bus_id: str, u=Depends(current_user)):
     if not bus:
         raise HTTPException(404, "Bus not found")
     
+    driver = None
+    if bus.get("driver_id"):
+        driver = await db.users.find_one({"id": bus["driver_id"]}, {"_id": 0, "name": 1, "phone": 1})
+    bus["driver_name"]  = driver["name"]  if driver else None
+    bus["driver_phone"] = driver["phone"] if driver else None
+
     td = today()
     boarded_count = await db.attendance.count_documents({"bus_id": bus_id, "date": td, "tap_type": "boarded"})
     bus["boarded_today"] = boarded_count

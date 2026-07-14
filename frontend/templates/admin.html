@@ -1595,14 +1595,14 @@
         let map;
         let busMarkers = {};
         let activeInfoWindow = null;
-        let token = localStorage.getItem('krce_token');
+        let token = sessionStorage.getItem('krce_token');
         let userProfile = null;
         let activeRegTab = 'pending';
         let globalUsers = [];
         let globalBuses = [];
 
-        const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const API_BASE = IS_LOCAL ? window.location.origin : 'https://krce-bus-tracking.onrender.com';
+        const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+        const API_BASE = IS_LOCAL ? (window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin) : 'https://krce-bus-tracking.onrender.com';
 
         // Fallback Mock Data for Premium Frontend Feel
         const mockStats = {
@@ -1705,7 +1705,7 @@
                 clearInterval(pollingInterval);
                 pollingInterval = null;
             }
-            localStorage.removeItem('krce_token');
+            sessionStorage.removeItem('krce_token');
             token = null;
             userProfile = null;
             showLogin();
@@ -1714,6 +1714,7 @@
         function connectWebSocket() {
             if (!token) return;
             if (wsConn) {
+                wsConn.onclose = null;
                 try { wsConn.close(); } catch(e){}
             }
             const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -2856,7 +2857,7 @@
                         return;
                     }
                     token = tokenVal;
-                    localStorage.setItem('krce_token', token);
+                    sessionStorage.setItem('krce_token', token);
                     userProfile = prof;
                     showPortal();
                 } else {
