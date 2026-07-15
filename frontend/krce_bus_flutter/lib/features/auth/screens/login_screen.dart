@@ -127,24 +127,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20),
 
-                  // Logo / title
-                  const Text(
-                    'KRCE BusTrack',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  // Logo
+                  Image.asset(
+                    'assets/images/logo_full.png',
+                    height: 160,
+                    fit: BoxFit.contain,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 12),
                   Text(
                     'K. Ramakrishnan College of Engineering',
                     style: TextStyle(
                         color: Colors.white.withOpacity(0.7), fontSize: 14),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 32),
 
                   // Login Card
                   GlassCard(
