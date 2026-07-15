@@ -923,6 +923,14 @@
             border-color: var(--status-active);
             box-shadow: 0 0 12px var(--status-active);
         }
+        .bus-marker-icon.danger {
+            border-color: var(--status-danger);
+            box-shadow: 0 0 12px var(--status-danger);
+        }
+        .bus-marker-icon.primary {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent);
+        }
         .campus-marker-icon {
             background: var(--accent);
             color: white;
@@ -1030,6 +1038,13 @@
                     <span>Registrations</span>
                 </span>
                 <span class="nav-badge" id="sidebar-reg-badge" style="display: none;">0</span>
+            </a>
+            <a class="nav-item" onclick="switchSection('sect-emergencies', this)">
+                <span class="nav-item-link">
+                    <i data-lucide="shield-alert" style="width: 18px; height: 18px; color: var(--status-danger);"></i>
+                    <span style="color: var(--status-danger); font-weight: 700;">Breakdowns</span>
+                </span>
+                <span class="nav-badge" id="sidebar-emerg-badge" style="display: none; background: var(--status-danger);">0</span>
             </a>
 
             <div class="nav-section-label">Operations</div>
@@ -1466,6 +1481,23 @@
 
                     <div class="alert-cards-list" id="alert-feed-container">
                         <!-- Populated dynamically -->
+                </div>
+
+                <!-- SECTION 9: BREAKDOWNS -->
+                <div class="sect-pane" id="sect-emergencies" style="display: none;">
+                    <div class="section-header-row">
+                        <div class="section-header-title">
+                            <h2>Emergency Bus Breakdowns</h2>
+                            <p>Monitor active breakdowns, review intelligent backup recommendations, and assign replacement buses.</p>
+                        </div>
+                    </div>
+                    
+                    <div id="emergencies-container" style="display: flex; flex-direction: column; gap: 24px; margin-top: 16px;">
+                        <!-- Populated dynamically -->
+                        <div class="empty-state">
+                            <i data-lucide="shield-check" style="width: 48px; height: 48px; color: var(--status-active);"></i>
+                            <p>No active breakdowns or emergencies reported.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -1600,6 +1632,7 @@
         let activeRegTab = 'pending';
         let globalUsers = [];
         let globalBuses = [];
+        let globalEmergencies = [];
 
         const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
         const API_BASE = IS_LOCAL ? (window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin) : 'https://krce-bus-tracking.onrender.com';
@@ -1747,9 +1780,10 @@
                             };
                             updateLiveMapMarkers();
                         }
-                    } else if (data.type === 'alert') {
+                    } else if (data.type === 'alert' || data.type === 'emergency_reported' || data.type === 'emergency_update') {
                         loadAlerts();
                         loadStats();
+                        loadEmergencies();
                     }
                 } catch(e) {
                     console.error("Error handling WebSocket message:", e);
@@ -1771,6 +1805,7 @@
                 loadBuses();
                 loadRegistrations();
                 loadAttendanceLog();
+                loadEmergencies();
             }, 10000);
         }
 
@@ -1781,6 +1816,7 @@
             loadRegistrations();
             loadAttendanceLog();
             loadAlerts();
+            loadEmergencies();
         }
 
         // Navigation Pane Routing
@@ -1806,13 +1842,16 @@
                 'sect-users': 'Students & Staff Directory',
                 'sect-regs': 'Registration Approvals Center',
                 'sect-attendance': 'Daily Attendance Logs',
-                'sect-alerts': 'Transit Alerts Feed'
+                'sect-alerts': 'Transit Alerts Feed',
+                'sect-emergencies': 'Emergency Breakdown Control'
             };
             document.getElementById('current-page-title').innerText = titleMap[sectId] || 'TransitAdmin Control';
 
             // Special actions on sections
             if (sectId === 'sect-map') {
                 setTimeout(initMap, 200);
+            } else if (sectId === 'sect-emergencies') {
+                loadEmergencies();
             }
         }
 
@@ -2035,8 +2074,20 @@
                 const lat = live.lat;
                 const lon = live.lon;
 
+                const activeEmerg = globalEmergencies.find(e => e.bus_id === b.id && e.status !== 'resolved' && e.status !== 'rejected');
+                const activeBackup = globalEmergencies.find(e => e.backup_bus_id === b.id && e.status !== 'resolved' && e.status !== 'rejected');
+
+                let markerColorClass = '';
+                if (activeEmerg) {
+                    markerColorClass = 'danger';
+                } else if (activeBackup) {
+                    markerColorClass = 'primary';
+                } else if (isOnline) {
+                    markerColorClass = 'online';
+                }
+
                 // DivIcon Marker
-                const htmlMarker = `<div class="bus-marker-icon ${isOnline ? 'online' : ''}">${b.number.replace('Bus-', '')}</div>`;
+                const htmlMarker = `<div class="bus-marker-icon ${markerColorClass}">${b.number.replace('Bus-', '')}</div>`;
                 if (busMarkers[b.id]) {
                     busMarkers[b.id].setPosition(new google.maps.LatLng(lat, lon));
                     busMarkers[b.id].html = htmlMarker;
@@ -2873,6 +2924,206 @@
             const box = document.getElementById('auth-error-box');
             document.getElementById('auth-error-msg').innerText = msg;
             box.style.display = 'flex';
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  9. EMERGENCY BUS BREAKDOWN & BACKUP ASSIGNMENT
+        // ═══════════════════════════════════════════════════════════════════
+        async function loadEmergencies() {
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emergencies`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    globalEmergencies = data;
+                    renderEmergenciesList(data);
+                }
+            } catch(e) {
+                console.error("Failed to load emergencies:", e);
+            }
+        }
+
+        function renderEmergenciesList(list) {
+            const container = document.getElementById('emergencies-container');
+            const activeEmergencies = list.filter(e => e.status !== 'resolved' && e.status !== 'rejected');
+            
+            // Update sidebar badge
+            const badge = document.getElementById('sidebar-emerg-badge');
+            if (activeEmergencies.length > 0) {
+                badge.innerText = activeEmergencies.length;
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.style.display = 'none';
+            }
+
+            if (activeEmergencies.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i data-lucide="shield-check" style="width: 48px; height: 48px; color: var(--status-active);"></i>
+                        <p>No active breakdowns or emergencies reported.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = activeEmergencies.map(e => {
+                const isRecommended = e.status === 'recommended' || e.status === 'searching';
+                const isAssigned = e.status === 'assigned';
+                const isAccepted = e.status === 'accepted';
+
+                let statusText = 'Reported';
+                let statusClass = 'pill-status-danger';
+                if (isAssigned) {
+                    statusText = 'Backup Assigned';
+                    statusClass = 'pill-status-info';
+                } else if (isAccepted) {
+                    statusText = 'Active Transfer';
+                    statusClass = 'pill-status-active';
+                }
+
+                // Render Timeline
+                const timelineHtml = e.timeline.map((item, idx) => `
+                    <div style="display: flex; gap: 12px; margin-bottom: 12px; font-size: 0.8rem; position: relative;">
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${idx === e.timeline.length - 1 ? 'var(--status-danger)' : 'var(--text-secondary)'}; z-index: 1;"></div>
+                            ${idx < e.timeline.length - 1 ? '<div style="width: 2px; flex-grow: 1; background: var(--bg-hover); margin-top: 4px; margin-bottom: 4px;"></div>' : ''}
+                        </div>
+                        <div>
+                            <span style="font-weight: 700; color: ${idx === e.timeline.length - 1 ? 'var(--status-danger)' : 'var(--text-primary)'};">${item.status}</span>
+                            <span style="color: var(--text-secondary); margin-left: 8px;">${new Date(item.ts).toLocaleTimeString()}</span>
+                            <div style="color: var(--text-secondary); margin-top: 2px;">${item.msg}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Render Backup Recommendations
+                let backupHtml = '';
+                if (isRecommended) {
+                    backupHtml = `
+                        <div style="margin-top: 20px; border-top: 1px solid var(--bg-hover); padding-top: 16px;">
+                            <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--accent);">
+                                <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
+                                Intelligent Backup Recommendations
+                            </h4>
+                            ${e.recommendations.length === 0 ? '<p style="font-size: 0.8rem; color: var(--text-secondary);">No online/available backup vehicles found.</p>' : `
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    ${e.recommendations.map(rec => `
+                                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-hover); padding: 12px; border-radius: 8px; border-left: 4px solid ${rec.has_enough_seats ? 'var(--status-active)' : 'var(--status-warning)'};">
+                                            <div>
+                                                <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">${rec.bus_number} (${rec.driver_name})</div>
+                                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">
+                                                    Distance: ${rec.distance_km} km | ETA: ${rec.eta_minutes} mins | Avail. Seats: ${rec.available_seats}
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-primary btn-sm" onclick="assignBackupBus('${e.id}', '${rec.bus_id}')" style="padding: 6px 12px; font-size: 0.75rem;">
+                                                Approve & Assign
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `}
+                        </div>
+                    `;
+                } else if (isAssigned) {
+                    backupHtml = `
+                        <div style="margin-top: 20px; background: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent); padding: 16px; border-radius: 8px; text-align: center;">
+                            <i data-lucide="loader" class="spin" style="width: 24px; height: 24px; color: var(--accent); margin: 0 auto 8px auto;"></i>
+                            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Awaiting Backup Response</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
+                                Assigned Bus: ${e.backup_bus_number} (Driver: ${e.backup_driver_name}, ETA: ${e.eta_minutes} mins).
+                            </div>
+                        </div>
+                    `;
+                } else if (isAccepted) {
+                    backupHtml = `
+                        <div style="margin-top: 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--status-active); padding: 16px; border-radius: 8px; text-align: center;">
+                            <i data-lucide="check-circle" style="width: 24px; height: 24px; color: var(--status-active); margin: 0 auto 8px auto;"></i>
+                            <div style="font-weight: 700; font-size: 0.9rem; color: var(--status-active);">Trip Continuing in Backup Bus</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
+                                Passengers successfully transferred to Bus ${e.backup_bus_number} (Driver: ${e.backup_driver_name}).
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="panel" style="padding: 24px; border: 1px solid var(--bg-hover); position: relative;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--status-danger);">Vehicle Breakdown: ${e.bus_number}</h3>
+                                    <span class="pill ${statusClass}">${statusText}</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
+                                    Route: ${e.route_name} | Reported At: ${new Date(e.emergency_time).toLocaleTimeString()}
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="resolveEmergency('${e.id}')" style="background: var(--bg-hover); color: var(--text-primary);">
+                                Resolve Emergency
+                            </button>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                            <div>
+                                <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: var(--text-primary);">Breakdown Details</h4>
+                                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem; color: var(--text-secondary);">
+                                    <div><strong>Driver:</strong> ${e.driver_name}</div>
+                                    <div><strong>Location Coordinates:</strong> ${e.gps.lat.toFixed(5)}, ${e.gps.lon.toFixed(5)}</div>
+                                    <div><strong>Current / Next Stop:</strong> ${e.current_stop} / ${e.next_stop}</div>
+                                    <div><strong>Students Onboard (${e.students_onboard.length}):</strong> ${e.students_onboard.length === 0 ? 'None' : e.students_onboard.join(', ')}</div>
+                                </div>
+                                
+                                ${backupHtml}
+                            </div>
+                            
+                            <div style="border-left: 1px solid var(--bg-hover); padding-left: 24px;">
+                                <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">Emergency Timeline</h4>
+                                <div style="margin-top: 10px;">
+                                    ${timelineHtml}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            lucide.createIcons();
+        }
+
+        async function assignBackupBus(emergId, backupBusId) {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emergencies/${emergId}/assign`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ backup_bus_id: backupBusId })
+                });
+                if (res.ok) {
+                    loadEmergencies();
+                }
+            } catch(e) {
+                console.error("Failed to assign backup:", e);
+            }
+        }
+
+        async function resolveEmergency(emergId) {
+            if (!confirm("Are you sure you want to mark this emergency as resolved?")) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emergencies/${emergId}/resolve`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    loadEmergencies();
+                }
+            } catch(e) {
+                console.error("Failed to resolve emergency:", e);
+            }
         }
     </script>
 </body>

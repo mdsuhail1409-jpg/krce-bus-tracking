@@ -25,6 +25,12 @@ final etaProvider = FutureProvider.autoDispose<EtaResponse>((ref) async {
   return api.getMyEta(auth.token);
 });
 
+final activeEmergencyProvider = FutureProvider.autoDispose<EmergencyAssignmentResponse?>((ref) async {
+  final auth = ref.watch(authProvider);
+  final api = ref.read(apiServiceProvider);
+  return api.getActiveEmergency(auth.token);
+});
+
 class StudentDashboard extends ConsumerStatefulWidget {
   const StudentDashboard({super.key});
 
@@ -39,6 +45,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
     final busesAsync = ref.watch(busesProvider);
     final alertsAsync = ref.watch(alertsProvider);
     final etaAsync = ref.watch(etaProvider);
+    final activeEmergencyAsync = ref.watch(activeEmergencyProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
@@ -48,6 +55,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
             ref.invalidate(busesProvider);
             ref.invalidate(alertsProvider);
             ref.invalidate(etaProvider);
+            ref.invalidate(activeEmergencyProvider);
           },
           child: ListView(
             padding: const EdgeInsets.all(16),
@@ -88,6 +96,73 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              activeEmergencyAsync.when(
+                data: (emerg) {
+                  if (emerg == null) return const SizedBox.shrink();
+                  
+                  final hasBackup = emerg.status == 'assigned' || emerg.status == 'accepted';
+                  
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorRed.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.errorRed.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: AppColors.errorRed),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '🚨 EMERGENCY: Bus Breakdown (${emerg.brokenBusNumber})',
+                                style: const TextStyle(
+                                  color: AppColors.errorRed,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Your assigned Bus ${emerg.brokenBusNumber} has encountered a breakdown.',
+                          style: const TextStyle(color: AppColors.textColor, fontSize: 13),
+                        ),
+                        if (hasBackup && emerg.backupBusNumber != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Replacement Bus: ${emerg.backupBusNumber} has been assigned.\nDriver: ${emerg.backupDriverName} | ETA: ${emerg.etaMinutes ?? "--"} mins.',
+                            style: const TextStyle(
+                              color: AppColors.successGreen,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Administrative control is routing a replacement bus. Please hold at your current location.',
+                            style: TextStyle(
+                              color: AppColors.warningOrange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
 
               // ETA Card
               etaAsync.when(

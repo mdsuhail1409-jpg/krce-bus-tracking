@@ -169,6 +169,15 @@ class MockCollection:
             self.data.append(new_doc)
         return found
 
+    async def update_many(self, query, update_doc, upsert=False):
+        set_fields = update_doc.get("$set", {})
+        count = 0
+        for doc in self.data:
+            if self._matches(doc, query):
+                doc.update(set_fields)
+                count += 1
+        return count
+
     async def delete_one(self, query):
         for doc in self.data:
             if self._matches(doc, query):
@@ -348,6 +357,7 @@ class MockDatabase:
         self.live_bus_positions = MockCollection("live_bus_positions", self)
         self.live_bus_positions_history = MockCollection("live_bus_positions_history", self)
         self.sessions = MockCollection("sessions", self)
+        self.emergencies = MockCollection("emergencies", self)
 
     def __getitem__(self, name):
         return getattr(self, name)
@@ -381,6 +391,7 @@ async def init_db():
     await db.registrations.create_index("id", unique=True)
     await db.live_bus_positions.create_index("bus_id", unique=True)
     await db.alerts.create_index("id", unique=True)
+    await db.emergencies.create_index("id", unique=True)
     await db.audit_log.create_index("ts")
     await db.live_bus_positions_history.create_index([("bus_id", 1), ("date", 1)])
     await db.sessions.create_index("session_id", unique=True)

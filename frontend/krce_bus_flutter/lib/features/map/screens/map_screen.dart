@@ -16,16 +16,17 @@ import 'package:dio/dio.dart';
 class BusMarkerPainter extends CustomPainter {
   final String label;
   final bool isOnline;
+  final Color? customColor;
 
-  BusMarkerPainter({required this.label, required this.isOnline});
+  BusMarkerPainter({required this.label, required this.isOnline, this.customColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
     final paint = Paint()..isAntiAlias = true;
-    final bodyColor =
-        isOnline ? const Color(0xFF10B981) : const Color(0xFF64748B);
+    final bodyColor = customColor ??
+        (isOnline ? const Color(0xFF10B981) : const Color(0xFF64748B));
 
     // Shadow
     paint.color = Colors.black.withOpacity(0.3);
@@ -126,6 +127,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   double _remainingDuration = 0;
   Bus? _trackedBus;
   bool _showRoutePanel = false;
+  EmergencyAssignmentResponse? _activeEmergency;
 
   static const String _darkMapStyle = '''
   [
@@ -216,13 +218,19 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final api = ref.read(apiServiceProvider);
     try {
       final buses = await api.getBuses(auth.token);
+      EmergencyAssignmentResponse? activeEmergency;
+      try {
+        activeEmergency = await api.getActiveEmergency(auth.token);
+      } catch (_) {}
+      
       if (!mounted) return;
       setState(() {
         _buses = buses;
+        _activeEmergency = activeEmergency;
         _errorMsg = null;
       });
       _updateAnimatedPositions(buses);
-      _updateBusIcons(buses);
+      _updateBusIcons(buses, activeEmergency);
       if (_trackedBus != null) {
         final updated = buses.firstWhere(
           (b) => b.id == _trackedBus!.id,
@@ -269,16 +277,26 @@ class _MapScreenState extends ConsumerState<MapScreen>
     }
   }
 
-  Future<void> _updateBusIcons(List<Bus> buses) async {
+  Future<void> _updateBusIcons(List<Bus> buses, EmergencyAssignmentResponse? activeEmergency) async {
     for (final bus in buses) {
       if (bus.live == null) continue;
       final isOnline = bus.live!.status != 'offline';
       final label = bus.number.contains('-')
           ? bus.number.split('-').last
           : bus.number;
-      final key = '${bus.id}_${isOnline}_$label';
+      
+      final isBroken = activeEmergency != null && activeEmergency.brokenBusId == bus.id;
+      final isBackup = activeEmergency != null && activeEmergency.backupBusId == bus.id;
+      Color? customColor;
+      if (isBroken) {
+        customColor = Colors.red;
+      } else if (isBackup) {
+        customColor = Colors.blue;
+      }
+
+      final key = '${bus.id}_${isOnline}_${label}_${customColor?.value}';
       if (!_busIcons.containsKey(key)) {
-        final icon = await _getBusMarkerIcon(label, isOnline);
+        final icon = await _getBusMarkerIcon(label, isOnline, customColor: customColor);
         if (mounted) {
           setState(() {
             _busIcons[key] = icon;
@@ -369,11 +387,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
     return BitmapDescriptor.fromBytes(bytes);
   }
 
-  Future<BitmapDescriptor> _getBusMarkerIcon(String label, bool isOnline) async {
+  Future<BitmapDescriptor> _getBusMarkerIcon(String label, bool isOnline, {Color? customColor}) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     const size = Size(140, 100);
-    final painter = BusMarkerPainter(label: label, isOnline: isOnline);
+    final painter = BusMarkerPainter(label: label, isOnline: isOnline, customColor: customColor);
     painter.paint(canvas, size);
     final picture = recorder.endRecording();
     final img = await picture.toImage(140, 100);
@@ -409,7 +427,17 @@ class _MapScreenState extends ConsumerState<MapScreen>
       final label = bus.number.contains('-')
           ? bus.number.split('-').last
           : bus.number;
-      final key = '${bus.id}_${isOnline}_$label';
+
+      final isBroken = _activeEmergency != null && _activeEmergency!.brokenBusId == bus.id;
+      final isBackup = _activeEmergency != null && _activeEmergency!.backupBusId == bus.id;
+      Color? customColor;
+      if (isBroken) {
+        customColor = Colors.red;
+      } else if (isBackup) {
+        customColor = Colors.blue;
+      }
+
+      final key = '${bus.id}_${isOnline}_${label}_${customColor?.value}';
 
       markers.add(Marker(
         markerId: MarkerId(bus.id),

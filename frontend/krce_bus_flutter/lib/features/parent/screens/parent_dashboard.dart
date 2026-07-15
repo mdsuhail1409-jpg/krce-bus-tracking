@@ -7,6 +7,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 
+final activeEmergencyProvider = FutureProvider.autoDispose<EmergencyAssignmentResponse?>((ref) async {
+  final auth = ref.watch(authProvider);
+  final api = ref.read(apiServiceProvider);
+  return api.getActiveEmergency(auth.token);
+});
+
 class ParentDashboard extends ConsumerStatefulWidget {
   const ParentDashboard({super.key});
 
@@ -29,6 +35,7 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
     final auth = ref.read(authProvider);
     final api = ref.read(apiServiceProvider);
     try {
+      ref.invalidate(activeEmergencyProvider);
       final results = await Future.wait(<Future<dynamic>>[
         api.getChildAttendance(auth.token),
         api.getAlerts(auth.token),
@@ -48,6 +55,7 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
+    final activeEmergencyAsync = ref.watch(activeEmergencyProvider);
     final today = _attendance.where((a) {
       final now = DateTime.now();
       return a.date.startsWith(
@@ -96,6 +104,73 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    activeEmergencyAsync.when(
+                      data: (emerg) {
+                        if (emerg == null) return const SizedBox.shrink();
+                        
+                        final hasBackup = emerg.status == 'assigned' || emerg.status == 'accepted';
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.errorRed.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.errorRed.withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded, color: AppColors.errorRed),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '🚨 EMERGENCY: Child\'s Bus Breakdown (${emerg.brokenBusNumber})',
+                                      style: const TextStyle(
+                                        color: AppColors.errorRed,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Your child\'s assigned Bus ${emerg.brokenBusNumber} has encountered a breakdown.',
+                                style: const TextStyle(color: AppColors.textColor, fontSize: 13),
+                              ),
+                              if (hasBackup && emerg.backupBusNumber != null) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Replacement Bus: ${emerg.backupBusNumber} has been assigned.\nDriver: ${emerg.backupDriverName} | ETA: ${emerg.etaMinutes ?? "--"} mins.',
+                                  style: const TextStyle(
+                                    color: AppColors.successGreen,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Administrative control is routing a replacement bus. Your child will be safely transferred.',
+                                  style: TextStyle(
+                                    color: AppColors.warningOrange,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
 
                     // Today's Status
                     GlassCard(

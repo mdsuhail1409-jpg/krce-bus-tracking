@@ -537,4 +537,61 @@ class ApiService {
       'refresh_token': res.data['refresh_token'] ?? '',
     };
   }
+
+  // ── Breakdown Emergency Module ──────────────────────────────
+  Future<GenericResponse> reportBreakdown(String token, double lat, double lon) async {
+    if (token.startsWith('demo_token_')) {
+      return GenericResponse(status: 'ok', message: 'Breakdown reported (Demo)');
+    }
+    final res = await _dio.post('/api/driver/breakdown',
+        data: {'lat': lat, 'lon': lon, 'emergency_type': 'breakdown'},
+        options: Options(headers: _authHeader(token)));
+    return GenericResponse.fromJson(res.data);
+  }
+
+  Future<EmergencyAssignmentResponse?> getEmergencyAssignment(String token) async {
+    if (token.startsWith('demo_token_')) {
+      return null;
+    }
+    try {
+      final res = await _dio.get('/api/driver/emergency-assignment',
+          options: Options(headers: _authHeader(token)));
+      if (res.data == null) return null;
+      return EmergencyAssignmentResponse.fromJson(res.data);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<GenericResponse> acceptEmergencyAssignment(String token, String emergencyId) async {
+    if (token.startsWith('demo_token_')) {
+      return GenericResponse(status: 'ok', message: 'Assignment accepted (Demo)');
+    }
+    final res = await _dio.post('/api/driver/emergency-assignment/$emergencyId/accept',
+        options: Options(headers: _authHeader(token)));
+    return GenericResponse.fromJson(res.data);
+  }
+
+  Future<GenericResponse> rejectEmergencyAssignment(String token, String emergencyId) async {
+    if (token.startsWith('demo_token_')) {
+      return GenericResponse(status: 'ok', message: 'Assignment rejected (Demo)');
+    }
+    final res = await _dio.post('/api/driver/emergency-assignment/$emergencyId/reject',
+        options: Options(headers: _authHeader(token)));
+    return GenericResponse.fromJson(res.data);
+  }
+
+  Future<EmergencyAssignmentResponse?> getActiveEmergency(String token) async {
+    if (token.startsWith('demo_token_')) {
+      return null;
+    }
+    try {
+      final res = await _dio.get('/api/user/active-emergency',
+          options: Options(headers: _authHeader(token)));
+      if (res.data == null) return null;
+      return EmergencyAssignmentResponse.fromJson(res.data);
+    } catch (e) {
+      return null;
+    }
+  }
 }

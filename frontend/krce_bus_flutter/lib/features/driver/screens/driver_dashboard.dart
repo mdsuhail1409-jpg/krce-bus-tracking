@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/gps_service.dart';
@@ -21,11 +22,14 @@ class _DriverDashboardState extends ConsumerState<DriverDashboard> {
   List<Passenger> _passengers = [];
   String _sosMessage = '';
   Timer? _passengerTimer;
+  Timer? _assignmentTimer;
+  bool _showingAssignmentDialog = false;
 
   @override
   void initState() {
     super.initState();
     _loadSavedState();
+    _startAssignmentPolling();
   }
 
   Future<void> _loadSavedState() async {
@@ -46,6 +50,7 @@ class _DriverDashboardState extends ConsumerState<DriverDashboard> {
   @override
   void dispose() {
     _passengerTimer?.cancel();
+    _assignmentTimer?.cancel();
     super.dispose();
   }
 
@@ -94,6 +99,135 @@ class _DriverDashboardState extends ConsumerState<DriverDashboard> {
     } catch (_) {
       setState(() => _sosMessage = 'Failed to trigger SOS');
     }
+  }
+
+  Future<void> _reportBreakdown() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceColor,
+        title: const Text('Report Breakdown?', style: TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to report a vehicle breakdown? This will alert administrative control and request a replacement bus.'),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.errorRed),
+            child: const Text('Report', style: TextStyle(color: Colors.white)),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final auth = ref.read(authProvider);
+    final api = ref.read(apiServiceProvider);
+    
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      await api.reportBreakdown(auth.token, position.latitude, position.longitude);
+      if (mounted) {
+        setState(() => _sosMessage = '🚨 Breakdown Reported! Admin control notified.');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sosMessage = 'Failed to report breakdown. Check GPS/permissions.');
+      }
+    }
+  }
+
+  void _startAssignmentPolling() {
+    _checkAssignment();
+    _assignmentTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _checkAssignment();
+    });
+  }
+
+  Future<void> _checkAssignment() async {
+    final auth = ref.read(authProvider);
+    final api = ref.read(apiServiceProvider);
+    if (auth.token.isEmpty || auth.token.startsWith('demo_')) return;
+    try {
+      final assign = await api.getEmergencyAssignment(auth.token);
+      if (assign != null && !_showingAssignmentDialog && mounted) {
+        setState(() {
+          _showingAssignmentDialog = true;
+        });
+        _showAssignmentDialog(assign);
+      }
+    } catch (_) {}
+  }
+
+  void _showAssignmentDialog(EmergencyAssignmentResponse assign) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.surfaceColor,
+          title: const Text('🚨 EMERGENCY PICKUP REQUEST',
+              style: TextStyle(color: AppColors.errorRed, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Broken Bus: ${assign.brokenBusNumber}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textColor)),
+              const SizedBox(height: 8),
+              Text('Students Onboard: ${assign.studentsWaiting}',
+                  style: const TextStyle(color: AppColors.textColor)),
+              const SizedBox(height: 8),
+              Text('Stops to Cover: ${assign.remainingStops.join(" ➔ ")}',
+                  style: const TextStyle(fontSize: 13, color: AppColors.mutedText)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text('REJECT', style: TextStyle(color: AppColors.mutedText)),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final auth = ref.read(authProvider);
+                final api = ref.read(apiServiceProvider);
+                try {
+                  await api.rejectEmergencyAssignment(auth.token, assign.emergencyId);
+                } catch (_) {}
+                if (mounted) {
+                  setState(() {
+                    _showingAssignmentDialog = false;
+                  });
+                }
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.successGreen),
+              child: const Text('ACCEPT', style: TextStyle(color: Colors.white)),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final auth = ref.read(authProvider);
+                final api = ref.read(apiServiceProvider);
+                try {
+                  await api.acceptEmergencyAssignment(auth.token, assign.emergencyId);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Pickup accepted. Students transferred to this vehicle.')),
+                  );
+                } catch (_) {}
+                if (mounted) {
+                  setState(() {
+                    _showingAssignmentDialog = false;
+                  });
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -204,6 +338,12 @@ class _DriverDashboardState extends ConsumerState<DriverDashboard> {
               text: '🚨 Trigger SOS Panic Alert',
               gradient: AppColors.gradientDanger,
               onPressed: _triggerSos,
+            ),
+            const SizedBox(height: 12),
+            PremiumButton(
+              text: '🚨 Report Vehicle Breakdown',
+              gradient: AppColors.gradientWarning,
+              onPressed: _reportBreakdown,
             ),
             const SizedBox(height: 24),
 

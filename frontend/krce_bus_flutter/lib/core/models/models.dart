@@ -458,3 +458,46 @@ class User {
         isActive: json['is_active'] ?? 1,
       );
 }
+
+class EmergencyAssignmentResponse {
+  final String emergencyId;
+  final String brokenBusId;
+  final String brokenBusNumber;
+  final double lat;
+  final double lon;
+  final int studentsWaiting;
+  final List<String> remainingStops;
+  final String status;
+  final String? backupBusNumber;
+  final String? backupDriverName;
+  final int? etaMinutes;
+
+  EmergencyAssignmentResponse({
+    required this.emergencyId,
+    required this.brokenBusId,
+    required this.brokenBusNumber,
+    required this.lat,
+    required this.lon,
+    required this.studentsWaiting,
+    required this.remainingStops,
+    required this.status,
+    this.backupBusNumber,
+    this.backupDriverName,
+    this.etaMinutes,
+  });
+
+  factory EmergencyAssignmentResponse.fromJson(Map<String, dynamic> json) =>
+      EmergencyAssignmentResponse(
+        emergencyId: json['id'] ?? '',
+        brokenBusId: json['bus_id'] ?? '',
+        brokenBusNumber: json['bus_number'] ?? '',
+        lat: (json['gps']?['lat'] ?? 0.0).toDouble(),
+        lon: (json['gps']?['lon'] ?? 0.0).toDouble(),
+        studentsWaiting: (json['students_onboard'] as List?)?.length ?? 0,
+        remainingStops: List<String>.from(json['remaining_stops'] ?? []),
+        status: json['status'] ?? '',
+        backupBusNumber: json['backup_bus_number'],
+        backupDriverName: json['backup_driver_name'],
+        etaMinutes: json['eta_minutes'],
+      );
+}
