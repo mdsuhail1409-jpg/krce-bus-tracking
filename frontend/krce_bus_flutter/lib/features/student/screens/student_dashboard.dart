@@ -150,7 +150,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                           const Text(
                             'Administrative control is routing a replacement bus. Please hold at your current location.',
                             style: TextStyle(
-                              color: AppColors.warningOrange,
+                              color: AppColors.warningYellow,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),

@@ -158,7 +158,7 @@ class _ParentDashboardState extends ConsumerState<ParentDashboard> {
                                 const Text(
                                   'Administrative control is routing a replacement bus. Your child will be safely transferred.',
                                   style: TextStyle(
-                                    color: AppColors.warningOrange,
+                                    color: AppColors.warningYellow,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
                                   ),

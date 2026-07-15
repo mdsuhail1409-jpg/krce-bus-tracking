@@ -286,7 +286,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
           : bus.number;
       
       final isBroken = activeEmergency != null && activeEmergency.brokenBusId == bus.id;
-      final isBackup = activeEmergency != null && activeEmergency.backupBusId == bus.id;
+      final isBackup = activeEmergency != null &&
+          activeEmergency.backupBusNumber != null &&
+          bus.number.contains(activeEmergency.backupBusNumber!);
       Color? customColor;
       if (isBroken) {
         customColor = Colors.red;
@@ -429,7 +431,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
           : bus.number;
 
       final isBroken = _activeEmergency != null && _activeEmergency!.brokenBusId == bus.id;
-      final isBackup = _activeEmergency != null && _activeEmergency!.backupBusId == bus.id;
+      final isBackup = _activeEmergency != null &&
+          _activeEmergency!.backupBusNumber != null &&
+          bus.number.contains(_activeEmergency!.backupBusNumber!);
       Color? customColor;
       if (isBroken) {
         customColor = Colors.red;
