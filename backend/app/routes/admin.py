@@ -136,7 +136,16 @@ async def admin_users(role: str = "", u=Depends(admin_only)):
     query = {"role": role} if role else {}
     fields = {"_id": 0, "password_hash": 0}
     cursor = db.users.find(query, fields).sort([("role", 1), ("name", 1)])
-    return await cursor.to_list(length=None)
+    users = await cursor.to_list(length=None)
+    result = []
+    for usr in users:
+        bus = None
+        if usr.get("bus_id"):
+            bus = await db.buses.find_one({"id": usr["bus_id"]}, {"_id": 0, "number": 1, "route_name": 1})
+        usr["bus_number"] = bus["number"] if bus else None
+        usr["route_name"] = bus["route_name"] if bus else None
+        result.append(usr)
+    return result
 
 
 @router.post("/api/admin/users/{uid}/toggle")
@@ -388,14 +397,21 @@ async def reg_action(req: RegAction, u=Depends(admin_only)):
 
     if req.action == "approved":
         new_uid  = reg["role"][:3] + str(uuid.uuid4())[:6]
-        new_password = secrets.token_urlsafe(12)
-        pw_hash = _hash(new_password)
-        logger.info(f"Generated password for {reg['email']}: {new_password}")
+        pw_hash = reg.get("password_hash")
+        if not pw_hash:
+            new_password = secrets.token_urlsafe(12)
+            pw_hash = _hash(new_password)
+            logger.info(f"Generated password for {reg['email']}: {new_password}")
+        
+        assigned_rfid = req.rfid_card if req.rfid_card else (reg.get("rfid_card") or None)
+        assigned_bus = req.bus_id if req.bus_id else (reg.get("requested_bus") or None)
+        parent_of = reg.get("parent_child_id") or None
+
         await db.users.insert_one({
             "id": new_uid, "name": reg["name"], "email": reg["email"],
             "phone": reg.get("phone"), "role": reg["role"],
-            "college_id": reg.get("college_id"), "rfid_card": req.rfid_card or None,
-            "bus_id": req.bus_id or None, "parent_of": None, "licence_no": None,
+            "college_id": reg.get("college_id"), "rfid_card": assigned_rfid,
+            "bus_id": assigned_bus, "parent_of": parent_of, "licence_no": None,
             "password_hash": pw_hash, "is_active": 1, "created_at": now_str(), "last_login": None
         })
 

@@ -447,6 +447,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
         markerId: MarkerId(bus.id),
         position: pos,
         icon: _busIcons[key] ?? BitmapDescriptor.defaultMarker,
+        rotation: bus.live!.heading.toDouble(),
+        infoWindow: InfoWindow(
+          title: 'Bus ${bus.number} - ${bus.routeName}',
+          snippet: 'Status: ${isOnline ? "Online" : "Offline"} | Speed: ${bus.live!.speed.toStringAsFixed(1)} km/h | Occupancy: ${bus.live!.passengers}/${bus.capacity}',
+        ),
         onTap: () => _drawRoute(bus),
       ));
     }

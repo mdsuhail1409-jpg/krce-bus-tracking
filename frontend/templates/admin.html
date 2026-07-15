@@ -1337,6 +1337,8 @@
                                 <option value="passenger">Students (Passengers)</option>
                                 <option value="staff">Staff Members</option>
                                 <option value="parent">Parents</option>
+                                <option value="driver">Drivers</option>
+                                <option value="committee">Transport Committee</option>
                                 <option value="admin">Administrators</option>
                             </select>
                         </div>
@@ -1414,18 +1416,45 @@
                         </button>
                     </div>
 
-                    <div class="filter-bar">
+                    <div class="filter-bar" style="flex-wrap: wrap; gap: 12px;">
                         <div class="filter-group">
                             <label class="form-label">Select Date</label>
-                            <input type="date" id="attendance-filter-date" class="form-control" style="width: 180px;">
+                            <input type="date" id="attendance-filter-date" class="form-control" style="width: 140px;">
                         </div>
                         <div class="filter-group">
                             <label class="form-label">Assigned Bus</label>
-                            <select id="attendance-filter-bus" class="form-control" style="width: 180px;">
+                            <select id="attendance-filter-bus" class="form-control" style="width: 140px;">
                                 <option value="">All Buses</option>
                             </select>
                         </div>
-                        <button class="btn btn-primary" onclick="loadAttendanceLog()" style="height: 46px;">Filter Log</button>
+                        <div class="filter-group">
+                            <label class="form-label">Route Coverage</label>
+                            <select id="attendance-filter-route" class="form-control" style="width: 160px;" onchange="applyAttendanceFilters()">
+                                <option value="">All Routes</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Tap Action</label>
+                            <select id="attendance-filter-status" class="form-control" style="width: 120px;" onchange="applyAttendanceFilters()">
+                                <option value="">All Statuses</option>
+                                <option value="boarded">Boarded</option>
+                                <option value="exited">Alighted</option>
+                            </select>
+                        </div>
+                        <div class="filter-group" style="flex: 1; min-width: 180px;">
+                            <label class="form-label">Search Attendance</label>
+                            <input type="text" id="attendance-search" class="form-control" placeholder="Search name, ID, stop..." oninput="applyAttendanceFilters()">
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label">Sort By</label>
+                            <select id="attendance-sort" class="form-control" style="width: 140px;" onchange="applyAttendanceFilters()">
+                                <option value="time-desc">Time (Newest)</option>
+                                <option value="time-asc">Time (Oldest)</option>
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="loadAttendanceLog()" style="height: 46px; align-self: flex-end;">Refresh Log</button>
                     </div>
 
                     <div class="panel">
@@ -1600,6 +1629,7 @@
         let activeRegTab = 'pending';
         let globalUsers = [];
         let globalBuses = [];
+        let globalAttendanceLogs = [];
 
         const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
         const API_BASE = IS_LOCAL ? (window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin) : 'https://krce-bus-tracking.onrender.com';
@@ -2035,8 +2065,17 @@
                 const lat = live.lat;
                 const lon = live.lon;
 
-                // DivIcon Marker
-                const htmlMarker = `<div class="bus-marker-icon ${isOnline ? 'online' : ''}">${b.number.replace('Bus-', '')}</div>`;
+                // DivIcon Marker with rotation and directional arrow
+                const heading = (live && live.heading) ? live.heading : 0;
+                const textHeading = isOnline ? `transform: rotate(${-heading}deg);` : '';
+                const containerHeading = isOnline ? `transform: rotate(${heading}deg);` : '';
+
+                const htmlMarker = `
+                    <div class="bus-marker-icon ${isOnline ? 'online' : ''}" style="${containerHeading}">
+                        <span style="display: inline-block; ${textHeading}">${b.number.replace('Bus-', '')}</span>
+                        <div style="position: absolute; top: -6px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid #ffffff;"></div>
+                    </div>
+                `;
                 if (busMarkers[b.id]) {
                     busMarkers[b.id].setPosition(new google.maps.LatLng(lat, lon));
                     busMarkers[b.id].html = htmlMarker;
@@ -2206,13 +2245,23 @@
         function populateBusesDropdowns(buses) {
             const filterBus = document.getElementById('attendance-filter-bus');
             const assignBus = document.getElementById('approve-bus-id');
+            const filterRoute = document.getElementById('attendance-filter-route');
             
             filterBus.innerHTML = '<option value="">All Buses</option>';
             assignBus.innerHTML = '<option value="">No Bus Assigned</option>';
+            filterRoute.innerHTML = '<option value="">All Routes</option>';
 
+            const routes = new Set();
             buses.forEach(b => {
                 filterBus.innerHTML += `<option value="${b.id}">${b.number}</option>`;
                 assignBus.innerHTML += `<option value="${b.id}">${b.number} (${b.route_name})</option>`;
+                if (b.route_name) {
+                    routes.add(b.route_name);
+                }
+            });
+
+            routes.forEach(r => {
+                filterRoute.innerHTML += `<option value="${r}">${r}</option>`;
             });
         }
 
@@ -2410,7 +2459,12 @@
             const roleFilter = document.getElementById('user-role-filter').value;
 
             const filtered = globalUsers.filter(u => {
-                const matchesSearch = u.name.toLowerCase().includes(query) || (u.college_id && u.college_id.toLowerCase().includes(query));
+                const matchesSearch = 
+                    u.name.toLowerCase().includes(query) || 
+                    (u.college_id && u.college_id.toLowerCase().includes(query)) ||
+                    (u.rfid_card && u.rfid_card.toLowerCase().includes(query)) ||
+                    (u.bus_number && u.bus_number.toLowerCase().includes(query)) ||
+                    (u.role && u.role.toLowerCase().includes(query));
                 const matchesRole = roleFilter === '' || u.role === roleFilter;
                 return matchesSearch && matchesRole;
             });
@@ -2437,7 +2491,42 @@
         }
 
         function exportUsersCSV() {
-            window.open(`${API_BASE}/api/admin/users/export`);
+            const query = document.getElementById('user-search').value.toLowerCase();
+            const roleFilter = document.getElementById('user-role-filter').value;
+            const filtered = globalUsers.filter(u => {
+                const matchesSearch = 
+                    u.name.toLowerCase().includes(query) || 
+                    (u.college_id && u.college_id.toLowerCase().includes(query)) ||
+                    (u.rfid_card && u.rfid_card.toLowerCase().includes(query)) ||
+                    (u.bus_number && u.bus_number.toLowerCase().includes(query)) ||
+                    (u.role && u.role.toLowerCase().includes(query));
+                const matchesRole = roleFilter === '' || u.role === roleFilter;
+                return matchesSearch && matchesRole;
+            });
+
+            const headers = ["Name", "College ID", "Email", "Phone", "Role", "Bus", "RFID", "Status", "Timestamp"];
+            const rows = filtered.map(u => [
+                u.name,
+                u.college_id || '—',
+                u.email,
+                u.phone || '—',
+                u.role,
+                u.bus_number || '—',
+                u.rfid_card || '—',
+                u.is_active ? 'Active' : 'Suspended',
+                u.created_at || '—'
+            ]);
+
+            let csvContent = "data:text/csv;charset=utf-8," 
+                + [headers.join(",")].concat(rows.map(e => e.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(","))).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `users_directory_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -2599,12 +2688,10 @@
         // ═══════════════════════════════════════════════════════════════════
         //  6. ATTENDANCE LOG LOADING
         // ═══════════════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════════
+        //  6. ATTENDANCE LOG LOADING & FILTERING
+        // ═══════════════════════════════════════════════════════════════════
         async function loadAttendanceLog() {
-            /* INTEGRATION NOTES:
-               API endpoint: GET /api/admin/attendance
-               Filters: date_filter, bus_id, org-restricted
-               Functions: fetchAttendance(filters)
-            */
             const dateVal = document.getElementById('attendance-filter-date').value;
             const busVal = document.getElementById('attendance-filter-bus').value;
             
@@ -2623,13 +2710,49 @@
                 });
             }
 
+            globalAttendanceLogs = logs;
+            applyAttendanceFilters();
+        }
+
+        function applyAttendanceFilters() {
+            const query = document.getElementById('attendance-search').value.toLowerCase();
+            const statusFilter = document.getElementById('attendance-filter-status').value;
+            const routeFilter = document.getElementById('attendance-filter-route').value;
+            const sortVal = document.getElementById('attendance-sort').value;
+
+            // 1. Filter
+            let filtered = globalAttendanceLogs.filter(l => {
+                const matchesSearch = 
+                    (l.student_name && l.student_name.toLowerCase().includes(query)) ||
+                    (l.college_id && l.college_id.toLowerCase().includes(query)) ||
+                    (l.stop_name && l.stop_name.toLowerCase().includes(query));
+                const matchesStatus = statusFilter === '' || l.tap_type === statusFilter;
+                const matchesRoute = routeFilter === '' || l.route_name === routeFilter;
+                return matchesSearch && matchesStatus && matchesRoute;
+            });
+
+            // 2. Sort
+            filtered.sort((a, b) => {
+                if (sortVal === 'time-desc') {
+                    return new Date(b.tap_time) - new Date(a.tap_time);
+                } else if (sortVal === 'time-asc') {
+                    return new Date(a.tap_time) - new Date(b.tap_time);
+                } else if (sortVal === 'name-asc') {
+                    return (a.student_name || '').localeCompare(b.student_name || '');
+                } else if (sortVal === 'name-desc') {
+                    return (b.student_name || '').localeCompare(a.student_name || '');
+                }
+                return 0;
+            });
+
+            // 3. Render
             const body = document.getElementById('attendance-table-body');
             const dashLogBody = document.getElementById('dash-boarding-log-body');
             
             body.innerHTML = '';
             dashLogBody.innerHTML = '';
 
-            logs.forEach((l, i) => {
+            filtered.forEach((l, i) => {
                 const timeStr = new Date(l.tap_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const tapPill = l.tap_type === 'boarded' ? 
                     `<span class="pill pill-status-active">Boarded</span>` : 
@@ -2663,7 +2786,7 @@
                 }
             });
 
-            if (logs.length === 0) {
+            if (filtered.length === 0) {
                 body.innerHTML = `<tr><td colspan="8" class="empty-state"><i data-lucide="info"></i><p>No records for this filter.</p></td></tr>`;
                 dashLogBody.innerHTML = `<tr><td colspan="6" class="empty-state"><i data-lucide="info"></i><p>No boarding events today.</p></td></tr>`;
             }
@@ -2671,9 +2794,51 @@
         }
 
         function exportAttendanceCSV() {
-            const dateVal = document.getElementById('attendance-filter-date').value;
-            const busVal = document.getElementById('attendance-filter-bus').value;
-            window.open(`${API_BASE}/api/admin/attendance/export?date_filter=${dateVal}&bus_id=${busVal}`);
+            const query = document.getElementById('attendance-search').value.toLowerCase();
+            const statusFilter = document.getElementById('attendance-filter-status').value;
+            const routeFilter = document.getElementById('attendance-filter-route').value;
+            const sortVal = document.getElementById('attendance-sort').value;
+
+            let filtered = globalAttendanceLogs.filter(l => {
+                const matchesSearch = 
+                    (l.student_name && l.student_name.toLowerCase().includes(query)) ||
+                    (l.college_id && l.college_id.toLowerCase().includes(query)) ||
+                    (l.stop_name && l.stop_name.toLowerCase().includes(query));
+                const matchesStatus = statusFilter === '' || l.tap_type === statusFilter;
+                const matchesRoute = routeFilter === '' || l.route_name === routeFilter;
+                return matchesSearch && matchesStatus && matchesRoute;
+            });
+
+            filtered.sort((a, b) => {
+                if (sortVal === 'time-desc') return new Date(b.tap_time) - new Date(a.tap_time);
+                if (sortVal === 'time-asc') return new Date(a.tap_time) - new Date(b.tap_time);
+                if (sortVal === 'name-asc') return (a.student_name || '').localeCompare(b.student_name || '');
+                if (sortVal === 'name-desc') return (b.student_name || '').localeCompare(a.student_name || '');
+                return 0;
+            });
+
+            const headers = ["Student Name", "College ID", "Bus", "Route", "Tap Type", "Stop", "Time", "Date"];
+            const rows = filtered.map(l => [
+                l.student_name || 'Unknown',
+                l.college_id || '—',
+                l.bus_number || '—',
+                l.route_name || '—',
+                l.tap_type || '—',
+                l.stop_name || '—',
+                l.tap_time ? new Date(l.tap_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+                l.date || '—'
+            ]);
+
+            let csvContent = "data:text/csv;charset=utf-8," 
+                + [headers.join(",")].concat(rows.map(e => e.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(","))).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `attendance_logs_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // ═══════════════════════════════════════════════════════════════════

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/student/screens/student_dashboard.dart';
+import '../features/student/screens/staff_dashboard.dart';
 import '../features/parent/screens/parent_dashboard.dart';
 import '../features/driver/screens/driver_dashboard.dart';
 import '../features/admin/screens/admin_dashboard.dart';
@@ -28,23 +29,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
       ShellRoute(
         builder: (context, state, child) =>
             _AppShell(child: child, role: auth.role),
         routes: [
           GoRoute(
-              path: '/home',
-              builder: (_, __) => _dashboardFor(auth.role)),
+            path: '/home',
+            builder: (_, __) => _dashboardFor(auth.role)),
           GoRoute(
-              path: '/map',
-              builder: (_, __) => const MapScreen()),
+            path: '/map',
+            builder: (context, state) {
+              final bus = state.extra as Bus?;
+              return MapScreen(selectedBus: bus);
+            },
+          ),
           GoRoute(
-              path: '/history',
-              builder: (_, __) => const HistoryScreen()),
+            path: '/history',
+            builder: (context, state) => const HistoryScreen(),
+          ),
           GoRoute(
-              path: '/profile',
-              builder: (_, __) => const ProfileScreen()),
+            path: '/profile',
+            builder: (context, state) => const ProfileScreen(),
+          ),
         ],
       ),
     ],
@@ -60,6 +70,8 @@ Widget _dashboardFor(String role) {
       return const AdminDashboard();
     case 'driver':
       return const DriverDashboard();
+    case 'staff':
+      return const StaffDashboard();
     case 'parent':
       return const ParentDashboard();
     default:

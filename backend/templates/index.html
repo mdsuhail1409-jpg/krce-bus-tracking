@@ -1494,7 +1494,16 @@
                 markerBg = 'background: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.7);';
             }
 
-            const markerHtml = `<div class="bus-marker-icon ${markerClass}" style="${markerBg}">${bus.number.split('-')[1] || bus.number}</div>`;
+            const heading = (live && live.heading) ? live.heading : 0;
+            const textHeading = isOnline ? `transform: rotate(${-heading}deg);` : '';
+            const containerHeading = isOnline ? `transform: rotate(${heading}deg);` : '';
+
+            const markerHtml = `
+                <div class="bus-marker-icon ${markerClass}" style="${markerBg} ${containerHeading}">
+                    <span style="display: inline-block; ${textHeading}">${bus.number.split('-')[1] || bus.number}</span>
+                    <div style="position: absolute; top: -6px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid #ffffff;"></div>
+                </div>
+            `;
 
             if (busMarkers[busId]) {
                 // Smooth transition if marker exists

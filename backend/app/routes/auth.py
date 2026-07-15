@@ -103,10 +103,12 @@ async def register(req: RegisterReq, request: Request):
     if await db.users.find_one({"email": req.email}):
         raise HTTPException(400, "Email already registered")
     rid = str(uuid.uuid4())[:8]
+    pw_hash = _hash(req.password)
     await db.registrations.insert_one({
         "id": rid, "user_id": "pending_" + rid, "name": req.name,
         "email": req.email, "college_id": req.college_id, "role": req.role,
         "requested_bus": req.requested_bus, "rfid_card": req.rfid_card,
+        "parent_child_id": req.parent_child_id, "password_hash": pw_hash,
         "phone": req.phone, "status": "pending", "submitted_at": now_str(),
         "reviewed_by": None, "reviewed_at": None, "notes": None
     })
