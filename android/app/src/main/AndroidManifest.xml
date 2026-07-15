@@ -30,7 +30,7 @@
             usesCleartextTraffic is intentionally NOT set here.
             The cloud backend uses HTTPS (wss:// for WebSocket).
             For local development with an emulator, Android allows
-            cleartext traffic to 10.0.2.2 (localhost) by default.
+            cleartext traffic to 10.0.2.2 (localhost) by default if configured.
         -->
 
         <meta-data

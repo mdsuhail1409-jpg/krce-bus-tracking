@@ -1,5 +1,5 @@
 // ============================================================
-// Data Models — matching ApiModels.kt exactly
+// Data Models — aligned to backend API responses
 // ============================================================
 
 class LoginReq {
@@ -11,6 +11,7 @@ class LoginReq {
 
 class LoginRes {
   final String token;
+  final String refreshToken;
   final String userId;
   final String name;
   final String role;
@@ -22,6 +23,7 @@ class LoginRes {
 
   LoginRes({
     required this.token,
+    required this.refreshToken,
     required this.userId,
     required this.name,
     required this.role,
@@ -33,7 +35,8 @@ class LoginRes {
   });
 
   factory LoginRes.fromJson(Map<String, dynamic> json) => LoginRes(
-        token: json['token'],
+        token: json['token'] ?? '',
+        refreshToken: json['refresh_token'] ?? '',
         userId: json['user_id'] ?? '',
         name: json['name'] ?? '',
         role: json['role'] ?? 'student',
@@ -267,12 +270,24 @@ class AdminStats {
 class EtaResponse {
   final String eta;
   final String nextStop;
+  final String delay;
+  final String distance;
+  final List<String> remainingStops;
 
-  EtaResponse({required this.eta, required this.nextStop});
+  EtaResponse({
+    required this.eta,
+    required this.nextStop,
+    this.delay = '--',
+    this.distance = '--',
+    this.remainingStops = const [],
+  });
 
   factory EtaResponse.fromJson(Map<String, dynamic> json) => EtaResponse(
         eta: json['eta'] ?? '--',
         nextStop: json['next_stop'] ?? '--',
+        delay: json['delay'] ?? '--',
+        distance: json['distance'] ?? '--',
+        remainingStops: List<String>.from(json['remaining_stops'] ?? []),
       );
 }
 
@@ -288,6 +303,81 @@ class GenericResponse {
       );
 }
 
+// Backend: GET /api/admin/drivers
+// Returns: id, name, phone, bus_id, bus_number, route_name, is_online
+class Driver {
+  final String id;
+  final String name;
+  final String? phone;
+  final String? busId;
+  final String? busNumber;
+  final String? routeName;
+  final bool isOnline;
+
+  Driver({
+    required this.id,
+    required this.name,
+    this.phone,
+    this.busId,
+    this.busNumber,
+    this.routeName,
+    this.isOnline = false,
+  });
+
+  factory Driver.fromJson(Map<String, dynamic> json) => Driver(
+        id: json['id'] ?? '',
+        name: json['name'] ?? '',
+        phone: json['phone'],
+        busId: json['bus_id'],
+        busNumber: json['bus_number'],
+        routeName: json['route_name'],
+        isOnline: json['is_online'] == true,
+      );
+}
+
+// Backend: POST /api/rfid/tap
+class RfidTapReq {
+  final String rfidCard;
+  final String busId;
+  final String stopName;
+  final double lat;
+  final double lon;
+
+  RfidTapReq({
+    required this.rfidCard,
+    required this.busId,
+    this.stopName = '',
+    this.lat = 0.0,
+    this.lon = 0.0,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'rfid_card': rfidCard,
+        'bus_id': busId,
+        'stop_name': stopName,
+        'lat': lat,
+        'lon': lon,
+      };
+}
+
+class RfidTapRes {
+  final String status;
+  final String tapType;
+  final String studentName;
+
+  RfidTapRes({
+    required this.status,
+    required this.tapType,
+    required this.studentName,
+  });
+
+  factory RfidTapRes.fromJson(Map<String, dynamic> json) => RfidTapRes(
+        status: json['status'] ?? '',
+        tapType: json['tap_type'] ?? '',
+        studentName: json['student_name'] ?? '',
+      );
+}
+
 class Registration {
   final String id;
   final String name;
@@ -299,6 +389,7 @@ class Registration {
   final String? parentOf;
   final String? phone;
   final String status;
+  final String? submittedAt;
 
   Registration({
     required this.id,
@@ -311,6 +402,7 @@ class Registration {
     this.parentOf,
     this.phone,
     required this.status,
+    this.submittedAt,
   });
 
   factory Registration.fromJson(Map<String, dynamic> json) => Registration(
@@ -324,6 +416,7 @@ class Registration {
         parentOf: json['parent_of'],
         phone: json['phone'],
         status: json['status'] ?? 'pending',
+        submittedAt: json['submitted_at'],
       );
 }
 

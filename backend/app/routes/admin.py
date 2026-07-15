@@ -31,7 +31,16 @@ async def admin_stats(u=Depends(admin_only)):
     td = today()
     total_students  = await db.users.count_documents({"role": {"$in": ["student","staff"]}})
     active_buses    = await db.buses.count_documents({"is_active": 1})
-    boarded_today   = len(await db.attendance.distinct("user_id", {"date": td, "tap_type": "boarded"}))
+    
+    # Calculate passengers currently boarded (last tap today is "boarded")
+    cursor = db.attendance.find({"date": td})
+    records = await cursor.to_list(length=None)
+    records = sorted(records, key=lambda x: x.get("tap_time", ""))
+    last_taps = {}
+    for rec in records:
+        last_taps[rec["user_id"]] = rec
+    boarded_today = sum(1 for rec in last_taps.values() if rec["tap_type"] == "boarded")
+
     pending_regs    = await db.registrations.count_documents({"status": "pending"})
     total_drivers   = await db.users.count_documents({"role": "driver"})
     active_alerts   = await db.alerts.count_documents({"is_resolved": 0})
@@ -54,13 +63,19 @@ async def admin_buses(u=Depends(admin_only)):
     cursor = db.buses.find({"is_active": 1}, {"_id": 0}).sort("number", 1)
     buses = await cursor.to_list(length=None)
 
-    # Batch boarded_today counts
-    pipeline = [
-        {"$match": {"date": td, "tap_type": "boarded"}},
-        {"$group": {"_id": "$bus_id", "cnt": {"$sum": 1}}}
-    ]
-    count_docs = await db.attendance.aggregate(pipeline).to_list(length=None)
-    count_map = {c["_id"]: c["cnt"] for c in count_docs}
+    # Calculate currently boarded count for each bus (last tap today is "boarded")
+    cursor = db.attendance.find({"date": td})
+    records = await cursor.to_list(length=None)
+    records = sorted(records, key=lambda x: x.get("tap_time", ""))
+    last_taps = {}
+    for rec in records:
+        last_taps[rec["user_id"]] = rec
+    
+    count_map = {}
+    for rec in last_taps.values():
+        if rec["tap_type"] == "boarded":
+            bid = rec["bus_id"]
+            count_map[bid] = count_map.get(bid, 0) + 1
 
     result = []
     for bus in buses:

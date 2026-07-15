@@ -9,6 +9,7 @@ final gpsServiceProvider = Provider((ref) => GpsService());
 
 class GpsService {
   StreamSubscription<Position>? _positionSub;
+  Timer? _heartbeatTimer;
   bool _isRunning = false;
   static const String _prefKey = 'gps_tracking';
 
@@ -44,6 +45,37 @@ class GpsService {
     await setSavedState(true);
     await NotificationService.showGpsNotification();
 
+    // Push immediate location on start
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      await apiService.pushGps(
+        token,
+        lat: position.latitude,
+        lon: position.longitude,
+        speed: position.speed * 3.6,
+        heading: position.heading,
+      );
+    } catch (_) {}
+
+    // Start periodic 30-second heartbeat to keep connection alive on backend
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      try {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 5),
+        );
+        await apiService.pushGps(
+          token,
+          lat: position.latitude,
+          lon: position.longitude,
+          speed: position.speed * 3.6,
+          heading: position.heading,
+        );
+      } catch (_) {}
+    });
+
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 10,
@@ -68,6 +100,8 @@ class GpsService {
     await setSavedState(false);
     await _positionSub?.cancel();
     _positionSub = null;
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
     await NotificationService.cancelGpsNotification();
   }
 }

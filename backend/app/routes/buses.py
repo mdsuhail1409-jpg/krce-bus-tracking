@@ -42,13 +42,19 @@ async def get_buses(u=Depends(current_user)):
 
     buses = await cursor.to_list(length=None)
 
-    # Batch boarded_today counts
-    pipeline = [
-        {"$match": {"date": td, "tap_type": "boarded"}},
-        {"$group": {"_id": "$bus_id", "cnt": {"$sum": 1}}}
-    ]
-    count_docs = await db.attendance.aggregate(pipeline).to_list(length=None)
-    count_map = {c["_id"]: c["cnt"] for c in count_docs}
+    # Calculate currently boarded count for each bus (last tap today is "boarded")
+    cursor = db.attendance.find({"date": td})
+    records = await cursor.to_list(length=None)
+    records = sorted(records, key=lambda x: x.get("tap_time", ""))
+    last_taps = {}
+    for rec in records:
+        last_taps[rec["user_id"]] = rec
+    
+    count_map = {}
+    for rec in last_taps.values():
+        if rec["tap_type"] == "boarded":
+            bid = rec["bus_id"]
+            count_map[bid] = count_map.get(bid, 0) + 1
 
     for bus in buses:
         driver = None
@@ -87,12 +93,19 @@ async def bus_passengers(bus_id: str, u=Depends(current_user)):
     await check_parent_bus_access(db, u, bus_id)
 
     td = today()
-    cursor = db.attendance.find(
-        {"bus_id": bus_id, "date": td, "tap_type": "boarded"}, {"_id": 0}
-    ).sort("tap_time", 1)
+    cursor = db.attendance.find({"bus_id": bus_id, "date": td})
     records = await cursor.to_list(length=None)
-    result = []
+    records = sorted(records, key=lambda x: x.get("tap_time", ""))
+    
+    last_taps = {}
     for rec in records:
+        last_taps[rec["user_id"]] = rec
+        
+    onboard_records = [rec for rec in last_taps.values() if rec["tap_type"] == "boarded"]
+    onboard_records = sorted(onboard_records, key=lambda x: x.get("tap_time", ""))
+    
+    result = []
+    for rec in onboard_records:
         user = await db.users.find_one({"id": rec["user_id"]}, {"_id": 0, "name": 1, "college_id": 1, "rfid_card": 1})
         result.append({
             "name":       user["name"]        if user else "Unknown",
@@ -121,7 +134,15 @@ async def get_bus_details(bus_id: str, u=Depends(current_user)):
     bus["driver_phone"] = driver["phone"] if driver else None
 
     td = today()
-    boarded_count = await db.attendance.count_documents({"bus_id": bus_id, "date": td, "tap_type": "boarded"})
+    cursor = db.attendance.find({"bus_id": bus_id, "date": td})
+    records = await cursor.to_list(length=None)
+    records = sorted(records, key=lambda x: x.get("tap_time", ""))
+    
+    last_taps = {}
+    for rec in records:
+        last_taps[rec["user_id"]] = rec
+        
+    boarded_count = sum(1 for rec in last_taps.values() if rec["tap_type"] == "boarded")
     bus["boarded_today"] = boarded_count
 
     bus_live_data = live_buses.get(bus_id)

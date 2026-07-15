@@ -31,10 +31,10 @@ android {
 
         val apiBaseUrl = localProperties.getProperty("API_BASE_URL")
             ?: project.findProperty("API_BASE_URL")?.toString()
-            ?: "http://10.0.2.2:8000/"
+            ?: "https://krce-bus-tracking.onrender.com/"
         val wsBaseUrl = localProperties.getProperty("WS_BASE_URL")
             ?: project.findProperty("WS_BASE_URL")?.toString()
-            ?: "ws://10.0.2.2:8000/"
+            ?: "wss://krce-bus-tracking.onrender.com/"
 
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
         buildConfigField("String", "WS_BASE_URL",  "\"$wsBaseUrl\"")

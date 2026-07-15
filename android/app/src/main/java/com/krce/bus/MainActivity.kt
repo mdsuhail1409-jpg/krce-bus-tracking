@@ -218,6 +218,9 @@ fun BusApp() {
             composable("history") { HistoryScreen(authToken, userRole) }
             composable("profile") { ProfileScreen(authViewModel) }
             composable("users_screen") { UsersScreen(navController, authToken) }
+            composable("drivers_directory") { DriversDirectoryScreen(navController, authToken) }
+            composable("attendance_logs") { AttendanceLogsScreen(navController, authToken) }
+            composable("alerts_management") { AlertsManagementScreen(navController, authToken) }
         }
     }
 }
@@ -709,30 +712,47 @@ fun AdminDashboard(navController: NavController, token: String) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Button(
-                            onClick = { navController.navigate("users_screen") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
-                            contentPadding = PaddingValues(12.dp)
-                        ) {
-                            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Manage Users", style = Typography.labelMedium, fontWeight = FontWeight.Bold)
-                        }
-                        Button(
-                            onClick = { showAlertDialog = true },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
-                            contentPadding = PaddingValues(12.dp)
-                        ) {
-                            Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Send Alert", style = Typography.labelMedium, fontWeight = FontWeight.Bold)
-                        }
+                        AdminToolButton(
+                            text = "Users",
+                            icon = Icons.Default.People,
+                            color = IndigoPrimary,
+                            modifier = Modifier.weight(1f)
+                        ) { navController.navigate("users_screen") }
+
+                        AdminToolButton(
+                            text = "Drivers",
+                            icon = Icons.Default.Badge,
+                            color = Color(0xFF10B981),
+                            modifier = Modifier.weight(1f)
+                        ) { navController.navigate("drivers_directory") }
+
+                        AdminToolButton(
+                            text = "Logs",
+                            icon = Icons.Default.Assignment,
+                            color = Color(0xFF6366F1),
+                            modifier = Modifier.weight(1f)
+                        ) { navController.navigate("attendance_logs") }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        AdminToolButton(
+                            text = "Alerts Feed",
+                            icon = Icons.Default.NotificationsActive,
+                            color = Color(0xFFF59E0B),
+                            modifier = Modifier.weight(1.5f)
+                        ) { navController.navigate("alerts_management") }
+
+                        AdminToolButton(
+                            text = "New Alert",
+                            icon = Icons.Default.AddAlert,
+                            color = ErrorRed,
+                            modifier = Modifier.weight(1f)
+                        ) { showAlertDialog = true }
                     }
 
                     // ── Pending Registrations Approvals ──────────────────────
@@ -1825,4 +1845,367 @@ fun EditUserDialog(
             TextButton(onClick = onDismiss) { Text("Cancel", color = MutedText) }
         }
     )
+}
+
+@Composable
+fun AdminToolButton(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(80.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(28.dp))
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(text, style = Typography.labelSmall, fontWeight = FontWeight.Bold, color = TextColor)
+        }
+    }
+}
+
+@Composable
+fun DriversDirectoryScreen(navController: NavController, token: String) {
+    var drivers by remember { mutableStateOf<List<com.krce.bus.models.Driver>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf("") }
+    val api = remember { ApiService.create() }
+
+    LaunchedEffect(Unit) {
+        try {
+            drivers = api.getDrivers(token)
+        } catch (e: Exception) {
+            if (token.startsWith("demo_token")) {
+                drivers = listOf(
+                    com.krce.bus.models.Driver("d1", "Rajan S.", "9840111111", "TN-45-AZ-1234", "B01", "Woraiyur Line", "active"),
+                    com.krce.bus.models.Driver("d2", "Muthu K.", "9840122222", "TN-45-AZ-5678", "B02", "Samayapuram Line", "active"),
+                    com.krce.bus.models.Driver("d3", "Suresh P.", "9840133333", "TN-45-AZ-9012", "B03", "Thiruverumbur Line", "active")
+                )
+            } else {
+                errorMsg = "Failed to load drivers"
+            }
+        } finally { isLoading = false }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundColor)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(GradientPrimary))
+                    .statusBarsPadding()
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text("Drivers Directory", style = Typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("${drivers.size} active drivers", style = Typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
+                    }
+                }
+            }
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = IndigoPrimary)
+                }
+            } else if (errorMsg.isNotEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(errorMsg, color = ErrorRed)
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+                    items(drivers.size) { index ->
+                        val driver = drivers[index]
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                                .border(1.dp, BorderColor, RoundedCornerShape(18.dp)),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = SurfaceColor)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .background(BusBadgeBg, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.Person, contentDescription = null, tint = BusBadgeIcon)
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(driver.name, style = Typography.titleMedium, fontWeight = FontWeight.Bold, color = TextColor)
+                                        Text(driver.phone, style = Typography.bodySmall, color = MutedText)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .background(if (driver.status == "active") SuccessBg else ErrorRed.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(driver.status.uppercase(), style = Typography.labelSmall, color = if (driver.status == "active") SuccessGreen else ErrorRed, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Divider(color = BorderColor, thickness = 0.5.dp)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("LICENSE NO", style = Typography.labelSmall, color = MutedText)
+                                        Text(driver.licenseNo ?: "N/A", style = Typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextColor)
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("ASSIGNED BUS", style = Typography.labelSmall, color = MutedText)
+                                        Text(driver.assignedBus ?: "Unassigned", style = Typography.bodyMedium, fontWeight = FontWeight.Bold, color = IndigoPrimary)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text("ROUTE COVERAGE", style = Typography.labelSmall, color = MutedText)
+                                Text(driver.routeCoverage ?: "Global / Floating", style = Typography.bodyMedium, color = TextColor)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AttendanceLogsScreen(navController: NavController, token: String) {
+    var logs by remember { mutableStateOf<List<Attendance>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf("") }
+    val api = remember { ApiService.create() }
+
+    LaunchedEffect(Unit) {
+        try {
+            logs = api.getAllAttendance(token)
+        } catch (e: Exception) {
+            if (token.startsWith("demo_token")) {
+                logs = listOf(
+                    Attendance("a1", "u1", "B01", "boarded", "2026-07-15T08:30:00", "Woraiyur", 10.1, 78.1, "2026-07-15", "Aravind Kumar", "21CS001", "B01", "Woraiyur"),
+                    Attendance("a2", "u2", "B01", "boarded", "2026-07-15T08:35:00", "Main Gate", 10.1, 78.1, "2026-07-15", "Suhail M", "21CS042", "B01", "Woraiyur")
+                )
+            } else {
+                errorMsg = "Failed to load logs"
+            }
+        } finally { isLoading = false }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundColor)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(GradientPrimary))
+                    .statusBarsPadding()
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text("Daily Attendance Logs", style = Typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Real-time boarding activity", style = Typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
+                    }
+                }
+            }
+
+            // Search / Filter bar (simplified)
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = MutedText)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Filter by date or bus...", color = MutedText, style = Typography.bodyMedium)
+                }
+            }
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = IndigoPrimary)
+                }
+            } else if (errorMsg.isNotEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(errorMsg, color = ErrorRed)
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+                    items(logs.size) { index ->
+                        AttendanceItem(logs[index])
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AlertsManagementScreen(navController: NavController, token: String) {
+    var alerts by remember { mutableStateOf<List<Alert>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf("") }
+    var showSendDialog by remember { mutableStateOf(false) }
+    var buses by remember { mutableStateOf<List<Bus>>(emptyList()) }
+    val api = remember { ApiService.create() }
+    val scope = rememberCoroutineScope()
+
+    fun loadData() {
+        scope.launch {
+            try {
+                alerts = api.getAlerts(token)
+                buses = api.getBuses(token)
+            } catch (e: Exception) {
+                if (token.startsWith("demo_token")) {
+                    alerts = listOf(
+                        Alert("al1", "Bus Delayed", "Bus B01 is running 10 mins late.", "delay", "Everyone", "B01", "Admin", "2026-07-15T08:00:00", 0),
+                        Alert("al2", "Route Change", "Route for B02 changed due to construction.", "info", "Everyone", "B02", "Admin", "2026-07-14T17:00:00", 1)
+                    )
+                    buses = listOf(Bus("B01", "TN-01", "Route 1", null, 50, emptyList()))
+                } else {
+                    errorMsg = "Failed to load alerts"
+                }
+            } finally { isLoading = false }
+        }
+    }
+
+    LaunchedEffect(Unit) { loadData() }
+
+    if (showSendDialog) {
+        SendAlertDialog(token, buses, onDismiss = { showSendDialog = false; loadData() })
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundColor)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(GradientWarning))
+                    .statusBarsPadding()
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Transit Alerts Feed", style = Typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Manage broadcasted notifications", style = Typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
+                    }
+                    IconButton(onClick = { showSendDialog = true }) {
+                        Icon(Icons.Default.AddCircle, contentDescription = "Add", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
+                }
+            }
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = IndigoPrimary)
+                }
+            } else if (errorMsg.isNotEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(errorMsg, color = ErrorRed)
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+                    items(alerts.size) { index ->
+                        val alert = alerts[index]
+                        val isResolved = alert.isResolved == 1
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                                .border(1.dp, BorderColor, RoundedCornerShape(18.dp)),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = SurfaceColor)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.Top) {
+                                    val icon = when(alert.alertType) {
+                                        "delay" -> Icons.Default.AccessTime
+                                        "safety" -> Icons.Default.Warning
+                                        else -> Icons.Default.Info
+                                    }
+                                    val iconColor = when(alert.alertType) {
+                                        "delay" -> Color(0xFFD97706)
+                                        "safety" -> ErrorRed
+                                        else -> IndigoPrimary
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(iconColor.copy(alpha = 0.1f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(alert.title, style = Typography.titleSmall, fontWeight = FontWeight.Bold, color = TextColor)
+                                        Text(alert.message, style = Typography.bodySmall, color = MutedText)
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("To: ${alert.targetBus ?: "Everyone"}", style = Typography.labelSmall, color = IndigoPrimary, fontWeight = FontWeight.Bold)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("•", color = MutedText)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(alert.sentAt.take(16).replace("T", " "), style = Typography.labelSmall, color = MutedText)
+                                        }
+                                    }
+                                    if (isResolved) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = "Resolved", tint = SuccessGreen)
+                                    }
+                                }
+
+                                if (!isResolved) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = {
+                                            scope.launch {
+                                                try {
+                                                    api.resolveAlert(token, alert.id)
+                                                    loadData()
+                                                } catch (e: Exception) {}
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary.copy(alpha = 0.1f)),
+                                        elevation = null
+                                    ) {
+                                        Text("Mark as Resolved", color = IndigoPrimary, fontWeight = FontWeight.Bold, style = Typography.labelMedium)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

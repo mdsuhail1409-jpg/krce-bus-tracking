@@ -13,6 +13,7 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>(
 // ── State ─────────────────────────────────────────────────
 class AuthState {
   final String token;
+  final String refreshToken;
   final String role;
   final String name;
   final String? busId;
@@ -24,6 +25,7 @@ class AuthState {
 
   const AuthState({
     this.token = '',
+    this.refreshToken = '',
     this.role = '',
     this.name = '',
     this.busId,
@@ -38,6 +40,7 @@ class AuthState {
 
   AuthState copyWith({
     String? token,
+    String? refreshToken,
     String? role,
     String? name,
     String? busId,
@@ -49,6 +52,7 @@ class AuthState {
   }) =>
       AuthState(
         token: token ?? this.token,
+        refreshToken: refreshToken ?? this.refreshToken,
         role: role ?? this.role,
         name: name ?? this.name,
         busId: busId ?? this.busId,
@@ -65,12 +69,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final ApiService _api;
 
   AuthNotifier(this._api) : super(const AuthState()) {
+    // Wire the 401 interceptor back to this notifier's refreshSession
+    _api.onTokenExpired = () => refreshSession();
     _loadSavedSession();
   }
 
   Future<void> _loadSavedSession() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token') ?? '';
+    final refreshToken = prefs.getString('refresh_token') ?? '';
     final role = prefs.getString('user_role') ?? '';
     final name = prefs.getString('user_name') ?? '';
     final busId = prefs.getString('bus_id');
@@ -81,6 +88,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (token.isNotEmpty) {
       state = state.copyWith(
         token: token,
+        refreshToken: refreshToken,
         role: role,
         name: name,
         busId: busId,
@@ -99,6 +107,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _saveSession(res, token);
       state = state.copyWith(
         token: token,
+        refreshToken: res.refreshToken,
         role: res.role,
         name: res.name,
         busId: res.busId,
@@ -114,6 +123,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _saveDemoSession(demo);
         state = state.copyWith(
           token: demo['token']!,
+          refreshToken: '',
           role: demo['role']!,
           name: demo['name']!,
           busId: demo['busId'],
@@ -128,6 +138,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
           error: 'Invalid credentials or server unreachable',
         );
       }
+    }
+  }
+
+  /// Refresh the access token using the stored refresh token.
+  /// Called automatically when a 401 is received.
+  Future<bool> refreshSession() async {
+    final currentRefreshToken = state.refreshToken;
+    if (currentRefreshToken.isEmpty) return false;
+    try {
+      final tokens = await _api.refreshToken(currentRefreshToken);
+      final newToken = 'Bearer ${tokens['token']!}';
+      final newRefreshToken = tokens['refresh_token'] ?? currentRefreshToken;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', newToken);
+      await prefs.setString('refresh_token', newRefreshToken);
+      state = state.copyWith(
+        token: newToken,
+        refreshToken: newRefreshToken,
+      );
+      return true;
+    } catch (_) {
+      await logout();
+      return false;
     }
   }
 
@@ -176,6 +209,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _saveSession(LoginRes res, String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
+    await prefs.setString('refresh_token', res.refreshToken);
     await prefs.setString('user_role', res.role);
     await prefs.setString('user_name', res.name);
     if (res.busId != null) await prefs.setString('bus_id', res.busId!);

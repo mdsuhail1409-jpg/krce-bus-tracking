@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import '../../../core/config/app_config.dart';
 import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/websocket_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'package:dio/dio.dart';
@@ -112,6 +113,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   bool _isFullscreen = false;
   LatLng? _myLocation;
   Timer? _pollTimer;
+  final WebSocketService _wsService = WebSocketService();
 
   // Cache for marker icons
   BitmapDescriptor? _campusIcon;
@@ -162,11 +164,32 @@ class _MapScreenState extends ConsumerState<MapScreen>
     _initMarkerIcons();
     _startPolling();
     _getMyLocation();
+    // Connect WebSocket for real-time bus updates
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = ref.read(authProvider);
+      if (auth.token.isNotEmpty && !auth.token.startsWith('demo_')) {
+        _wsService.connect(auth.token, _handleWsMessage);
+      }
+    });
+  }
+
+  /// Handle incoming WebSocket messages — update bus position instantly
+  void _handleWsMessage(Map<String, dynamic> data) {
+    final type = data['type'] as String? ?? '';
+    if (type == 'gps_update' || type == 'bus_update') {
+      final busId = data['bus_id'] as String? ?? '';
+      if (busId.isEmpty || !mounted) return;
+      final updatedBus = _buses.indexWhere((b) => b.id == busId);
+      if (updatedBus == -1) return;
+      // Refresh the full bus list on any GPS update
+      _fetchBuses();
+    }
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _wsService.disconnect();
     for (final c in _animControllers.values) {
       c.dispose();
     }
