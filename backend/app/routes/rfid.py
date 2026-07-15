@@ -23,11 +23,12 @@ async def rfid_tap(req: RfidTap, u=Depends(current_user)):
         raise HTTPException(404, "RFID card not registered")
 
     td = today()
-    last_tap = await db.attendance.find_one(
+    cursor = db.attendance.find(
         {"user_id": stu["id"], "date": td},
-        {"_id": 0, "tap_type": 1},
-        sort=[("tap_time", -1)]
-    )
+        {"_id": 0, "tap_type": 1}
+    ).sort([("tap_time", -1)]).limit(1)
+    taps = await cursor.to_list(length=1)
+    last_tap = taps[0] if taps else None
     tap_type = "exited" if (last_tap and last_tap["tap_type"] == "boarded") else "boarded"
 
     await db.attendance.insert_one({
