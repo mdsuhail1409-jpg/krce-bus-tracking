@@ -147,119 +147,42 @@ class _StaffDashboardState extends ConsumerState<StaffDashboard> {
 
               // ETA Card
               etaAsync.when(
-                data: (eta) {
-                  if (eta.etaText == null && eta.busNumber == null) {
-                    return GlassCard(
-                      child: Row(
+                data: (eta) => GlassCard(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.successGreen.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.access_time,
+                            color: AppColors.successGreen),
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.directions_bus_outlined,
-                              color: AppColors.mutedText, size: 28),
-                          const SizedBox(width: 14),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('No Active Bus',
-                                    style: TextStyle(
-                                        color: AppColors.textColor,
-                                        fontWeight: FontWeight.bold)),
-                                Text('Assigned bus is not running yet.',
-                                    style: TextStyle(
-                                        color: AppColors.mutedText,
-                                        fontSize: 12)),
-                              ],
-                            ),
+                          const Text('ETA to Campus',
+                              style: TextStyle(color: AppColors.mutedText)),
+                          Text(
+                            eta.eta,
+                            style: const TextStyle(
+                                color: AppColors.successGreen,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold),
                           ),
+                          Text('Next Stop: ${eta.nextStop}',
+                              style: const TextStyle(
+                                  color: AppColors.mutedText, fontSize: 12)),
                         ],
                       ),
-                    );
-                  }
-
-                  return GlassCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.between,
-                          children: [
-                            Text(
-                              'Assigned Bus: ${eta.busNumber ?? "—"}',
-                              style: const TextStyle(
-                                  color: AppColors.textColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.indigoPrimary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text('Live',
-                                  style: TextStyle(
-                                      color: AppColors.indigoPrimary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            const Icon(Icons.timer_outlined,
-                                color: AppColors.indigoPrimary, size: 28),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('ETA to your Stop',
-                                    style: TextStyle(
-                                        color: AppColors.mutedText,
-                                        fontSize: 12)),
-                                Text(
-                                  eta.etaText ?? 'Calculating...',
-                                  style: const TextStyle(
-                                      color: AppColors.textColor,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        if (eta.nextStop != null) ...[
-                          const Divider(height: 24),
-                          Row(
-                            children: [
-                              const Icon(Icons.location_on_outlined,
-                                  color: AppColors.successGreen, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Next Stop: ${eta.nextStop}',
-                                  style: const TextStyle(
-                                      color: AppColors.mutedText,
-                                      fontSize: 13),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                },
-                loading: () => GlassCard(
-                  child: const Center(
-                    child: CircularProgressIndicator(),
+                    ],
                   ),
                 ),
-                error: (e, _) => GlassCard(
-                  child: Text('Failed to load ETA: $e',
-                      style:
-                          const TextStyle(color: AppColors.errorRed)),
-                ),
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (_, __) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 16),
 
@@ -282,7 +205,7 @@ class _StaffDashboardState extends ConsumerState<StaffDashboard> {
                     children: [
                       ElevatedButton(
                         onPressed: () {
-                          context.go('/map', extra: myBus);
+                          context.go('/map');
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.indigoPrimary,

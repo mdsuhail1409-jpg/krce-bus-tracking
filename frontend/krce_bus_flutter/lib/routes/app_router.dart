@@ -42,10 +42,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => _dashboardFor(auth.role)),
           GoRoute(
             path: '/map',
-            builder: (context, state) {
-              final bus = state.extra as Bus?;
-              return MapScreen(selectedBus: bus);
-            },
+            builder: (context, state) => const MapScreen(),
           ),
           GoRoute(
             path: '/history',
