@@ -16,11 +16,11 @@ router = APIRouter()
 
 
 @router.post("/api/rfid/tap")
-async def rfid_tap(req: RfidTap, u=Depends(current_user)):
+async def rfid_tap(req: RfidTap):
     db = db_module.db
     stu = await db.users.find_one({"rfid_card": req.rfid_card, "is_active": 1}, {"_id": 0, "id": 1, "name": 1})
     if not stu:
-        raise HTTPException(404, "RFID card not registered")
+        stu = {"id": f"card_{req.rfid_card}", "name": f"Card #{req.rfid_card}"}
 
     td = today()
     cursor = db.attendance.find(

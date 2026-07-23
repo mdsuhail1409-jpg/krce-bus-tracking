@@ -11,6 +11,7 @@ from app.routes.driver import router as driver_router
 from app.routes.rfid import router as rfid_router
 from app.routes.pages import router as pages_router
 from app.routes.emergencies import router as emergencies_router
+from app.routes.hardware import router as hardware_router
 
 # WebSocket is registered directly on the app (not via APIRouter)
 # See app/__init__.py for websocket registration
@@ -24,4 +25,5 @@ all_routers = [
     rfid_router,
     pages_router,
     emergencies_router,
+    hardware_router,
 ]

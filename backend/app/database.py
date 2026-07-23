@@ -43,6 +43,7 @@ def _build_seed():
         {"id":"drv03","name":"Selvam P.","email":"selvam@krce.ac.in","phone":"9840133333","role":"driver","college_id":None,"rfid_card":None,"bus_id":"B03","parent_of":None,"licence_no":"TN-DL-003","password_hash":_hash("driver@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"drv04","name":"Arun M.","email":"arun@krce.ac.in","phone":"9840144444","role":"driver","college_id":None,"rfid_card":None,"bus_id":"B04","parent_of":None,"licence_no":"TN-DL-004","password_hash":_hash("driver@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"drv05","name":"Suresh T.","email":"suresh.d@krce.ac.in","phone":"9840155555","role":"driver","college_id":None,"rfid_card":None,"bus_id":"B05","parent_of":None,"licence_no":"TN-DL-005","password_hash":_hash("driver@123"),"is_active":1,"created_at":now_str(),"last_login":None},
+        {"id":"drv06","name":"Hari Prasad","email":"hari@krce.ac.in","phone":"9840166666","role":"driver","college_id":None,"rfid_card":None,"bus_id":"B06","parent_of":None,"licence_no":"TN-DL-006","password_hash":_hash("driver@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"stu01","name":"Aravind Kumar","email":"aravind@krce.ac.in","phone":"9841100001","role":"student","college_id":"21CS001","rfid_card":"RF001","bus_id":"B01","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"stu02","name":"Priya Devi","email":"priya@krce.ac.in","phone":"9841100002","role":"student","college_id":"21EC002","rfid_card":"RF002","bus_id":"B02","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"stu03","name":"Karthikeyan M","email":"karthik@krce.ac.in","phone":"9841100003","role":"student","college_id":"21ME003","rfid_card":"RF003","bus_id":"B03","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
@@ -62,6 +63,7 @@ def _build_seed():
         {"id":"B03","number":"TN-03","route_name":"Route C — Ariyamangalam","driver_id":"drv03","capacity":50,"stops":["KRCE Campus","Thuvakudi","Ariyamangalam","Cantonment","Collector Office","KRCE Campus"],"is_active":1,"created_at":now_str()},
         {"id":"B04","number":"TN-04","route_name":"Route D — Chatram Bus Stand","driver_id":"drv04","capacity":40,"stops":["KRCE Campus","Palakarai","Chatram Bus Stand","Central","Junction","KRCE Campus"],"is_active":1,"created_at":now_str()},
         {"id":"B05","number":"TN-05","route_name":"Route E — Mannarpuram","driver_id":"drv05","capacity":55,"stops":["KRCE Campus","Thillai Nagar","Mannarpuram","Rockfort","Chinthamani","KRCE Campus"],"is_active":1,"created_at":now_str()},
+        {"id":"B06","number":"TN-06","route_name":"Chathiram Bus Stand Route","driver_id":"drv06","capacity":50,"stops":["KRCE Campus","Chathiram Bus Stand","Samayapuram","KRCE Campus"],"is_active":1,"created_at":now_str()},
     ]
     td = today()
     alerts = [

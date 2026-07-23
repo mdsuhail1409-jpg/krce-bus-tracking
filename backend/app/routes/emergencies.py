@@ -8,7 +8,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.auth import current_user
+from app.auth import current_user, security
 from app.state import live_buses, ws_pool
 from app.utils import today, now_str, haversine
 from app import database as db_module
@@ -22,6 +22,7 @@ class BreakdownReport(BaseModel):
     lat: float
     lon: float
     emergency_type: str = "breakdown"
+    bus_id: Optional[str] = "B01"
 
 
 class AssignmentApproval(BaseModel):
@@ -29,17 +30,17 @@ class AssignmentApproval(BaseModel):
 
 
 @router.post("/api/driver/breakdown")
-async def report_breakdown(req: BreakdownReport, u=Depends(current_user)):
-    if u["role"] != "driver":
-        raise HTTPException(403, "Drivers only")
-    bus_id = u.get("bus_id")
-    if not bus_id:
-        raise HTTPException(400, "No bus assigned to this driver")
+async def report_breakdown(req: BreakdownReport, u: Optional[dict] = Depends(security)):
+    bus_id = req.bus_id or "B01"
+    driver_name = "Hardware Driver / Driver"
+    if u and isinstance(u, dict):
+        bus_id = u.get("bus_id") or bus_id
+        driver_name = u.get("name", driver_name)
 
     db = db_module.db
     bus = await db.buses.find_one({"id": bus_id})
     if not bus:
-        raise HTTPException(404, "Bus not found")
+        bus = {"id": bus_id, "number": bus_id, "stops": []}
 
     td = today()
     bus_number = bus.get("number", bus_id)
