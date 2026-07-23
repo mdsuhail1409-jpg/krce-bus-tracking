@@ -406,5 +406,26 @@ async def init_db():
         await db.alerts.insert_many(alerts)
         await db.attendance.insert_many(attendance)
         logger.info("MongoDB seeded with demo data")
+    else:
+        # Ensure Chathiram Bus Stand Route B06 is present in the database
+        existing_bus = await db.buses.find_one({"id": "B06"})
+        if not existing_bus:
+            logger.info("Database not empty, but B06 bus is missing. Seeding B06 and its driver...")
+            existing_drv = await db.users.find_one({"id": "drv06"})
+            if not existing_drv:
+                await db.users.insert_one({
+                    "id": "drv06", "name": "Hari Prasad", "email": "hari@krce.ac.in",
+                    "phone": "9840166666", "role": "driver", "college_id": None,
+                    "rfid_card": None, "bus_id": "B06", "parent_of": None,
+                    "licence_no": "TN-DL-006", "password_hash": _hash("driver@123"),
+                    "is_active": 1, "created_at": now_str(), "last_login": None
+                })
+            await db.buses.insert_one({
+                "id": "B06", "number": "TN-06", "route_name": "Chathiram Bus Stand Route",
+                "driver_id": "drv06", "capacity": 50,
+                "stops": ["KRCE Campus", "Chathiram Bus Stand", "Samayapuram", "KRCE Campus"],
+                "is_active": 1, "created_at": now_str()
+            })
+            logger.info("B06 bus and driver successfully seeded into production database.")
 
     logger.info("MongoDB connected — database: %s", MONGO_DB_NAME)
