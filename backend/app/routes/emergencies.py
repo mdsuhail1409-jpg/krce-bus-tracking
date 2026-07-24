@@ -44,7 +44,10 @@ async def report_breakdown(req: BreakdownReport, u: Optional[dict] = Depends(sec
 
     td = today()
     bus_number = bus.get("number", bus_id)
-    driver_name = u["name"]
+    # Guard: driver_name already set above; only override if logged-in user
+    if u and isinstance(u, dict):
+        driver_name = u.get("name", driver_name)
+
 
     # Calculate stops info based on current GPS
     stops = bus.get("stops", [])
@@ -148,7 +151,7 @@ async def report_breakdown(req: BreakdownReport, u: Optional[dict] = Depends(sec
         "id": emerg_id,
         "bus_id": bus_id,
         "bus_number": bus_number,
-        "driver_id": u["sub"],
+        "driver_id": (u.get("sub") if u and isinstance(u, dict) else None) or "hw_node",
         "driver_name": driver_name,
         "gps": {"lat": req.lat, "lon": req.lon},
         "route_name": bus.get("route_name", ""),

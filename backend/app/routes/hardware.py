@@ -1,19 +1,37 @@
 """
 KRCE Bus Tracking System — Dedicated IoT Hardware telemetry routes.
-Supports NodeMCU ESP8266 / SIM900A GPRS POST requests for GPS, RFID tap, and SOS button alerts.
+Supports ESP32 / SIM900A GPRS POST requests for GPS, RFID tap, and SOS button alerts.
 """
 
+import time
 import uuid
+import os
+
 from pydantic import BaseModel
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 
 from app.models import RfidTap, GpsUpdate
 from app.state import live_buses, ws_pool
 from app.utils import today, now_str
 from app.gps import process_gps_update, trigger_system_alert
+from app.config import logger
 from app import database as db_module
 
 router = APIRouter()
+
+# ─────────────────────────────────────────────────────────────
+#  OPTIONAL API KEY AUTH FOR HARDWARE DEVICES
+#  Set HW_API_KEY env var in Render dashboard to enable.
+#  If not set, any device can POST (backward compatible).
+# ─────────────────────────────────────────────────────────────
+_HW_API_KEY = os.getenv("HW_API_KEY", "")
+
+
+async def _verify_hw_key(x_device_key: str = ""):
+    """Optional device key check. If HW_API_KEY env var is set, enforce it."""
+    if _HW_API_KEY and x_device_key != _HW_API_KEY:
+        logger.warning("[HW AUTH] Rejected request with invalid device key: '%s'", x_device_key)
+        raise HTTPException(status_code=403, detail="Invalid device key")
 
 
 class HardwareGpsUpdate(BaseModel):
@@ -23,6 +41,8 @@ class HardwareGpsUpdate(BaseModel):
     speed: float = 0.0
     heading: float = 0.0
     passengers: int = 0
+    satellites: int = 0
+    hdop: float = 0.0
 
 
 class HardwareEmergencyReport(BaseModel):
@@ -32,18 +52,35 @@ class HardwareEmergencyReport(BaseModel):
     emergency_type: str = "SOS Button Pressed"
 
 
+# ─────────────────────────────────────────────────────────────
+#  KEEP-ALIVE PING
+#  ESP32 calls this every 30s to warm Render from cold start.
+# ─────────────────────────────────────────────────────────────
+@router.get("/api/hardware/ping")
+async def hardware_ping():
+    """Lightweight keep-alive for ESP32. Warms Render from cold start."""
+    live_count = sum(1 for b in live_buses.values() if b.get("status") != "offline")
+    logger.debug("[HW PING] Keep-alive received. Live buses: %d", live_count)
+    return {"ok": True, "ts": int(time.time()), "live_buses": live_count}
+
+
+# ─────────────────────────────────────────────────────────────
+#  GPS LOCATION — via bus_id path param
+# ─────────────────────────────────────────────────────────────
 @router.post("/api/buses/{bus_id}/live")
 async def hardware_bus_live_post(bus_id: str, req: GpsUpdate):
-    """Handle hardware GPS location broadcast from ESP8266 / SIM900A."""
+    """Handle hardware GPS location broadcast from ESP32 / SIM900A."""
     db = db_module.db
     bus = await db.buses.find_one({"id": bus_id})
-    driver_name = "Hardware NodeMCU"
+    driver_name = "Hardware ESP32"
     driver_id = "hw_node"
     if bus and bus.get("driver_id"):
         drv = await db.users.find_one({"id": bus["driver_id"]})
         if drv:
             driver_name = drv.get("name", driver_name)
             driver_id = drv.get("id", driver_id)
+
+    logger.info("[HW GPS] bus=%s lat=%.4f lon=%.4f spd=%.1f km/h", bus_id, req.lat, req.lon, req.speed)
 
     await process_gps_update(
         bus_id=bus_id,
@@ -58,18 +95,28 @@ async def hardware_bus_live_post(bus_id: str, req: GpsUpdate):
     return {"status": "ok", "bus_id": bus_id}
 
 
+# ─────────────────────────────────────────────────────────────
+#  GPS LOCATION — via JSON body (primary ESP32 endpoint)
+# ─────────────────────────────────────────────────────────────
 @router.post("/api/hardware/gps")
-async def hardware_gps_post(req: HardwareGpsUpdate):
+async def hardware_gps_post(req: HardwareGpsUpdate, x_device_key: str = Header(default="")):
     """Handle hardware GPS location broadcast via generic hardware route."""
+    await _verify_hw_key(x_device_key)
+
     db = db_module.db
     bus = await db.buses.find_one({"id": req.bus_id})
-    driver_name = "Hardware NodeMCU"
+    driver_name = "Hardware ESP32"
     driver_id = "hw_node"
     if bus and bus.get("driver_id"):
         drv = await db.users.find_one({"id": bus["driver_id"]})
         if drv:
             driver_name = drv.get("name", driver_name)
             driver_id = drv.get("id", driver_id)
+
+    logger.info(
+        "[HW GPS] bus=%s lat=%.4f lon=%.4f spd=%.1f km/h sats=%d hdop=%.1f",
+        req.bus_id, req.lat, req.lon, req.speed, req.satellites, req.hdop
+    )
 
     await process_gps_update(
         bus_id=req.bus_id,
@@ -81,16 +128,28 @@ async def hardware_gps_post(req: HardwareGpsUpdate):
         heading=req.heading,
         passengers=req.passengers
     )
+
+    # Persist extra telemetry fields not in process_gps_update
+    if req.bus_id in live_buses:
+        live_buses[req.bus_id]["satellites"] = req.satellites
+        live_buses[req.bus_id]["hdop"] = req.hdop
+        live_buses[req.bus_id]["hw_source"] = "ESP32"
+
     return {"status": "ok", "bus_id": req.bus_id}
 
 
+# ─────────────────────────────────────────────────────────────
+#  RFID TAP — boarding / alighting
+# ─────────────────────────────────────────────────────────────
 @router.post("/api/hardware/rfid/tap")
-async def hardware_rfid_tap(req: RfidTap):
+async def hardware_rfid_tap(req: RfidTap, x_device_key: str = Header(default="")):
     """Handle hardware RFID swipe without JWT bearer requirement."""
+    await _verify_hw_key(x_device_key)
+
     db = db_module.db
     stu = await db.users.find_one({"rfid_card": req.rfid_card, "is_active": 1}, {"_id": 0, "id": 1, "name": 1})
     if not stu:
-        # Auto-create or log unknown card tap for hardware testing fallback
+        logger.warning("[HW RFID] Unknown card tapped: %s on bus %s", req.rfid_card, req.bus_id)
         stu = {"id": f"unk_{req.rfid_card}", "name": f"Student ({req.rfid_card})"}
 
     td = today()
@@ -107,6 +166,8 @@ async def hardware_rfid_tap(req: RfidTap):
         "tap_type": tap_type, "tap_time": now_str(), "stop_name": req.stop_name or "Live Stop",
         "lat": req.lat, "lon": req.lon, "date": td
     })
+
+    logger.info("[HW RFID] %s → %s (%s) on bus %s", req.rfid_card, stu["name"], tap_type, req.bus_id)
 
     new_pax = 0
     if req.bus_id in live_buses:
@@ -133,10 +194,19 @@ async def hardware_rfid_tap(req: RfidTap):
     return {"status": "ok", "tap_type": tap_type, "student_name": stu["name"]}
 
 
+# ─────────────────────────────────────────────────────────────
+#  SOS / BREAKDOWN EMERGENCY
+# ─────────────────────────────────────────────────────────────
 @router.post("/api/driver/breakdown")
-async def hardware_driver_breakdown(req: HardwareEmergencyReport):
-    """Handle breakdown & SOS button alerts from ESP8266 NodeMCU."""
+async def hardware_driver_breakdown(req: HardwareEmergencyReport, x_device_key: str = Header(default="")):
+    """Handle breakdown & SOS button alerts from ESP32."""
+    await _verify_hw_key(x_device_key)
+
     bus_id = req.bus_id
+    logger.warning(
+        "[HW SOS] EMERGENCY from bus=%s at lat=%.4f lon=%.4f type='%s'",
+        bus_id, req.lat, req.lon, req.emergency_type
+    )
     await trigger_system_alert(
         "SOS Panic Emergency Alert",
         f"Bus {bus_id} Hardware SOS Panic Button Pressed at Lat: {req.lat:.4f}, Lon: {req.lon:.4f}! Immediate assistance requested.",

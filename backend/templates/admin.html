@@ -572,6 +572,11 @@
         .pill-status-offline { background: rgba(100, 116, 139, 0.08); border: 1px solid rgba(100, 116, 139, 0.2); color: var(--status-offline); }
         .pill-status-warning { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); color: var(--status-warning); }
         .pill-status-danger { background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--status-danger); }
+        .hw-badge { display:inline-flex; align-items:center; gap:4px; font-size:0.68rem; font-weight:600; padding:2px 7px; border-radius:20px; letter-spacing:0.02em; }
+        .hw-badge.online  { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; }
+        .hw-badge.offline { background:rgba(100,116,139,0.10); border:1px solid rgba(100,116,139,0.2); color:#64748b; }
+        .hw-badge .hw-dot { width:6px; height:6px; border-radius:50%; background:currentColor; animation: hw-pulse 1.4s infinite; }
+        @keyframes hw-pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 
         /* Tables styling */
         .table-responsive {
@@ -2084,10 +2089,11 @@
                     div.innerHTML = `
                         <div class="fleet-item-header">
                             <span>${b.number}</span>
-                            <span class="pill pill-status-offline">Offline</span>
+                            <span class="hw-badge offline"><span class="hw-dot"></span>ESP32 Offline</span>
                         </div>
+                        <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:2px;">${b.route_name}</div>
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-secondary);">
-                            <span>Occupancy: ${b.boarded_today || 0}/${b.capacity}</span>
+                            <span>Pax: ${b.boarded_today || 0}/${b.capacity}</span>
                             <span>No GPS signal</span>
                         </div>
                     `;
@@ -2149,13 +2155,27 @@
                     );
                 }
                 
+                const hwSrc = live && live.hw_source === 'ESP32';
+                const sats = live && live.satellites != null ? live.satellites : '--';
+                const hdopVal = live && live.hdop != null ? live.hdop : '--';
+                const lastSeenTs = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '--';
+                const hwBadgeHtml = hwSrc
+                    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;"></span>ESP32 Live</span>`
+                    : `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.2);color:#64748b;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;">App Source</span>`;
                 const popupContent = `
-                    <div style="color: #0b0f19; font-family: Outfit, sans-serif; font-size: 0.85rem;">
-                        <strong>${b.number}</strong> (${b.plate_number || b.number})<br>
+                    <div style="color: #0b0f19; font-family: Outfit, sans-serif; font-size: 0.85rem; min-width:200px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <strong>${b.number}</strong> ${hwBadgeHtml}
+                        </div>
                         <strong>Route:</strong> ${b.route_name}<br>
                         <strong>Driver:</strong> ${b.driver_name || 'Unassigned'}<br>
                         <strong>Speed:</strong> ${speed} km/h<br>
-                        <strong>Occupancy:</strong> ${b.boarded_today}/${b.capacity}
+                        <strong>Occupancy:</strong> ${b.boarded_today}/${b.capacity}<br>
+                        <hr style="border:none;border-top:1px solid #e2e8f0;margin:5px 0;">
+                        <div style="color:#64748b;font-size:0.78rem;">
+                            📡 Satellites: <b>${sats}</b> &nbsp;|&nbsp; HDOP: <b>${hdopVal}</b><br>
+                            🕒 Last update: <b>${lastSeenTs}</b>
+                        </div>
                     </div>
                 `;
                 const infoWindow = new google.maps.InfoWindow({
@@ -2177,14 +2197,17 @@
                     map.setZoom(14);
                     busMarkers[b.id].openPopup();
                 };
+                const isHw = live && live.hw_source === 'ESP32';
+                const lastUpd = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '--';
                 div.innerHTML = `
                     <div class="fleet-item-header">
                         <span>${b.number}</span>
-                        <span class="pill ${isOnline ? 'pill-status-active' : 'pill-status-offline'}">${isOnline ? 'Active' : 'Offline'}</span>
+                        <span class="hw-badge ${isHw ? 'online' : 'offline'}"><span class="hw-dot"></span>${isHw ? 'ESP32' : 'App'}</span>
                     </div>
+                    <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:2px;">${b.route_name}</div>
                     <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-secondary);">
-                        <span>Occupancy: ${b.boarded_today || 0}/${b.capacity}</span>
-                        <span>${live && live.status === 'moving' ? `${speed} km/h` : 'Stationary'}</span>
+                        <span>Pax: ${b.boarded_today || 0}/${b.capacity}</span>
+                        <span>${live && live.status === 'moving' ? `${speed} km/h` : 'Idle'} · ${lastUpd}</span>
                     </div>
                 `;
                 fleetList.appendChild(div);
