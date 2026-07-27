@@ -1696,6 +1696,24 @@
                     <button type="submit" class="btn btn-primary btn-sm">Dispatch Alert</button>
                 </div>
             </form>
+    <div class="modal-overlay" id="minimap-modal" style="display:none; align-items:center; justify-content:center; z-index:9999;">
+        <div class="modal-card" style="max-width: 680px; width: 92%;">
+            <div class="modal-header">
+                <div>
+                    <h3 class="modal-title" id="minimap-modal-title">Bus Live Location</h3>
+                    <div id="minimap-modal-subtitle" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;"></div>
+                </div>
+                <button class="close-modal-btn" onclick="closeMiniMapModal()"><i data-lucide="x"></i></button>
+            </div>
+            
+            <div id="minimap-canvas" style="width: 100%; height: 360px; border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border); overflow: hidden; background: #0f172a;"></div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div id="minimap-details" style="font-size: 0.8rem; color: var(--text-secondary);"></div>
+                <button class="btn btn-primary btn-sm" onclick="goToLiveTrackerFromModal()">
+                    Go to Main Fleet Tracker
+                </button>
+            </div>
         </div>
     </div>
 
@@ -3305,11 +3323,17 @@
 
                 const alertCard = document.createElement('div');
                 alertCard.className = `alert-card-item ${a.alert_type}`;
+                alertCard.style.cursor = 'pointer';
+                alertCard.title = 'Click to view bus position on mini-map';
+                alertCard.onclick = (evt) => {
+                    if (evt.target.tagName === 'BUTTON' || evt.target.closest('button')) return;
+                    openBusMiniMap(a.target_bus || 'B01', null, null, a.title, timeStr);
+                };
                 alertCard.innerHTML = `
                     <div class="alert-card-icon"><i data-lucide="${iconName}"></i></div>
                     <div class="alert-card-body">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 4px;">
-                            <h4 class="alert-card-title">${a.title}</h4>
+                            <h4 class="alert-card-title">${a.title} <small style="font-size:0.7rem; color:var(--accent); font-weight:normal; margin-left:6px;">(Click for map)</small></h4>
                             <div>${resolveBtn}</div>
                         </div>
                         <p class="alert-card-desc">${a.message}</p>
@@ -3328,6 +3352,8 @@
                     const dashAlert = document.createElement('div');
                     dashAlert.className = `alert-card-item ${a.alert_type}`;
                     dashAlert.style.padding = '12px 14px';
+                    dashAlert.style.cursor = 'pointer';
+                    dashAlert.onclick = () => openBusMiniMap(a.target_bus || 'B01', null, null, a.title, timeStr);
                     dashAlert.innerHTML = `
                         <div class="alert-card-icon" style="width:28px; height:28px;"><i data-lucide="${iconName}" style="width:14px; height:14px;"></i></div>
                         <div style="flex:1;">
@@ -3496,6 +3522,7 @@
         function renderEmergenciesList(list) {
             const container = document.getElementById('emergencies-container');
             const activeEmergencies = (list || []).filter(e => e.status !== 'resolved' && e.status !== 'rejected');
+            const historyEmergencies = (list || []).filter(e => e.status === 'resolved' || e.status === 'rejected');
             
             // Update sidebar badge
             const badge = document.getElementById('sidebar-emerg-badge');
@@ -3506,9 +3533,10 @@
                 badge.style.display = 'none';
             }
 
+            // Bug 1 Fix: History tab should ONLY display resolved/rejected breakdowns
             const targetList = activeEmergTab === 'active' 
                 ? activeEmergencies 
-                : (list || []);
+                : historyEmergencies;
 
             // Bug 7: "no breakdowns yet" empty state message
             if (targetList.length === 0) {
@@ -3618,12 +3646,21 @@
                     </button>
                 ` : '';
 
+                // Bug 2 Fix: Do not render Resolve Emergency button on resolved breakdown history cards
+                const resolveBtn = !isResolved ? `
+                    <button class="btn btn-secondary btn-sm" onclick="resolveEmergency('${e.id}')" style="background: var(--bg-hover); color: var(--text-primary);">
+                        Resolve Emergency
+                    </button>
+                ` : `<span class="pill pill-status-offline">Resolved</span>`;
+
                 return `
                     <div class="panel" style="padding: 24px; border: 1px solid var(--bg-hover); position: relative;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
                             <div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                    <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--status-danger);">Vehicle Breakdown: ${e.bus_number}</h3>
+                                    <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--status-danger); cursor: pointer;" onclick="openBusMiniMap('${e.bus_id}', ${e.gps ? e.gps.lat : 10.927669}, ${e.gps ? e.gps.lon : 78.7410}, '${e.bus_number}', '${formattedTime}')" title="Click to view bus position on mini-map">
+                                        Vehicle Breakdown: ${e.bus_number} 📡
+                                    </h3>
                                     <span class="pill ${statusClass}">${statusText}</span>
                                 </div>
                                 <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
@@ -3632,9 +3669,10 @@
                             </div>
                             <div>
                                 ${muteBuzzerBtn}
-                                <button class="btn btn-secondary btn-sm" onclick="resolveEmergency('${e.id}')" style="background: var(--bg-hover); color: var(--text-primary);">
-                                    Resolve Emergency
+                                <button class="btn btn-secondary btn-sm" onclick="openBusMiniMap('${e.bus_id}', ${e.gps ? e.gps.lat : 10.927669}, ${e.gps ? e.gps.lon : 78.7410}, '${e.bus_number}', '${formattedTime}')" style="background: rgba(59, 130, 246, 0.15); border: 1px solid var(--accent); color: var(--accent); font-weight: 700; margin-right: 8px;">
+                                    📡 Mini-Map
                                 </button>
+                                ${resolveBtn}
                             </div>
                         </div>
 
