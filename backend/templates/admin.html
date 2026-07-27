@@ -2250,7 +2250,7 @@
                     busMarkers[b.id].openPopup();
                 };
                 const isHw = live && live.hw_source === 'ESP32';
-                const lastUpd = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '--';
+                const lastUpd = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour:'2-digit',minute:'2-digit'}) : '--';
                 div.innerHTML = `
                     <div class="fleet-item-header">
                         <span>${b.number}</span>
@@ -2269,7 +2269,7 @@
             document.getElementById('map-stat-onboard').innerText = totalOnboard;
             document.getElementById('map-stat-moving').innerText = movingCount;
             document.getElementById('map-stat-offline').innerText = offlineCount;
-            document.getElementById('map-last-update').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('map-last-update').innerText = new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -3213,7 +3213,7 @@
             };
 
             list.forEach((a, i) => {
-                const timeStr = new Date(a.sent_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+                const timeStr = new Date(a.sent_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' }) + ' IST';
                 const iconName = iconMap[a.alert_type] || 'bell';
                 const resolveBtn = !a.is_resolved ? 
                     `<button class="btn btn-secondary btn-sm" onclick="resolveAlert('${a.id}')" style="padding: 4px 8px; font-size:0.75rem;">Mark Resolved</button>` : 

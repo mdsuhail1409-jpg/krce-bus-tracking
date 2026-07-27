@@ -42,7 +42,8 @@ async def websocket_ep(ws: WebSocket, token: str = Query(...)):
                 "bus_id": bus_id, "driver_id": uid, "driver_name": name,
                 "lat": last_pos["lat"], "lon": last_pos["lon"],
                 "speed": last_pos["speed"], "heading": last_pos["heading"], "passengers": last_pos["passengers"],
-                "updated_at": last_pos["updated_at"], "status": last_pos["status"],
+                "updated_at": time.time(),
+                "status": "moving" if last_pos["speed"] > 2 else "idle",
                 "route_geometry": [],
                 "last_active": time.time()
             }
