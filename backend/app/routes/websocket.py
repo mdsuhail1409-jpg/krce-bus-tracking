@@ -119,8 +119,8 @@ async def websocket_ep(ws: WebSocket, token: str = Query(...)):
         ws_pool.pop(uid, None)
         last_seen.pop(uid, None)
         if role == "driver" and bus_id and bus_id in live_buses:
-            live_buses[bus_id]["status"] = "signal_loss"
+            live_buses[bus_id]["status"] = "offline"
             await db.live_bus_positions.update_one(
                 {"bus_id": bus_id},
-                {"$set": {"status": "signal_loss", "updated_at": time.time()}}
+                {"$set": {"status": "offline", "updated_at": time.time()}}
             )
