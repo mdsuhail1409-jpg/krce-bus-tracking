@@ -36,7 +36,7 @@ class KrceBusApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'KRCE BusTrack',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
       routerConfig: router,
     );
   }

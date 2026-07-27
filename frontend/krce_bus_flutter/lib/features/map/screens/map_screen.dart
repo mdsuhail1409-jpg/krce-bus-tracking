@@ -600,7 +600,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                       top: Radius.circular(20)),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black.withOpacity(0.4), blurRadius: 12)
+                        color: Colors.black.withOpacity(0.08), blurRadius: 16)
                   ],
                 ),
                 child: Column(
@@ -694,11 +694,11 @@ class _RouteInfoPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xE61E293B),
+        color: AppColors.surfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderColor),
+        border: Border.all(color: AppColors.borderColor, width: 1),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 16)
+          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 16)
         ],
       ),
       child: Column(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/login_screen.dart';
+import '../features/auth/screens/register_screen.dart';
 import '../features/student/screens/student_dashboard.dart';
 import '../features/student/screens/staff_dashboard.dart';
 import '../features/parent/screens/parent_dashboard.dart';
@@ -22,16 +23,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: auth.isAuthenticated ? _homeRoute(auth.role) : '/login',
     redirect: (context, state) {
       final isLoggedIn = auth.isAuthenticated;
-      final isLoginPage = state.matchedLocation == '/login';
+      final isAuthPage = state.matchedLocation == '/login' || state.matchedLocation == '/register';
 
-      if (!isLoggedIn && !isLoginPage) return '/login';
-      if (isLoggedIn && isLoginPage) return _homeRoute(auth.role);
+      if (!isLoggedIn && !isAuthPage) return '/login';
+      if (isLoggedIn && isAuthPage) return _homeRoute(auth.role);
       return null;
     },
     routes: [
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) =>
@@ -102,11 +107,12 @@ class _AppShell extends StatelessWidget {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.surfaceColor,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(16)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.3), blurRadius: 10)
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            )
           ],
         ),
         child: NavigationBar(
