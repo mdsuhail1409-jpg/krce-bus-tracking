@@ -583,8 +583,9 @@
         .pill-status-warning { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); color: var(--status-warning); }
         .pill-status-danger { background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--status-danger); }
         .hw-badge { display:inline-flex; align-items:center; gap:4px; font-size:0.68rem; font-weight:600; padding:2px 7px; border-radius:20px; letter-spacing:0.02em; }
-        .hw-badge.online  { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; }
-        .hw-badge.offline { background:rgba(100,116,139,0.10); border:1px solid rgba(100,116,139,0.2); color:#64748b; }
+        .hw-badge.online      { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; }
+        .hw-badge.signal_loss { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; }
+        .hw-badge.offline     { background:rgba(100,116,139,0.10); border:1px solid rgba(100,116,139,0.2); color:#64748b; }
         .hw-badge .hw-dot { width:6px; height:6px; border-radius:50%; background:currentColor; animation: hw-pulse 1.4s infinite; }
         @keyframes hw-pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 
@@ -1805,16 +1806,29 @@
         }
 
         /**
-         * Check if a bus is online (status != 'offline' and last GPS ping within 45s).
+         * Get 2-tier bus status info:
+         * - 'offline': status === 'offline' OR last ping > 180s (3 minutes) OR no lat/lon
+         * - 'signal_loss': last ping > 90s OR status === 'signal_loss'
+         * - 'online': last ping <= 90s
          */
-        function checkBusOnline(live) {
-            if (!live || !live.lat || !live.lon || live.status === 'offline') return false;
+        function getBusStatusInfo(live) {
+            if (!live || !live.lat || !live.lon || live.status === 'offline') {
+                return { status: 'offline', isOnline: false, isSignalLoss: false, stateClass: 'offline' };
+            }
             const nowSec = Math.floor(Date.now() / 1000);
             const lastActive = live.last_active || live.updated_at || 0;
-            if (lastActive > 0 && (nowSec - lastActive > 45)) {
-                return false;
+            const elapsed = lastActive > 0 ? (nowSec - lastActive) : 999;
+            
+            if (elapsed > 180) {
+                return { status: 'offline', isOnline: false, isSignalLoss: false, stateClass: 'offline' };
+            } else if (elapsed > 90 || live.status === 'signal_loss') {
+                return { status: 'signal_loss', isOnline: true, isSignalLoss: true, stateClass: 'signal_loss' };
             }
-            return true;
+            return { status: 'online', isOnline: true, isSignalLoss: false, stateClass: 'online' };
+        }
+
+        function checkBusOnline(live) {
+            return getBusStatusInfo(live).isOnline;
         }
 
         let wsConn;
@@ -2140,7 +2154,9 @@
 
             globalBuses.forEach(b => {
                 const live = b.live;
-                const isOnline = checkBusOnline(live);
+                const sInfo = getBusStatusInfo(live);
+                const isOnline = sInfo.isOnline;
+                const isSignalLoss = sInfo.isSignalLoss;
                 const speed = live ? live.speed : 0;
 
                 totalOnboard += b.boarded_today || 0;
@@ -2174,9 +2190,9 @@
                     return;
                 }
 
-                if (isOnline && speed > 2) {
+                if (isOnline && !isSignalLoss && speed > 2) {
                     movingCount++;
-                } else {
+                } else if (!isOnline) {
                     offlineCount++;
                 }
 
@@ -2191,8 +2207,10 @@
                     markerColorClass = 'danger';
                 } else if (activeBackup) {
                     markerColorClass = 'primary';
-                } else if (isOnline) {
+                } else if (isOnline && !isSignalLoss) {
                     markerColorClass = 'online';
+                } else if (isSignalLoss) {
+                    markerColorClass = 'warning';
                 }
 
                 // DivIcon Marker with rotation and directional arrow
@@ -2233,13 +2251,24 @@
                 const hdopVal = live && live.hdop != null ? live.hdop : '--';
                 const lastSeenTs = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour:'2-digit', minute:'2-digit', second:'2-digit' }) + ' IST' : '--';
                 
-                const statusBadgeHtml = isOnline ?
-                    `<span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;border:1px solid #86efac;color:#15803d;padding:3px 8px;border-radius:12px;font-size:0.72rem;font-weight:700;"><span style="width:6px;height:6px;border-radius:50%;background:#16a34a;display:inline-block;"></span>ACTIVE BUS (${speed > 2 ? `${speed} km/h` : 'IDLE'})</span>` :
-                    `<span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b;padding:3px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>OFFLINE</span>`;
+                let statusBadgeHtml = '';
+                if (!isOnline) {
+                    statusBadgeHtml = `<span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b;padding:3px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>OFFLINE</span>`;
+                } else if (isSignalLoss) {
+                    statusBadgeHtml = `<span style="display:inline-flex;align-items:center;gap:4px;background:#fef3c7;border:1px solid #fcd34d;color:#d97706;padding:3px 8px;border-radius:12px;font-size:0.72rem;font-weight:700;"><span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>SIGNAL LOSS</span>`;
+                } else {
+                    statusBadgeHtml = `<span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;border:1px solid #86efac;color:#15803d;padding:3px 8px;border-radius:12px;font-size:0.72rem;font-weight:700;"><span style="width:6px;height:6px;border-radius:50%;background:#16a34a;display:inline-block;"></span>ACTIVE BUS (${speed > 2 ? `${speed} km/h` : 'IDLE'})</span>`;
+                }
 
-                const hwBadgeHtml = isOnline
-                    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;"></span>${hwSrc ? 'ESP32' : 'App'}</span>`
-                    : `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.2);color:#64748b;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#64748b;display:inline-block;"></span>${hwSrc ? 'ESP32' : 'App'}</span>`;
+                let hwBadgeHtml = '';
+                if (!isOnline) {
+                    hwBadgeHtml = `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.2);color:#64748b;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#64748b;display:inline-block;"></span>${hwSrc ? 'ESP32' : 'App'}</span>`;
+                } else if (isSignalLoss) {
+                    hwBadgeHtml = `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;display:inline-block;"></span>${hwSrc ? 'ESP32' : 'App'}</span>`;
+                } else {
+                    hwBadgeHtml = `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;"></span>${hwSrc ? 'ESP32' : 'App'}</span>`;
+                }
+
                 const popupContent = `
                     <div style="color: #0b0f19; font-family: Outfit, sans-serif; font-size: 0.85rem; min-width:220px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -2272,8 +2301,13 @@
                 // Sidebar active list item
                 const div = document.createElement('div');
                 div.className = 'fleet-item';
-                // Green highlight for active buses in fleet list
-                if (isOnline) {
+                if (!isOnline) {
+                    // Normal dark border
+                } else if (isSignalLoss) {
+                    div.style.borderLeft = '4px solid var(--status-warning)';
+                    div.style.background = 'rgba(245, 158, 11, 0.06)';
+                    div.style.borderColor = 'rgba(245, 158, 11, 0.25)';
+                } else {
                     div.style.borderLeft = '4px solid var(--status-active)';
                     div.style.background = 'rgba(16, 185, 129, 0.06)';
                     div.style.borderColor = 'rgba(16, 185, 129, 0.25)';
@@ -2285,18 +2319,27 @@
                 };
                 const isHw = live && live.hw_source === 'ESP32';
                 const lastUpd = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour:'2-digit',minute:'2-digit'}) : '--';
-                const statusDot = isOnline
-                    ? `<span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;box-shadow:0 0 6px #10b981;margin-right:4px;"></span>`
-                    : `<span style="width:8px;height:8px;border-radius:50%;background:#64748b;display:inline-block;margin-right:4px;"></span>`;
+                
+                const statusDot = !isOnline
+                    ? `<span style="width:8px;height:8px;border-radius:50%;background:#64748b;display:inline-block;margin-right:4px;"></span>`
+                    : (isSignalLoss
+                        ? `<span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;box-shadow:0 0 6px #f59e0b;margin-right:4px;"></span>`
+                        : `<span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;box-shadow:0 0 6px #10b981;margin-right:4px;"></span>`);
+
+                let speedLabel = 'Offline';
+                if (isOnline) {
+                    speedLabel = isSignalLoss ? 'Signal Loss' : (live && live.status === 'moving' ? `${speed} km/h` : 'Idle');
+                }
+
                 div.innerHTML = `
                     <div class="fleet-item-header">
                         <span>${statusDot}${b.number}</span>
-                        <span class="hw-badge ${isOnline ? 'online' : 'offline'}"><span class="hw-dot"></span>${isHw ? 'ESP32' : 'App'}</span>
+                        <span class="hw-badge ${sInfo.stateClass}"><span class="hw-dot"></span>${isHw ? 'ESP32' : 'App'}</span>
                     </div>
                     <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:2px;">${b.route_name}</div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:${isOnline ? 'var(--status-active)' : 'var(--text-secondary)'};">
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:${!isOnline ? 'var(--text-secondary)' : (isSignalLoss ? 'var(--status-warning)' : 'var(--status-active)')};">
                         <span>Pax: ${b.boarded_today || 0}/${b.capacity}</span>
-                        <span>${live && live.status === 'moving' ? `${speed} km/h` : (isOnline ? 'Idle' : 'Offline')} · ${lastUpd}</span>
+                        <span>${speedLabel} · ${lastUpd}</span>
                     </div>
                 `;
                 fleetList.appendChild(div);
@@ -2343,10 +2386,13 @@
 
             list.forEach(b => {
                 const live = b.live;
-                const isOnline = checkBusOnline(live);
-                const statusPill = isOnline ? 
-                    `<span class="pill pill-status-active"><span class="live-dot"></span>Online</span>` : 
-                    `<span class="pill pill-status-offline">Offline</span>`;
+                const sInfo = getBusStatusInfo(live);
+                let statusPill = `<span class="pill pill-status-offline">Offline</span>`;
+                if (sInfo.isOnline && !sInfo.isSignalLoss) {
+                    statusPill = `<span class="pill pill-status-active"><span class="live-dot"></span>Online</span>`;
+                } else if (sInfo.isSignalLoss) {
+                    statusPill = `<span class="pill pill-status-warning"><span class="live-dot" style="background:var(--status-warning);"></span>Signal Loss</span>`;
+                }
 
                 const utilPercent = Math.min(100, Math.round((b.boarded_today / Math.max(1, b.capacity)) * 100));
 

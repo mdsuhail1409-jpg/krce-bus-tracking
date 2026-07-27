@@ -7,7 +7,7 @@ import json
 import time
 import uuid
 
-from app.config import COLLEGE_LAT, COLLEGE_LON, STOP_COORDS, VEHICLE_TTL, logger
+from app.config import COLLEGE_LAT, COLLEGE_LON, STOP_COORDS, VEHICLE_TTL, VEHICLE_WARN_TTL, logger
 from app.state import live_buses, ws_pool, last_seen, geofence_states
 from app.utils import haversine, fetch_osrm_route, today, now_str
 from app import database as db_module
@@ -211,10 +211,14 @@ async def stale_cleaner():
         
         db = db_module.db
         for bid, info in list(live_buses.items()):
-            if info.get("status") == "offline":
+            curr_status = info.get("status")
+            if curr_status == "offline":
                 continue
+            
             bus_last_active = info.get("last_active") or info.get("updated_at", 0)
-            if now - bus_last_active > VEHICLE_TTL:
+            elapsed = now - bus_last_active
+            
+            if elapsed > VEHICLE_TTL:
                 info["status"] = "offline"
                 save_data = info.copy()
                 save_data.pop("route_geometry", None)
@@ -228,6 +232,13 @@ async def stale_cleaner():
                     f"Bus {bid} (Driver: {info.get('driver_name', 'Unknown')}) is offline.",
                     alert_type="warning",
                     target_bus=bid
+                )
+            elif elapsed > VEHICLE_WARN_TTL and curr_status != "signal_loss":
+                info["status"] = "signal_loss"
+                await db.live_bus_positions.update_one(
+                    {"bus_id": bid},
+                    {"$set": {"status": "signal_loss"}},
+                    upsert=True
                 )
 
 

@@ -65,7 +65,8 @@ SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 # ═══════════════════════════════════════════════════════════════════
 #  TIMING
 # ═══════════════════════════════════════════════════════════════════
-VEHICLE_TTL = 45  # seconds before driver or hardware kit is considered offline
+VEHICLE_WARN_TTL = 90   # seconds before signal loss warning (amber)
+VEHICLE_TTL = 180       # seconds before bus is considered offline (grey)
 
 # ═══════════════════════════════════════════════════════════════════
 #  LOGGING
