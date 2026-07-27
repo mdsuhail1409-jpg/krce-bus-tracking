@@ -65,7 +65,7 @@ SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 # ═══════════════════════════════════════════════════════════════════
 #  TIMING
 # ═══════════════════════════════════════════════════════════════════
-VEHICLE_TTL = 300  # seconds before driver is considered offline
+VEHICLE_TTL = 45  # seconds before driver or hardware kit is considered offline
 
 # ═══════════════════════════════════════════════════════════════════
 #  LOGGING

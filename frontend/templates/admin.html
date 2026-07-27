@@ -1804,6 +1804,19 @@
             return new Date(dateStr + 'Z');
         }
 
+        /**
+         * Check if a bus is online (status != 'offline' and last GPS ping within 45s).
+         */
+        function checkBusOnline(live) {
+            if (!live || !live.lat || !live.lon || live.status === 'offline') return false;
+            const nowSec = Math.floor(Date.now() / 1000);
+            const lastActive = live.last_active || live.updated_at || 0;
+            if (lastActive > 0 && (nowSec - lastActive > 45)) {
+                return false;
+            }
+            return true;
+        }
+
         let wsConn;
         let pollingInterval;
 
@@ -2127,7 +2140,7 @@
 
             globalBuses.forEach(b => {
                 const live = b.live;
-                const isOnline = live && live.status !== 'offline';
+                const isOnline = checkBusOnline(live);
                 const speed = live ? live.speed : 0;
 
                 totalOnboard += b.boarded_today || 0;
@@ -2224,9 +2237,9 @@
                     `<span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;border:1px solid #86efac;color:#15803d;padding:3px 8px;border-radius:12px;font-size:0.72rem;font-weight:700;"><span style="width:6px;height:6px;border-radius:50%;background:#16a34a;display:inline-block;"></span>ACTIVE BUS (${speed > 2 ? `${speed} km/h` : 'IDLE'})</span>` :
                     `<span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b;padding:3px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>OFFLINE</span>`;
 
-                const hwBadgeHtml = hwSrc
-                    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;"></span>ESP32</span>`
-                    : `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.2);color:#64748b;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;">App</span>`;
+                const hwBadgeHtml = isOnline
+                    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;"></span>${hwSrc ? 'ESP32' : 'App'}</span>`
+                    : `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(100,116,139,0.1);border:1px solid rgba(100,116,139,0.2);color:#64748b;padding:2px 7px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#64748b;display:inline-block;"></span>${hwSrc ? 'ESP32' : 'App'}</span>`;
                 const popupContent = `
                     <div style="color: #0b0f19; font-family: Outfit, sans-serif; font-size: 0.85rem; min-width:220px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -2278,12 +2291,12 @@
                 div.innerHTML = `
                     <div class="fleet-item-header">
                         <span>${statusDot}${b.number}</span>
-                        <span class="hw-badge ${isHw ? 'online' : 'offline'}"><span class="hw-dot"></span>${isHw ? 'ESP32' : 'App'}</span>
+                        <span class="hw-badge ${isOnline ? 'online' : 'offline'}"><span class="hw-dot"></span>${isHw ? 'ESP32' : 'App'}</span>
                     </div>
                     <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:2px;">${b.route_name}</div>
                     <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:${isOnline ? 'var(--status-active)' : 'var(--text-secondary)'};">
                         <span>Pax: ${b.boarded_today || 0}/${b.capacity}</span>
-                        <span>${live && live.status === 'moving' ? `${speed} km/h` : 'Idle'} · ${lastUpd}</span>
+                        <span>${live && live.status === 'moving' ? `${speed} km/h` : (isOnline ? 'Idle' : 'Offline')} · ${lastUpd}</span>
                     </div>
                 `;
                 fleetList.appendChild(div);
@@ -2330,7 +2343,7 @@
 
             list.forEach(b => {
                 const live = b.live;
-                const isOnline = live && live.status !== 'offline';
+                const isOnline = checkBusOnline(live);
                 const statusPill = isOnline ? 
                     `<span class="pill pill-status-active"><span class="live-dot"></span>Online</span>` : 
                     `<span class="pill pill-status-offline">Offline</span>`;

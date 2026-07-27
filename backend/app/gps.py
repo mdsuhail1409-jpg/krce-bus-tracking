@@ -201,28 +201,33 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
 
 
 async def stale_cleaner():
-    """Background task to detect offline drivers."""
+    """Background task to detect offline drivers and hardware kits."""
     while True:
-        await asyncio.sleep(60)
+        await asyncio.sleep(10)
         now = time.time()
-        stale = [k for k, v in last_seen.items() if now - v > VEHICLE_TTL]
+        stale = [k for k, v in list(last_seen.items()) if now - v > VEHICLE_TTL]
         for uid in stale:
             last_seen.pop(uid, None)
-        for bid, info in live_buses.items():
+        
+        db = db_module.db
+        for bid, info in list(live_buses.items()):
             if info.get("status") == "offline":
                 continue
-            # Check if bus itself was recently active (covers both App and ESP32 sources)
-            bus_last_active = info.get("last_active", 0)
-            if now - bus_last_active <= VEHICLE_TTL:
-                continue
-            # Bus hasn't sent any GPS data within TTL — mark offline
-            drv = info.get("driver_id", "")
-            if drv and drv not in last_seen:
+            bus_last_active = info.get("last_active") or info.get("updated_at", 0)
+            if now - bus_last_active > VEHICLE_TTL:
                 info["status"] = "offline"
+                save_data = info.copy()
+                save_data.pop("route_geometry", None)
+                await db.live_bus_positions.update_one(
+                    {"bus_id": bid},
+                    {"$set": {"status": "offline", "updated_at": now}},
+                    upsert=True
+                )
                 await trigger_system_alert(
                     "Driver Offline",
-                    f"Driver {info.get('driver_name', 'Unknown')} of Bus {bid} is offline.",
+                    f"Bus {bid} (Driver: {info.get('driver_name', 'Unknown')}) is offline.",
                     alert_type="warning",
                     target_bus=bid
                 )
+
 
