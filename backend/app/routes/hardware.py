@@ -53,15 +53,34 @@ class HardwareEmergencyReport(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────
-#  KEEP-ALIVE PING
-#  ESP32 calls this every 30s to warm Render from cold start.
+#  KEEP-ALIVE PING & HARDWARE STATUS
+#  ESP32 calls this every 5-30s to warm Render and check buzzer state.
 # ─────────────────────────────────────────────────────────────
 @router.get("/api/hardware/ping")
-async def hardware_ping():
-    """Lightweight keep-alive for ESP32. Warms Render from cold start."""
+async def hardware_ping(bus_id: str = "B01"):
+    """Lightweight keep-alive for ESP32. Warms Render and returns buzzer status."""
+    db = db_module.db
+    emerg = await db.emergencies.find_one({
+        "bus_id": bus_id,
+        "status": {"$ne": "resolved"},
+        "buzzer_active": 1
+    })
+    buzzer_active = True if emerg else False
     live_count = sum(1 for b in live_buses.values() if b.get("status") != "offline")
-    logger.debug("[HW PING] Keep-alive received. Live buses: %d", live_count)
-    return {"ok": True, "ts": int(time.time()), "live_buses": live_count}
+    return {"ok": True, "ts": int(time.time()), "bus_id": bus_id, "buzzer_active": buzzer_active, "live_buses": live_count}
+
+
+@router.get("/api/hardware/status")
+async def hardware_status(bus_id: str = "B01"):
+    """Check hardware status including active buzzer state until admin acknowledgement."""
+    db = db_module.db
+    emerg = await db.emergencies.find_one({
+        "bus_id": bus_id,
+        "status": {"$ne": "resolved"},
+        "buzzer_active": 1
+    })
+    buzzer_active = True if emerg else False
+    return {"ok": True, "bus_id": bus_id, "buzzer_active": buzzer_active, "emergency_id": emerg["id"] if emerg else None}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -195,11 +214,12 @@ async def hardware_rfid_tap(req: RfidTap, x_device_key: str = Header(default="")
 
 
 # ─────────────────────────────────────────────────────────────
-#  SOS / BREAKDOWN EMERGENCY
+#  SOS / BREAKDOWN EMERGENCY (HARDWARE BUTTON)
 # ─────────────────────────────────────────────────────────────
+@router.post("/api/hardware/sos")
 @router.post("/api/driver/breakdown")
 async def hardware_driver_breakdown(req: HardwareEmergencyReport, x_device_key: str = Header(default="")):
-    """Handle breakdown & SOS button alerts from ESP32."""
+    """Handle breakdown & SOS hardware button alerts from ESP32."""
     await _verify_hw_key(x_device_key)
 
     bus_id = req.bus_id
@@ -207,10 +227,61 @@ async def hardware_driver_breakdown(req: HardwareEmergencyReport, x_device_key: 
         "[HW SOS] EMERGENCY from bus=%s at lat=%.4f lon=%.4f type='%s'",
         bus_id, req.lat, req.lon, req.emergency_type
     )
+
+    db = db_module.db
+    bus = await db.buses.find_one({"id": bus_id})
+    bus_number = bus.get("number", bus_id) if bus else bus_id
+
+    eid = "E" + str(uuid.uuid4())[:6]
+    emerg_doc = {
+        "id": eid,
+        "bus_id": bus_id,
+        "bus_number": bus_number,
+        "driver_name": "Hardware ESP32 Node",
+        "driver_phone": "N/A",
+        "status": "recommended",
+        "buzzer_active": 1,
+        "emergency_type": req.emergency_type or "Hardware Pushbutton SOS Alert",
+        "emergency_time": now_str(),
+        "date": today(),
+        "gps": {"lat": req.lat, "lon": req.lon},
+        "backup_bus_id": None,
+        "timeline": [
+            {
+                "status": "SOS Button Pressed",
+                "ts": now_str(),
+                "msg": f"Hardware SOS Panic Button pressed on Bus {bus_number}. Buzzer activated on kit."
+            }
+        ]
+    }
+
+    await db.emergencies.update_one({"id": eid}, {"$set": emerg_doc}, upsert=True)
+
     await trigger_system_alert(
         "SOS Panic Emergency Alert",
-        f"Bus {bus_id} Hardware SOS Panic Button Pressed at Lat: {req.lat:.4f}, Lon: {req.lon:.4f}! Immediate assistance requested.",
+        f"Bus {bus_number} Hardware SOS Panic Button Pressed at Lat: {req.lat:.4f}, Lon: {req.lon:.4f}! Immediate assistance requested.",
         alert_type="danger",
         target_bus=bus_id
     )
-    return {"status": "ok", "message": "Emergency broadcast sent"}
+
+    import json
+    ws_payload = json.dumps({
+        "type": "emergency",
+        "id": eid,
+        "bus_id": bus_id,
+        "bus_number": bus_number,
+        "emergency_type": req.emergency_type,
+        "buzzer_active": 1
+    })
+    for cid, cws in list(ws_pool.items()):
+        try:
+            await cws.send_text(ws_payload)
+        except Exception:
+            pass
+
+    return {
+        "status": "ok",
+        "message": "Emergency broadcast sent",
+        "emergency_id": eid,
+        "buzzer_active": True
+    }

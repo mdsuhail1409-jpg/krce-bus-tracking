@@ -245,6 +245,7 @@ async def assign_backup(emergency_id: str, req: AssignmentApproval, u=Depends(cu
         {"id": emergency_id},
         {"$set": {
             "status": "assigned",
+            "buzzer_active": 0,
             "backup_bus_id": req.backup_bus_id,
             "backup_bus_number": backup_bus["number"],
             "backup_driver_name": backup_driver_name,
@@ -262,7 +263,7 @@ async def assign_backup(emergency_id: str, req: AssignmentApproval, u=Depends(cu
 
     # WS broadcast to update admin & driver views
     import json
-    ws_payload = json.dumps({"type": "emergency_update", "id": emergency_id})
+    ws_payload = json.dumps({"type": "emergency_update", "id": emergency_id, "buzzer_active": 0})
     for cid, cws in list(ws_pool.items()):
         try:
             await cws.send_text(ws_payload)
@@ -290,7 +291,7 @@ async def resolve_emergency(emergency_id: str, u=Depends(current_user)):
 
     await db.emergencies.update_one(
         {"id": emergency_id},
-        {"$set": {"status": "resolved"}, "$push": {"timeline": timeline_entry}}
+        {"$set": {"status": "resolved", "buzzer_active": 0}, "$push": {"timeline": timeline_entry}}
     )
 
     await trigger_system_alert(
@@ -301,7 +302,7 @@ async def resolve_emergency(emergency_id: str, u=Depends(current_user)):
     )
 
     import json
-    ws_payload = json.dumps({"type": "emergency_update", "id": emergency_id})
+    ws_payload = json.dumps({"type": "emergency_update", "id": emergency_id, "buzzer_active": 0})
     for cid, cws in list(ws_pool.items()):
         try:
             await cws.send_text(ws_payload)
@@ -309,6 +310,38 @@ async def resolve_emergency(emergency_id: str, u=Depends(current_user)):
             pass
 
     return {"status": "ok"}
+
+
+@router.post("/api/admin/emergencies/{emergency_id}/mute")
+async def mute_emergency_buzzer(emergency_id: str, u=Depends(current_user)):
+    if u["role"] not in ("admin", "committee"):
+        raise HTTPException(403, "Admin/Committee only")
+
+    db = db_module.db
+    emerg = await db.emergencies.find_one({"id": emergency_id})
+    if not emerg:
+        raise HTTPException(404, "Emergency not found")
+
+    timeline_entry = {
+        "status": "Buzzer Muted",
+        "ts": now_str(),
+        "msg": f"Admin {u.get('name', 'Admin')} acknowledged emergency and muted hardware kit buzzer."
+    }
+
+    await db.emergencies.update_one(
+        {"id": emergency_id},
+        {"$set": {"buzzer_active": 0}, "$push": {"timeline": timeline_entry}}
+    )
+
+    import json
+    ws_payload = json.dumps({"type": "emergency_update", "id": emergency_id, "buzzer_active": 0})
+    for cid, cws in list(ws_pool.items()):
+        try:
+            await cws.send_text(ws_payload)
+        except Exception:
+            pass
+
+    return {"status": "ok", "message": "Buzzer muted successfully"}
 
 
 @router.get("/api/driver/emergency-assignment")

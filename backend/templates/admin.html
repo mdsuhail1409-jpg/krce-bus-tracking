@@ -3612,6 +3612,12 @@
                     `;
                 }
 
+                const muteBuzzerBtn = (e.buzzer_active === 1 && !isResolved) ? `
+                    <button class="btn btn-warning btn-sm" onclick="muteEmergencyBuzzer('${e.id}')" style="background: rgba(245, 158, 11, 0.15); border: 1px solid var(--status-warning); color: var(--status-warning); font-weight: 700; margin-right: 8px;">
+                        Acknowledge & Mute Kit Buzzer
+                    </button>
+                ` : '';
+
                 return `
                     <div class="panel" style="padding: 24px; border: 1px solid var(--bg-hover); position: relative;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
@@ -3621,12 +3627,15 @@
                                     <span class="pill ${statusClass}">${statusText}</span>
                                 </div>
                                 <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
-                                    Route: ${e.route_name} | Reported At: ${formattedTime}
+                                    Route: ${e.route_name || 'Scheduled Route'} | Reported At: ${formattedTime}
                                 </div>
                             </div>
-                            <button class="btn btn-secondary btn-sm" onclick="resolveEmergency('${e.id}')" style="background: var(--bg-hover); color: var(--text-primary);">
-                                Resolve Emergency
-                            </button>
+                            <div>
+                                ${muteBuzzerBtn}
+                                <button class="btn btn-secondary btn-sm" onclick="resolveEmergency('${e.id}')" style="background: var(--bg-hover); color: var(--text-primary);">
+                                    Resolve Emergency
+                                </button>
+                            </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
