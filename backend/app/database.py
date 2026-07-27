@@ -58,12 +58,12 @@ def _build_seed():
         {"id":"par02","name":"Meenakshi Devi","email":"meenakshi@gmail.com","phone":"9841300002","role":"parent","college_id":None,"rfid_card":None,"bus_id":None,"parent_of":"21EC002","licence_no":None,"password_hash":_hash("parent@123"),"is_active":1,"created_at":now_str(),"last_login":None},
     ]
     buses = [
-        {"id":"B01","number":"TN-01","route_name":"Route A — Woraiyur","driver_id":"drv01","capacity":50,"stops":["KRCE Campus","Samayapuram","Woraiyur Bus Stand","Woraiyur Town","Gandhi Market","KRCE Campus"],"is_active":1,"created_at":now_str()},
-        {"id":"B02","number":"TN-02","route_name":"Route B — Srirangam","driver_id":"drv02","capacity":45,"stops":["KRCE Campus","Panjappur","Srirangam","Cauvery Bridge","K.K. Nagar","KRCE Campus"],"is_active":1,"created_at":now_str()},
-        {"id":"B03","number":"TN-03","route_name":"Route C — Ariyamangalam","driver_id":"drv03","capacity":50,"stops":["KRCE Campus","Thuvakudi","Ariyamangalam","Cantonment","Collector Office","KRCE Campus"],"is_active":1,"created_at":now_str()},
-        {"id":"B04","number":"TN-04","route_name":"Route D — Chatram Bus Stand","driver_id":"drv04","capacity":40,"stops":["KRCE Campus","Palakarai","Chatram Bus Stand","Central","Junction","KRCE Campus"],"is_active":1,"created_at":now_str()},
-        {"id":"B05","number":"TN-05","route_name":"Route E — Mannarpuram","driver_id":"drv05","capacity":55,"stops":["KRCE Campus","Thillai Nagar","Mannarpuram","Rockfort","Chinthamani","KRCE Campus"],"is_active":1,"created_at":now_str()},
-        {"id":"B06","number":"TN-06","route_name":"Chathiram Bus Stand Route","driver_id":"drv06","capacity":50,"stops":["KRCE Campus","Chathiram Bus Stand","Samayapuram","KRCE Campus"],"is_active":1,"created_at":now_str()},
+        {"id":"B01","number":"TN-01","route_name":"Route A — Woraiyur","driver_id":"drv01","capacity":50,"stops":["KRCE Campus","Samayapuram","Woraiyur Bus Stand","Woraiyur Town","Gandhi Market"],"is_active":1,"created_at":now_str()},
+        {"id":"B02","number":"TN-02","route_name":"Route B — Srirangam","driver_id":"drv02","capacity":45,"stops":["KRCE Campus","Panjappur","Srirangam","Cauvery Bridge","K.K. Nagar"],"is_active":1,"created_at":now_str()},
+        {"id":"B03","number":"TN-03","route_name":"Route C — Ariyamangalam","driver_id":"drv03","capacity":50,"stops":["KRCE Campus","Thuvakudi","Ariyamangalam","Cantonment","Collector Office"],"is_active":1,"created_at":now_str()},
+        {"id":"B04","number":"TN-04","route_name":"Route D — Chatram Bus Stand","driver_id":"drv04","capacity":40,"stops":["KRCE Campus","Palakarai","Chatram Bus Stand","Central","Junction"],"is_active":1,"created_at":now_str()},
+        {"id":"B05","number":"TN-05","route_name":"Route E — Mannarpuram","driver_id":"drv05","capacity":55,"stops":["KRCE Campus","Thillai Nagar","Mannarpuram","Rockfort","Chinthamani"],"is_active":1,"created_at":now_str()},
+        {"id":"B06","number":"TN-06","route_name":"Chathiram Bus Stand Route","driver_id":"drv06","capacity":50,"stops":["KRCE Campus","Chathiram Bus Stand","Samayapuram"],"is_active":1,"created_at":now_str()},
     ]
     td = today()
     alerts = [
@@ -423,7 +423,7 @@ async def init_db():
             await db.buses.insert_one({
                 "id": "B06", "number": "TN-06", "route_name": "Chathiram Bus Stand Route",
                 "driver_id": "drv06", "capacity": 50,
-                "stops": ["KRCE Campus", "Chathiram Bus Stand", "Samayapuram", "KRCE Campus"],
+                "stops": ["KRCE Campus", "Chathiram Bus Stand", "Samayapuram"],
                 "is_active": 1, "created_at": now_str()
             })
             logger.info("B06 bus and driver successfully seeded into production database.")

@@ -159,6 +159,22 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
     
     current_pax = live_buses[bus_id].get("passengers", 0) if not is_first_ping else passengers
 
+    # 1. Fetch Bus Route to determine progression
+    bus = await db.buses.find_one({"id": bus_id})
+    stops = bus.get("stops", []) if bus else []
+    
+    # 2. Find nearest stop index
+    nearest_stop_idx = 0
+    min_dist = float('inf')
+    from app.config import STOP_COORDS
+    for idx, stop_name in enumerate(stops):
+        coords = STOP_COORDS.get(stop_name)
+        if coords:
+            d = haversine(lat, lon, coords[0], coords[1])
+            if d < min_dist:
+                min_dist = d
+                nearest_stop_idx = idx
+
     if is_first_ping:
         live_buses[bus_id] = {
             "bus_id": bus_id, "driver_id": driver_id, "driver_name": driver_name,
@@ -166,7 +182,10 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
             "passengers": current_pax, "updated_at": now_ts,
             "status": "moving" if speed > 2 else "idle",
             "route_geometry": [],
-            "last_active": now_ts
+            "last_active": now_ts,
+            "recent_stop_indices": [nearest_stop_idx],
+            "confirmed_stop_idx": nearest_stop_idx,
+            "direction": "forward"
         }
         asyncio.create_task(initialize_route_geometry(bus_id, lat, lon))
     else:
@@ -177,6 +196,40 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
             "status": "moving" if speed > 2 else "idle",
             "last_active": now_ts
         })
+
+    # 3. Debounce nearest stop index to avoid GPS noise
+    recent = live_buses[bus_id].setdefault("recent_stop_indices", [])
+    recent.append(nearest_stop_idx)
+    if len(recent) > 3:
+        recent.pop(0)
+    
+    if len(set(recent)) == 1:
+        confirmed_idx = recent[0]
+        prev_confirmed = live_buses[bus_id].get("confirmed_stop_idx")
+        if prev_confirmed is not None and prev_confirmed != confirmed_idx:
+            if confirmed_idx > prev_confirmed:
+                live_buses[bus_id]["direction"] = "forward"
+            elif confirmed_idx < prev_confirmed:
+                live_buses[bus_id]["direction"] = "reverse"
+        live_buses[bus_id]["confirmed_stop_idx"] = confirmed_idx
+
+    # 4. Calculate dynamic destination and remaining stops
+    direction = live_buses[bus_id].get("direction", "forward")
+    confirmed_idx = live_buses[bus_id].get("confirmed_stop_idx", nearest_stop_idx)
+    
+    if direction == "forward":
+        remaining_stops = stops[confirmed_idx:]
+        dest_stop = stops[-1] if stops else None
+    else:
+        remaining_stops = stops[:confirmed_idx+1][::-1]
+        dest_stop = stops[0] if stops else None
+
+    live_buses[bus_id]["destination_stop"] = dest_stop
+    if dest_stop and dest_stop in STOP_COORDS:
+        coords = STOP_COORDS[dest_stop]
+        live_buses[bus_id]["destination_lat"] = coords[0]
+        live_buses[bus_id]["destination_lon"] = coords[1]
+    live_buses[bus_id]["remaining_stops"] = remaining_stops
 
     # Log to history collection for playback
     await db.live_bus_positions_history.insert_one({

@@ -39,7 +39,11 @@ data class LiveBus(
     val heading: Double,
     val passengers: Int,
     @SerializedName("updated_at") val updatedAt: Double,
-    val status: String // "moving", "idle", "offline"
+    val status: String, // "moving", "idle", "offline"
+    val direction: String? = null,
+    @SerializedName("destination_lat") val destinationLat: Double? = null,
+    @SerializedName("destination_lon") val destinationLon: Double? = null,
+    @SerializedName("remaining_stops") val remainingStops: List<String>? = null
 )
 
 data class Alert(

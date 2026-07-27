@@ -329,8 +329,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final busPos = LatLng(bus.live!.lat, bus.live!.lon);
     try {
       final dio = Dio();
+      final dLon = bus.live!.destinationLon ?? AppConfig.collegeLon;
+      final dLat = bus.live!.destinationLat ?? AppConfig.collegeLat;
       final wps =
-          '${bus.live!.lon},${bus.live!.lat};${AppConfig.collegeLon},${AppConfig.collegeLat}';
+          '${bus.live!.lon},${bus.live!.lat};${dLon},${dLat}';
       final res = await dio.get(
           'https://router.project-osrm.org/route/v1/driving/$wps?overview=full&geometries=geojson');
       if (res.statusCode == 200) {
@@ -346,7 +348,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
       }
     } catch (_) {
       setState(() {
-        _remainingRoute = [busPos, _campus];
+        final dLon = bus.live!.destinationLon ?? AppConfig.collegeLon;
+        final dLat = bus.live!.destinationLat ?? AppConfig.collegeLat;
+        _remainingRoute = [busPos, LatLng(dLat, dLon)];
       });
     }
   }

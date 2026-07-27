@@ -106,11 +106,13 @@ fun LiveMapScreen(authToken: String, busId: String?) {
     // Fetch directions from OSRM every time the tracked bus position changes
     LaunchedEffect(trackedLive) {
         trackedLive?.let { live ->
+            val dLat = live.destinationLat ?: collegeLatLng.latitude
+            val dLon = live.destinationLon ?: collegeLatLng.longitude
             val result = fetchOSRMRoute(
                 originLat = live.lat,
                 originLon = live.lon,
-                destLat = collegeLatLng.latitude,
-                destLon = collegeLatLng.longitude
+                destLat = dLat,
+                destLon = dLon
             )
             directionsResult = result
         }
@@ -128,8 +130,11 @@ fun LiveMapScreen(authToken: String, busId: String?) {
         animatedBusLatLng?.let { busPoint ->
             if (!hasCentered) {
                 try {
+                    val dLat = trackedLive?.destinationLat ?: collegeLatLng.latitude
+                    val dLon = trackedLive?.destinationLon ?: collegeLatLng.longitude
+                    val targetLatLng = LatLng(dLat, dLon)
                     val bounds = LatLngBounds.builder()
-                        .include(collegeLatLng)
+                        .include(targetLatLng)
                         .include(busPoint)
                         .build()
                     cameraPositionState.animate(

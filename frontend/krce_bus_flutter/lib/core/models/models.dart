@@ -59,6 +59,10 @@ class LiveBus {
   final int passengers;
   final double updatedAt;
   final String status;
+  final String? direction;
+  final double? destinationLat;
+  final double? destinationLon;
+  final List<String>? remainingStops;
 
   LiveBus({
     required this.busId,
@@ -71,6 +75,10 @@ class LiveBus {
     required this.passengers,
     required this.updatedAt,
     required this.status,
+    this.direction,
+    this.destinationLat,
+    this.destinationLon,
+    this.remainingStops,
   });
 
   factory LiveBus.fromJson(Map<String, dynamic> json) => LiveBus(
@@ -84,6 +92,10 @@ class LiveBus {
         passengers: json['passengers'] ?? 0,
         updatedAt: (json['updated_at'] ?? 0.0).toDouble(),
         status: json['status'] ?? 'offline',
+        direction: json['direction'],
+        destinationLat: json['destination_lat'] != null ? (json['destination_lat']).toDouble() : null,
+        destinationLon: json['destination_lon'] != null ? (json['destination_lon']).toDouble() : null,
+        remainingStops: json['remaining_stops'] != null ? List<String>.from(json['remaining_stops']) : null,
       );
 }
 
