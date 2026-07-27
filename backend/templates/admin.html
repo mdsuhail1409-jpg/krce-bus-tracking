@@ -1696,6 +1696,10 @@
                     <button type="submit" class="btn btn-primary btn-sm">Dispatch Alert</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MINI-MAP BUS LOCATION MODAL -->
     <div class="modal-overlay" id="minimap-modal" style="display:none; align-items:center; justify-content:center; z-index:9999;">
         <div class="modal-card" style="max-width: 680px; width: 92%;">
             <div class="modal-header">
@@ -3733,6 +3737,80 @@
                 }
             } catch(e) {
                 console.error("Failed to resolve emergency:", e);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  MINI-MAP ALERT / BREAKDOWN BUS LOCATION MODAL
+        // ═══════════════════════════════════════════════════════════════════
+        let miniMap;
+        let miniMapMarker;
+        let currentMiniMapBusId = null;
+
+        function openBusMiniMap(busId, lat, lon, title, timeStr) {
+            currentMiniMapBusId = busId;
+            const bus = (globalBuses || []).find(b => b.id === busId || b.number === busId) || {};
+            const busNum = bus.number || busId || "Vehicle";
+            const route = bus.route_name || "Assigned Route";
+            const driver = bus.driver_name || "Unassigned";
+            const live = bus.live || {};
+            const isOnline = checkBusOnline(live);
+            
+            const targetLat = (lat != null && !isNaN(lat)) ? parseFloat(lat) : (live.lat != null ? live.lat : 10.927669);
+            const targetLon = (lon != null && !isNaN(lon)) ? parseFloat(lon) : (live.lon != null ? live.lon : 78.7410);
+
+            document.getElementById('minimap-modal-title').innerText = `Bus Position: ${busNum}`;
+            document.getElementById('minimap-modal-subtitle').innerText = `${title || 'Bus Alert'} | Route: ${route} (Driver: ${driver})`;
+            
+            document.getElementById('minimap-details').innerHTML = `
+                <strong>Location:</strong> ${targetLat.toFixed(5)}, ${targetLon.toFixed(5)} &nbsp;|&nbsp; 
+                <strong>Status:</strong> ${isOnline ? '<span style="color:#10b981;font-weight:700;">ACTIVE</span>' : '<span style="color:#64748b;font-weight:700;">OFFLINE</span>'} &nbsp;|&nbsp; 
+                <strong>Pax:</strong> ${bus.boarded_today || 0}/${bus.capacity || 50}
+            `;
+
+            const modalEl = document.getElementById('minimap-modal');
+            modalEl.style.display = 'flex';
+            lucide.createIcons();
+
+            setTimeout(() => {
+                const centerPos = { lat: targetLat, lng: targetLon };
+                const miniMapEl = document.getElementById('minimap-canvas');
+                if (!miniMap) {
+                    miniMap = new google.maps.Map(miniMapEl, {
+                        center: centerPos,
+                        zoom: 15,
+                        disableDefaultUI: false,
+                        zoomControl: true
+                    });
+                } else {
+                    miniMap.setCenter(centerPos);
+                    miniMap.setZoom(15);
+                }
+
+                if (miniMapMarker) {
+                    miniMapMarker.setPosition(centerPos);
+                } else {
+                    miniMapMarker = new google.maps.Marker({
+                        position: centerPos,
+                        map: miniMap,
+                        title: busNum
+                    });
+                }
+            }, 150);
+        }
+
+        function closeMiniMapModal() {
+            document.getElementById('minimap-modal').style.display = 'none';
+        }
+
+        function goToLiveTrackerFromModal() {
+            closeMiniMapModal();
+            const navItem = document.querySelector(".nav-item[onclick*='sect-map']");
+            if (navItem) switchSection('sect-map', navItem);
+            if (currentMiniMapBusId && busMarkers[currentMiniMapBusId]) {
+                setTimeout(() => {
+                    busMarkers[currentMiniMapBusId].openPopup();
+                }, 300);
             }
         }
     </script>
