@@ -1789,6 +1789,21 @@
             document.getElementById('portal-layout').style.display = 'none';
         }
 
+        /**
+         * Robust date parser for backend timestamps.
+         * Handles both old UTC strings (no offset) and new IST strings (with +05:30).
+         * Old UTC strings get 'Z' appended so JS parses them as UTC before IST display.
+         */
+        function parseIST(dateStr) {
+            if (!dateStr) return null;
+            // If the string already has a timezone offset (+05:30, Z, etc.), parse directly
+            if (dateStr.includes('+') || dateStr.toUpperCase().includes('Z')) {
+                return new Date(dateStr);
+            }
+            // Otherwise treat as UTC (old format before IST fix)
+            return new Date(dateStr + 'Z');
+        }
+
         let wsConn;
         let pollingInterval;
 
@@ -2244,6 +2259,12 @@
                 // Sidebar active list item
                 const div = document.createElement('div');
                 div.className = 'fleet-item';
+                // Green highlight for active buses in fleet list
+                if (isOnline) {
+                    div.style.borderLeft = '4px solid var(--status-active)';
+                    div.style.background = 'rgba(16, 185, 129, 0.06)';
+                    div.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+                }
                 div.onclick = () => {
                     map.setCenter({ lat: lat, lng: lon });
                     map.setZoom(14);
@@ -2251,13 +2272,16 @@
                 };
                 const isHw = live && live.hw_source === 'ESP32';
                 const lastUpd = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour:'2-digit',minute:'2-digit'}) : '--';
+                const statusDot = isOnline
+                    ? `<span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;box-shadow:0 0 6px #10b981;margin-right:4px;"></span>`
+                    : `<span style="width:8px;height:8px;border-radius:50%;background:#64748b;display:inline-block;margin-right:4px;"></span>`;
                 div.innerHTML = `
                     <div class="fleet-item-header">
-                        <span>${b.number}</span>
+                        <span>${statusDot}${b.number}</span>
                         <span class="hw-badge ${isHw ? 'online' : 'offline'}"><span class="hw-dot"></span>${isHw ? 'ESP32' : 'App'}</span>
                     </div>
                     <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:2px;">${b.route_name}</div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-secondary);">
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:${isOnline ? 'var(--status-active)' : 'var(--text-secondary)'};">
                         <span>Pax: ${b.boarded_today || 0}/${b.capacity}</span>
                         <span>${live && live.status === 'moving' ? `${speed} km/h` : 'Idle'} · ${lastUpd}</span>
                     </div>
@@ -2764,7 +2788,7 @@
 
             list.forEach(r => {
                 const dateRaw = r.reviewed_at || r.submitted_at;
-                const timeStr = dateRaw ? new Date(dateRaw).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' }) + ' IST' : '—';
+                const timeStr = dateRaw ? parseIST(dateRaw).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' }) + ' IST' : '—';
 
                 const row = document.createElement('tr');
                 if (activeRegTab === 'pending') {
@@ -2990,7 +3014,7 @@
             const dashLogBody = document.getElementById('dash-boarding-log-body');
             dashLogBody.innerHTML = '';
             filtered.slice(0, 5).forEach(l => {
-                const timeStr = l.tap_time ? new Date(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) + ' IST' : '—';
+                const timeStr = l.tap_time ? parseIST(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) + ' IST' : '—';
                 const tapPill = l.tap_type === 'boarded' ? 
                     `<span class="pill pill-status-active">Boarded</span>` : 
                     `<span class="pill pill-status-danger">Alighted</span>`;
@@ -3035,7 +3059,7 @@
                 `;
                 const body = document.getElementById('attendance-table-body');
                 filtered.forEach(l => {
-                    const timeStr = l.tap_time ? new Date(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST' : '—';
+                    const timeStr = l.tap_time ? parseIST(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST' : '—';
                     const tapPill = l.tap_type === 'boarded' ? 
                         `<span class="pill pill-status-active">Boarded</span>` : 
                         `<span class="pill pill-status-danger">Alighted</span>`;
@@ -3073,7 +3097,7 @@
                         const logsInGroup = busGroups[bKey];
                         const routeName = logsInGroup[0]?.route_name || '';
                         const rowsHtml = logsInGroup.map(l => {
-                            const timeStr = l.tap_time ? new Date(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST' : '—';
+                            const timeStr = l.tap_time ? parseIST(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST' : '—';
                             const tapPill = l.tap_type === 'boarded' ? 
                                 `<span class="pill pill-status-active">Boarded</span>` : 
                                 `<span class="pill pill-status-danger">Alighted</span>`;
@@ -3155,7 +3179,7 @@
                 l.route_name || '—',
                 l.tap_type || '—',
                 l.stop_name || '—',
-                l.tap_time ? new Date(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) + ' IST' : '—',
+                l.tap_time ? parseIST(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) + ' IST' : '—',
                 l.date || '—'
             ]);
 
@@ -3213,7 +3237,8 @@
             };
 
             list.forEach((a, i) => {
-                const timeStr = new Date(a.sent_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' }) + ' IST';
+                const alertDate = parseIST(a.sent_at);
+                const timeStr = alertDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' }) + ' IST';
                 const iconName = iconMap[a.alert_type] || 'bell';
                 const resolveBtn = !a.is_resolved ? 
                     `<button class="btn btn-secondary btn-sm" onclick="resolveAlert('${a.id}')" style="padding: 4px 8px; font-size:0.75rem;">Mark Resolved</button>` : 
@@ -3461,7 +3486,7 @@
                 }
 
                 // Format time in IST (Bug 12)
-                const formattedTime = e.emergency_time ? new Date(e.emergency_time).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST' : '—';
+                const formattedTime = e.emergency_time ? parseIST(e.emergency_time).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST' : '—';
 
                 // Render Timeline
                 const timelineHtml = (e.timeline || []).map((item, idx) => `
@@ -3472,7 +3497,7 @@
                         </div>
                         <div>
                             <span style="font-weight: 700; color: ${idx === e.timeline.length - 1 ? 'var(--status-danger)' : 'var(--text-primary)'};">${item.status}</span>
-                            <span style="color: var(--text-secondary); margin-left: 8px;">${item.ts ? new Date(item.ts).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) + ' IST' : ''}</span>
+                            <span style="color: var(--text-secondary); margin-left: 8px;">${item.ts ? parseIST(item.ts).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) + ' IST' : ''}</span>
                             <div style="color: var(--text-secondary); margin-top: 2px;">${item.msg}</div>
                         </div>
                     </div>

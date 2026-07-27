@@ -209,8 +209,15 @@ async def stale_cleaner():
         for uid in stale:
             last_seen.pop(uid, None)
         for bid, info in live_buses.items():
+            if info.get("status") == "offline":
+                continue
+            # Check if bus itself was recently active (covers both App and ESP32 sources)
+            bus_last_active = info.get("last_active", 0)
+            if now - bus_last_active <= VEHICLE_TTL:
+                continue
+            # Bus hasn't sent any GPS data within TTL — mark offline
             drv = info.get("driver_id", "")
-            if drv and drv not in last_seen and info.get("status") != "offline":
+            if drv and drv not in last_seen:
                 info["status"] = "offline"
                 await trigger_system_alert(
                     "Driver Offline",
@@ -218,3 +225,4 @@ async def stale_cleaner():
                     alert_type="warning",
                     target_bus=bid
                 )
+
