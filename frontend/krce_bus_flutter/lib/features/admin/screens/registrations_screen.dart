@@ -169,6 +169,9 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
                         busId: selectedBusId,
                       );
                       if (res.status == 'ok') {
+                        setState(() {
+                          _registrations.removeWhere((r) => r.id == reg.id);
+                        });
                         _fetchData();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Registration approved successfully'), backgroundColor: AppColors.successGreen),
@@ -249,6 +252,9 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
                     notes: notesController.text,
                   );
                   if (res.status == 'ok') {
+                    setState(() {
+                      _registrations.removeWhere((r) => r.id == reg.id);
+                    });
                     _fetchData();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Registration rejected'), backgroundColor: AppColors.errorRed),

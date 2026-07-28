@@ -585,52 +585,69 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ),
             ),
 
-          // ── Bus List bottom card ──────────────────────────
+          // ── Bus List bottom card (scrollable) ──────────────
           if (!_showRoutePanel)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceColor,
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20)),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.08), blurRadius: 16)
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Campus Bus Fleet  •  Total Active: ${_buses.where((b) => b.live?.status != "offline" && b.live != null).length}',
-                      style: const TextStyle(
-                          color: AppColors.textColor,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    ..._buses.take(3).map((b) => _BusListItem(
-                          bus: b,
-                          onTap: () {
-                            if (b.live != null && _mapCtrl != null) {
-                              _mapCtrl!.animateCamera(
-                                CameraUpdate.newLatLngZoom(
-                                  LatLng(b.live!.lat, b.live!.lon),
-                                  14,
-                                ),
-                              );
-                              _drawRoute(b);
-                            }
-                          },
-                        )),
-                  ],
-                ),
-              ),
+            DraggableScrollableSheet(
+              initialChildSize: 0.25,
+              minChildSize: 0.10,
+              maxChildSize: 0.6,
+              snap: true,
+              snapSizes: const [0.10, 0.25, 0.6],
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceColor,
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 16)
+                    ],
+                  ),
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 0),
+                    children: [
+                      // Drag handle
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 10, bottom: 10),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.mutedText.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'Campus Bus Fleet  •  Total Active: ${_buses.where((b) => b.live?.status != "offline" && b.live != null).length}',
+                        style: const TextStyle(
+                            color: AppColors.textColor,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      ..._buses.map((b) => _BusListItem(
+                            bus: b,
+                            onTap: () {
+                              if (b.live != null && _mapCtrl != null) {
+                                _mapCtrl!.animateCamera(
+                                  CameraUpdate.newLatLngZoom(
+                                    LatLng(b.live!.lat, b.live!.lon),
+                                    14,
+                                  ),
+                                );
+                                _drawRoute(b);
+                              }
+                            },
+                          )),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                );
+              },
             ),
         ],
       ),

@@ -56,6 +56,49 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
     }
   }
 
+  void _confirmAndDeactivate(User user) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.surfaceColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.errorRed),
+              SizedBox(width: 10),
+              Text(
+                'Deactivate User',
+                style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to deactivate ${user.name}? This will prevent them from accessing the app.',
+            style: const TextStyle(color: AppColors.textColor),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.mutedText)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.errorRed,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                _toggleUserStatus(user);
+              },
+              child: const Text('Deactivate', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _toggleUserStatus(User user) async {
     final auth = ref.read(authProvider);
     final api = ref.read(apiServiceProvider);
@@ -243,21 +286,74 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                                     ),
                                   ),
                                   Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Switch(
-                                        value: isActive,
-                                        activeColor: AppColors.successGreen,
-                                        inactiveThumbColor: AppColors.mutedText,
-                                        onChanged: (_) => _toggleUserStatus(user),
-                                      ),
-                                      Text(
-                                        isActive ? 'Active' : 'Inactive',
-                                        style: TextStyle(
-                                          color: isActive ? AppColors.successGreen : AppColors.mutedText,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
+                                      // Account Status Badge
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: isActive
+                                              ? AppColors.successGreen.withOpacity(0.12)
+                                              : AppColors.errorRed.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          isActive ? 'Active' : 'Inactive',
+                                          style: TextStyle(
+                                            color: isActive ? AppColors.successGreen : AppColors.errorRed,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
+                                      const SizedBox(height: 6),
+                                      // Online Status (for drivers)
+                                      if (role == 'driver')
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 7,
+                                              height: 7,
+                                              decoration: const BoxDecoration(
+                                                color: AppColors.mutedText,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Text(
+                                              'Offline',
+                                              style: TextStyle(
+                                                color: AppColors.mutedText,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      if (isActive) ...[
+                                        const SizedBox(height: 8),
+                                        SizedBox(
+                                          height: 28,
+                                          child: OutlinedButton(
+                                            style: OutlinedButton.styleFrom(
+                                              side: const BorderSide(color: AppColors.errorRed),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                                            ),
+                                            onPressed: () => _confirmAndDeactivate(user),
+                                            child: const Text(
+                                              'Deactivate',
+                                              style: TextStyle(
+                                                color: AppColors.errorRed,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ],

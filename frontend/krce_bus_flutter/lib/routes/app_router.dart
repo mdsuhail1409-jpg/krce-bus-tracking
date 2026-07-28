@@ -10,7 +10,7 @@ import '../features/parent/screens/parent_dashboard.dart';
 import '../features/driver/screens/driver_dashboard.dart';
 import '../features/admin/screens/admin_dashboard.dart';
 import '../features/map/screens/map_screen.dart';
-import '../features/history/screens/history_screen.dart';
+import '../features/history/screens/logs_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../core/theme/app_colors.dart';
 
@@ -51,7 +51,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/history',
-            builder: (context, state) => const HistoryScreen(),
+            builder: (context, state) => const LogsScreen(),
           ),
           GoRoute(
             path: '/profile',
@@ -95,7 +95,7 @@ class _AppShell extends StatelessWidget {
       _NavItem(icon: Icons.home_outlined, label: 'Home', route: '/home'),
       _NavItem(
           icon: Icons.location_on_outlined, label: 'Map', route: '/map'),
-      _NavItem(icon: Icons.list_alt_outlined, label: 'History', route: '/history'),
+      _NavItem(icon: Icons.list_alt_outlined, label: 'Logs', route: '/history'),
       _NavItem(icon: Icons.person_outlined, label: 'Profile', route: '/profile'),
     ];
 

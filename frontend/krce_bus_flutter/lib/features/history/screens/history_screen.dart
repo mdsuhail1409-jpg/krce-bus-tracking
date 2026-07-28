@@ -5,6 +5,7 @@ import '../../../core/services/api_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/utils/date_utils.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
@@ -141,7 +142,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
-                                      '${rec.busNumber ?? rec.busId}  •  ${rec.stopName ?? "--"}  •  ${rec.tapTime}',
+                                      '${rec.busNumber ?? rec.busId}  •  ${rec.stopName ?? "--"}  •  ${AppDateUtils.formatTimeIst(rec.tapTime)}',
                                       style: const TextStyle(
                                           color: AppColors.mutedText,
                                           fontSize: 12),
@@ -168,7 +169,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(rec.date,
+                                  Text(AppDateUtils.formatDateIst(rec.date),
                                       style: const TextStyle(
                                           color: AppColors.mutedText,
                                           fontSize: 10)),

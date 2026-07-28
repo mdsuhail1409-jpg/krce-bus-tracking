@@ -7,6 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 
+import '../../../core/utils/date_utils.dart';
+
 final activeEmergencyProvider = FutureProvider.autoDispose<EmergencyAssignmentResponse?>((ref) async {
   final auth = ref.watch(authProvider);
   final api = ref.read(apiServiceProvider);
@@ -264,14 +266,14 @@ class _AttendanceRow extends StatelessWidget {
                   style: TextStyle(color: color, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '${record.stopName ?? "--"}  •  ${record.tapTime.length > 5 ? record.tapTime.substring(0, 5) : record.tapTime}',
+                  '${record.stopName ?? "--"}  •  ${AppDateUtils.formatTimeIst(record.tapTime)}',
                   style: const TextStyle(
                       color: AppColors.mutedText, fontSize: 12),
                 ),
               ],
             ),
           ),
-          Text(record.date,
+          Text(AppDateUtils.formatDateIst(record.date),
               style:
                   const TextStyle(color: AppColors.mutedText, fontSize: 11)),
         ],

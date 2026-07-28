@@ -20,7 +20,6 @@ class AdminDashboard extends ConsumerStatefulWidget {
 class _AdminDashboardState extends ConsumerState<AdminDashboard> {
   AdminStats? _stats;
   List<Bus> _buses = [];
-  List<Alert> _alerts = [];
   bool _isLoading = true;
   Timer? _refreshTimer;
 
@@ -45,13 +44,11 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
       final results = await Future.wait(<Future<dynamic>>[
         api.getAdminStats(auth.token),
         api.getBuses(auth.token),
-        api.getAlerts(auth.token),
       ]);
       if (mounted) {
         setState(() {
           _stats = results[0] as AdminStats;
           _buses = results[1] as List<Bus>;
-          _alerts = results[2] as List<Alert>;
           _isLoading = false;
         });
       }
@@ -225,7 +222,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                         physics: const NeverScrollableScrollPhysics(),
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
-                        childAspectRatio: 1.6,
+                        childAspectRatio: 1.4,
                         children: [
                           _StatCard(
                               icon: Icons.people,
@@ -271,20 +268,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                     const SizedBox(height: 10),
                     ..._buses.map((b) => _BusCard(bus: b)),
                     const SizedBox(height: 20),
-
-                    // Active Alerts
-                    if (_alerts.isNotEmpty) ...[
-                      const Text('Active Alerts',
-                          style: TextStyle(
-                              color: AppColors.textColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16)),
-                      const SizedBox(height: 10),
-                      ..._alerts
-                          .where((a) => a.isResolved == 0)
-                          .take(5)
-                          .map((a) => _AlertCard(alert: a)),
-                    ],
                   ],
                 ),
         ),
@@ -319,11 +302,11 @@ class _StatCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 20),
-          const Spacer(),
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 6),
           Text(value,
               style: TextStyle(
-                  color: color, fontSize: 24, fontWeight: FontWeight.bold)),
+                  color: color, fontSize: 20, fontWeight: FontWeight.bold)),
           Text(label,
               style: const TextStyle(
                   color: AppColors.mutedText, fontSize: 11)),
@@ -398,54 +381,6 @@ class _BusCard extends StatelessWidget {
                       : AppColors.mutedText,
                   fontWeight: FontWeight.bold,
                   fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AlertCard extends StatelessWidget {
-  final Alert alert;
-  const _AlertCard({required this.alert});
-
-  @override
-  Widget build(BuildContext context) {
-    Color color;
-    switch (alert.alertType) {
-      case 'emergency':
-        color = AppColors.errorRed;
-        break;
-      case 'warning':
-        color = AppColors.warningYellow;
-        break;
-      default:
-        color = AppColors.indigoPrimary;
-    }
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.warning_amber_rounded, color: color, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(alert.title,
-                    style: TextStyle(
-                        color: color, fontWeight: FontWeight.bold)),
-                Text(alert.message,
-                    style: const TextStyle(
-                        color: AppColors.mutedText, fontSize: 12)),
-              ],
             ),
           ),
         ],

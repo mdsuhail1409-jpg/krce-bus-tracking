@@ -197,6 +197,7 @@ class _SendAlertDialogState extends ConsumerState<SendAlertDialog> {
               DropdownButtonFormField<String?>(
                 dropdownColor: AppColors.surfaceColor,
                 value: _targetBusId,
+                isExpanded: true,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: AppColors.backgroundColor,
@@ -210,7 +211,11 @@ class _SendAlertDialogState extends ConsumerState<SendAlertDialog> {
                   ...widget.buses.map((bus) {
                     return DropdownMenuItem(
                       value: bus.id,
-                      child: Text('Bus ${bus.number} (${bus.routeName})', style: const TextStyle(color: AppColors.textColor)),
+                      child: Text(
+                        'Bus ${bus.number} (${bus.routeName})',
+                        style: const TextStyle(color: AppColors.textColor),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     );
                   }),
                 ],

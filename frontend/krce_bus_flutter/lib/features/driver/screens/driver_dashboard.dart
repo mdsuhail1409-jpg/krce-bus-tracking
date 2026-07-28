@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../widgets/glass_card.dart';
 import '../../../widgets/premium_button.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/utils/date_utils.dart';
 
 class DriverDashboard extends ConsumerStatefulWidget {
   const DriverDashboard({super.key});
@@ -443,7 +444,7 @@ class _PassengerCard extends StatelessWidget {
                         color: AppColors.textColor,
                         fontWeight: FontWeight.bold)),
                 Text(
-                  '${passenger.collegeId}  •  ${passenger.stopName ?? "Unknown stop"}',
+                  '${passenger.collegeId}  •  ${passenger.stopName ?? "Unknown stop"}  •  ${AppDateUtils.formatTimeIst(passenger.tapTime)}',
                   style: const TextStyle(
                       color: AppColors.mutedText, fontSize: 12),
                 ),
