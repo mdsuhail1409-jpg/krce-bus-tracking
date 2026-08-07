@@ -172,11 +172,11 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
             d_tvs = haversine(lat, lon, tvs_coord[0], tvs_coord[1])
             d_sit = haversine(lat, lon, sit_coord[0], sit_coord[1])
             if d_tvs <= d_sit:
-                stops = ["KRCE Campus", "TVS Tollgate", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Allathur"]
+                stops = ["KRCE Campus", "TVS Tollgate", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Kalkandar Kottai"]
                 if is_first_ping or bus_id not in live_buses:
                     live_buses[bus_id]["active_variant"] = "TVS Tollgate Branch"
             else:
-                stops = ["KRCE Campus", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Allathur"]
+                stops = ["KRCE Campus", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Kalkandar Kottai"]
                 if is_first_ping or bus_id not in live_buses:
                     live_buses[bus_id]["active_variant"] = "SIT Branch"
 
