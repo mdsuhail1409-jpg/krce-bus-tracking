@@ -408,7 +408,7 @@ async def init_db():
         logger.info("MongoDB seeded with demo data")
     else:
         # Ensure Kalkandar Kottai Route B06 is present and updated in the database
-        existing_bus = await db.buses.find_one({"id": "B06"})
+        existing_bus = await db.buses.find_one({"$or": [{"id": "B06"}, {"number": "TN-06"}]})
         new_stops = ["KRCE Campus", "TVS Tollgate", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Kalkandar Kottai"]
         if not existing_bus:
             logger.info("Database not empty, but B06 bus is missing. Seeding B06 and its driver...")
@@ -430,8 +430,8 @@ async def init_db():
             logger.info("B06 bus and driver successfully seeded into production database.")
         else:
             # Update existing B06 route name and stops to match new Kalkandar Kottai route
-            await db.buses.update_one(
-                {"id": "B06"},
+            await db.buses.update_many(
+                {"$or": [{"id": "B06"}, {"number": "TN-06"}]},
                 {"$set": {"route_name": "Route F — Kalkandar Kottai", "stops": new_stops}}
             )
 

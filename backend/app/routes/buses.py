@@ -57,6 +57,8 @@ async def get_buses(u=Depends(current_user)):
             count_map[bid] = count_map.get(bid, 0) + 1
 
     for bus in buses:
+        if bus.get("id") == "B06" or bus.get("number") == "TN-06":
+            bus["route_name"] = "Route F — Kalkandar Kottai"
         driver = None
         if bus.get("driver_id"):
             driver = await db.users.find_one({"id": bus["driver_id"]}, {"_id": 0, "name": 1, "phone": 1})
