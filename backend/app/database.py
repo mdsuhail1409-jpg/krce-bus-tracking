@@ -63,7 +63,7 @@ def _build_seed():
         {"id":"B03","number":"TN-03","route_name":"Route C — Ariyamangalam","driver_id":"drv03","capacity":50,"stops":["KRCE Campus","Thuvakudi","Ariyamangalam","Cantonment","Collector Office"],"is_active":1,"created_at":now_str()},
         {"id":"B04","number":"TN-04","route_name":"Route D — Chatram Bus Stand","driver_id":"drv04","capacity":40,"stops":["KRCE Campus","Palakarai","Chatram Bus Stand","Central","Junction"],"is_active":1,"created_at":now_str()},
         {"id":"B05","number":"TN-05","route_name":"Route E — Mannarpuram","driver_id":"drv05","capacity":55,"stops":["KRCE Campus","Thillai Nagar","Mannarpuram","Rockfort","Chinthamani"],"is_active":1,"created_at":now_str()},
-        {"id":"B06","number":"TN-06","route_name":"Chathiram Bus Stand Route","driver_id":"drv06","capacity":50,"stops":["KRCE Campus","Chathiram Bus Stand","Samayapuram"],"is_active":1,"created_at":now_str()},
+        {"id":"B06","number":"TN-06","route_name":"Route F — Allathur","driver_id":"drv06","capacity":50,"stops":["KRCE Campus","TVS Tollgate","SIT","Ambigapuram","Manjathidal","Armory Gate","Panjayat Office","Allathur"],"is_active":1,"created_at":now_str()},
     ]
     td = today()
     alerts = [
@@ -407,8 +407,9 @@ async def init_db():
         await db.attendance.insert_many(attendance)
         logger.info("MongoDB seeded with demo data")
     else:
-        # Ensure Chathiram Bus Stand Route B06 is present in the database
+        # Ensure Allathur Route B06 is present and updated in the database
         existing_bus = await db.buses.find_one({"id": "B06"})
+        new_stops = ["KRCE Campus", "TVS Tollgate", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Allathur"]
         if not existing_bus:
             logger.info("Database not empty, but B06 bus is missing. Seeding B06 and its driver...")
             existing_drv = await db.users.find_one({"id": "drv06"})
@@ -421,11 +422,17 @@ async def init_db():
                     "is_active": 1, "created_at": now_str(), "last_login": None
                 })
             await db.buses.insert_one({
-                "id": "B06", "number": "TN-06", "route_name": "Chathiram Bus Stand Route",
+                "id": "B06", "number": "TN-06", "route_name": "Route F — Allathur",
                 "driver_id": "drv06", "capacity": 50,
-                "stops": ["KRCE Campus", "Chathiram Bus Stand", "Samayapuram"],
+                "stops": new_stops,
                 "is_active": 1, "created_at": now_str()
             })
             logger.info("B06 bus and driver successfully seeded into production database.")
+        else:
+            # Update existing B06 route name and stops to match new Allathur route
+            await db.buses.update_one(
+                {"id": "B06"},
+                {"$set": {"route_name": "Route F — Allathur", "stops": new_stops}}
+            )
 
     logger.info("MongoDB connected — database: %s", MONGO_DB_NAME)

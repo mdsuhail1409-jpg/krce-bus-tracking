@@ -163,10 +163,26 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
     bus = await db.buses.find_one({"id": bus_id})
     stops = bus.get("stops", []) if bus else []
     
+    from app.config import STOP_COORDS
+    # Dynamic route branching for Bus 6 (B06): Choose TVS Tollgate route vs SIT route based on proximity
+    if bus_id == "B06":
+        tvs_coord = STOP_COORDS.get("TVS Tollgate")
+        sit_coord = STOP_COORDS.get("SIT")
+        if tvs_coord and sit_coord:
+            d_tvs = haversine(lat, lon, tvs_coord[0], tvs_coord[1])
+            d_sit = haversine(lat, lon, sit_coord[0], sit_coord[1])
+            if d_tvs <= d_sit:
+                stops = ["KRCE Campus", "TVS Tollgate", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Allathur"]
+                if is_first_ping or bus_id not in live_buses:
+                    live_buses[bus_id]["active_variant"] = "TVS Tollgate Branch"
+            else:
+                stops = ["KRCE Campus", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Allathur"]
+                if is_first_ping or bus_id not in live_buses:
+                    live_buses[bus_id]["active_variant"] = "SIT Branch"
+
     # 2. Find nearest stop index
     nearest_stop_idx = 0
     min_dist = float('inf')
-    from app.config import STOP_COORDS
     for idx, stop_name in enumerate(stops):
         coords = STOP_COORDS.get(stop_name)
         if coords:
