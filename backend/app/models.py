@@ -57,3 +57,13 @@ class ChangePasswordReq(BaseModel):
 
 class RefreshReq(BaseModel):
     refresh_token: str
+
+
+class TempBusAssignment(BaseModel):
+    temp_bus_id: str
+    expiry_hours: int = 12
+
+
+class BusReassignment(BaseModel):
+    bus_id: str
+    reason: str = ""

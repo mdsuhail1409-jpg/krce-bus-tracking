@@ -416,6 +416,23 @@ class ApiService {
     return GenericResponse.fromJson(res.data);
   }
 
+  Future<GenericResponse> reassignBus(
+    String token,
+    String userId,
+    String busId, {
+    String reason = '',
+  }) async {
+    if (token.startsWith('demo_token_')) {
+      return GenericResponse(status: 'ok', message: 'Bus reassigned (Demo)');
+    }
+    final res = await _dio.put(
+      '/api/admin/users/$userId/reassign-bus',
+      data: {'bus_id': busId, 'reason': reason},
+      options: Options(headers: _authHeader(token)),
+    );
+    return GenericResponse.fromJson(res.data);
+  }
+
   // ── Admin Registrations ────────────────────────────────────
   Future<List<Registration>> getAdminRegistrations(String token, {String status = "pending"}) async {
     if (token.startsWith('demo_token_')) {

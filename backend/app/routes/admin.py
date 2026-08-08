@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.auth import _hash, admin_only
-from app.models import BusUpsert, AlertCreate, RegAction
+from app.models import BusUpsert, AlertCreate, RegAction, TempBusAssignment, BusReassignment
 from app.state import live_buses, last_seen
 from app.utils import today, now_str
 from app.predictions import predict_occupancy
@@ -158,6 +158,59 @@ async def toggle_user(uid: str, u=Depends(admin_only)):
     new_val = 0 if user["is_active"] else 1
     await db.users.update_one({"id": uid}, {"$set": {"is_active": new_val}})
     return {"status": "ok", "is_active": new_val}
+
+
+@router.post("/api/admin/users/{uid}/temp-bus")
+async def assign_temp_bus(uid: str, req: TempBusAssignment, u=Depends(admin_only)):
+    db = db_module.db
+    from datetime import datetime, timedelta
+    user = await db.users.find_one({"id": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    expiry_date = datetime.utcnow() + timedelta(hours=req.expiry_hours)
+    
+    await db.users.update_one({"id": uid}, {"$set": {
+        "temp_bus_id": req.temp_bus_id,
+        "temp_bus_expiry": expiry_date.isoformat()
+    }})
+    return {"status": "ok", "temp_bus_id": req.temp_bus_id, "expiry": expiry_date.isoformat()}
+
+
+@router.put("/api/admin/users/{uid}/reassign-bus")
+async def reassign_bus(uid: str, req: BusReassignment, u=Depends(admin_only)):
+    """
+    Permanently reassign a student/staff member to a different bus.
+    Updates the user's bus_id field in the database.
+    """
+    db = db_module.db
+    user = await db.users.find_one({"id": uid}, {"_id": 0, "name": 1, "role": 1, "bus_id": 1})
+    if not user:
+        raise HTTPException(404, "User not found")
+    if user.get("role") not in ["student", "staff"]:
+        raise HTTPException(400, "Bus reassignment is only allowed for students and staff")
+    bus = await db.buses.find_one({"id": req.bus_id, "is_active": 1}, {"_id": 0, "number": 1, "route_name": 1})
+    if not bus:
+        raise HTTPException(404, "Bus not found or inactive")
+    old_bus_id = user.get("bus_id")
+    await db.users.update_one({"id": uid}, {"$set": {"bus_id": req.bus_id}})
+    await db.bus_reassignment_log.insert_one({
+        "user_id": uid,
+        "user_name": user.get("name"),
+        "old_bus_id": old_bus_id,
+        "new_bus_id": req.bus_id,
+        "new_bus_number": bus["number"],
+        "reason": req.reason,
+        "reassigned_by": u["id"],
+        "reassigned_at": now_str(),
+    })
+    return {
+        "status": "ok",
+        "user_id": uid,
+        "new_bus_id": req.bus_id,
+        "new_bus_number": bus["number"],
+        "new_route_name": bus["route_name"],
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -444,6 +497,7 @@ async def send_alert(req: AlertCreate, u=Depends(admin_only)):
     payload = json.dumps({
         "type": "alert", "id": aid, "title": req.title,
         "message": req.message, "alert_type": req.alert_type,
+        "target_bus": req.target_bus, "target_role": req.target_role
     })
     for uid, ws in list(ws_pool.items()):
         try:
