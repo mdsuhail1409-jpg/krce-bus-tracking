@@ -54,6 +54,16 @@ async def current_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(s
     return verify_token(creds.credentials)
 
 
+async def optional_user(creds: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[dict]:
+    """FastAPI dependency — return user payload if valid Bearer token provided, else None."""
+    if not creds:
+        return None
+    try:
+        return jwt.decode(creds.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except Exception:
+        return None
+
+
 async def admin_only(u=Depends(current_user)):
     """FastAPI dependency — restrict to admin/committee roles."""
     if u["role"] not in ("admin", "committee"):

@@ -5,7 +5,7 @@ GET /api/buses, /api/buses/{bus_id}, /api/buses/{bus_id}/live, /api/buses/{bus_i
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.auth import current_user
+from app.auth import current_user, optional_user
 from app.state import live_buses
 from app.utils import today
 from app import database as db_module
@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 async def check_parent_bus_access(db, u, bus_id: str):
-    if u.get("role") == "parent":
+    if u and u.get("role") == "parent":
         parent_of = u.get("parent_of")
         if not parent_of:
             raise HTTPException(403, "Access Denied: No child associated with your parent account.")
@@ -24,12 +24,12 @@ async def check_parent_bus_access(db, u, bus_id: str):
 
 
 @router.get("/api/buses")
-async def get_buses(u=Depends(current_user)):
+async def get_buses(u=Depends(optional_user)):
     db = db_module.db
     td = today()
 
     # If parent, only fetch their child's assigned bus
-    if u.get("role") == "parent":
+    if u and u.get("role") == "parent":
         parent_of = u.get("parent_of")
         if not parent_of:
             return []
