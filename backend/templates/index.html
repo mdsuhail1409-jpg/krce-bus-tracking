@@ -1037,6 +1037,11 @@
                 showToast("Error", "No RFID card associated with your profile.", "error");
                 return;
             }
+            const targetBus = (typeof allBuses !== 'undefined' && Array.isArray(allBuses)) ? allBuses.find(b => b.id === busId) : null;
+            if (targetBus && (!targetBus.live || targetBus.live.status === 'offline')) {
+                showToast("Boarding Failed", "Bus is offline. Passengers cannot board an offline bus.", "error");
+                return;
+            }
             try {
                 const res = await fetch(`${API_BASE}/api/rfid/tap`, {
                     method: 'POST',
@@ -1049,7 +1054,11 @@
                         bus_id: busId
                     })
                 });
-                if (!res.ok) throw new Error();
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    showToast("Tap Failed", errData.detail || "Could not simulate boarding tap.", "error");
+                    return;
+                }
                 const data = await res.json();
                 showToast(data.tap_type === 'boarded' ? 'Boarded Bus' : 'Exited Bus', `Successfully simulated ${data.tap_type} for ${data.student_name}.`, 'success');
                 loadAttendance();
@@ -1411,6 +1420,16 @@
             map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: campusLat, lng: campusLon },
                 zoom: 13,
+                minZoom: 7,
+                restriction: {
+                    latLngBounds: {
+                        north: 14.0,
+                        south: 7.5,
+                        west: 75.5,
+                        east: 81.0
+                    },
+                    strictBounds: false
+                },
                 styles: darkMapStyle,
                 disableDefaultUI: true,
                 zoomControl: true

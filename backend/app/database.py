@@ -52,6 +52,7 @@ def _build_seed():
         {"id":"stu06","name":"Ravi Shankar","email":"ravi@krce.ac.in","phone":"9841100006","role":"student","college_id":"22CS007","rfid_card":"RF006","bus_id":"B05","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"stu07","name":"Meena P","email":"meena@krce.ac.in","phone":"9841100007","role":"student","college_id":"22EC008","rfid_card":"RF007","bus_id":"B02","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"stu08","name":"Saran B","email":"saran@krce.ac.in","phone":"9841100008","role":"student","college_id":"22ME010","rfid_card":"RF008","bus_id":"B03","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
+        {"id":"stu09","name":"Anbu Selvan","email":"anbu@krce.ac.in","phone":"9841100009","role":"student","college_id":"22CS042","rfid_card":"6B:15:81:B2","bus_id":"B06","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"fac01","name":"Dr. Radha L","email":"radha@krce.ac.in","phone":"9841200001","role":"staff","college_id":"FAC002","rfid_card":"RF009","bus_id":"B01","parent_of":None,"licence_no":None,"password_hash":_hash("staff@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"fac02","name":"Dr. Senthil Kumar","email":"senthil@krce.ac.in","phone":"9841200002","role":"staff","college_id":"FAC001","rfid_card":"RF010","bus_id":"B02","parent_of":None,"licence_no":None,"password_hash":_hash("staff@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"par01","name":"Suresh Kumar","email":"suresh.p@gmail.com","phone":"9841300001","role":"parent","college_id":None,"rfid_card":None,"bus_id":None,"parent_of":"21CS001","licence_no":None,"password_hash":_hash("parent@123"),"is_active":1,"created_at":now_str(),"last_login":None},
@@ -64,6 +65,7 @@ def _build_seed():
         {"id":"B04","number":"TN-04","route_name":"Route D — Chatram Bus Stand","driver_id":"drv04","capacity":40,"stops":["KRCE Campus","Palakarai","Chatram Bus Stand","Central","Junction"],"is_active":1,"created_at":now_str()},
         {"id":"B05","number":"TN-05","route_name":"Route E — Mannarpuram","driver_id":"drv05","capacity":55,"stops":["KRCE Campus","Thillai Nagar","Mannarpuram","Rockfort","Chinthamani"],"is_active":1,"created_at":now_str()},
         {"id":"B06","number":"TN-06","route_name":"Route F — Kalkandar Kottai","driver_id":"drv06","capacity":50,"stops":["KRCE Campus","TVS Tollgate","SIT","Ambigapuram","Manjathidal","Armory Gate","Panjayat Office","Kalkandar Kottai"],"is_active":1,"created_at":now_str()},
+        {"id":"B07","number":"TN-07","route_name":"Route G — Kalkandar Kottai (BVM Trichy)","driver_id":"drv07","capacity":50,"stops":["KRCE Campus","BVM Trichy","Armory Gate","Kadai Veethi","Mandabam","Aathupalam"],"is_active":1,"created_at":now_str()},
     ]
     td = today()
     alerts = [
@@ -407,7 +409,16 @@ async def init_db():
         await db.attendance.insert_many(attendance)
         logger.info("MongoDB seeded with demo data")
     else:
-        # Ensure Kalkandar Kottai Route B06 is present and updated in the database
+        # Ensure Kalkandar Kottai Route B06 and student stu09 are present and updated in the database
+        existing_stu = await db.users.find_one({"rfid_card": "6B:15:81:B2"})
+        if not existing_stu:
+            await db.users.insert_one({
+                "id": "stu09", "name": "Anbu Selvan", "email": "anbu@krce.ac.in",
+                "phone": "9841100009", "role": "student", "college_id": "22CS042",
+                "rfid_card": "6B:15:81:B2", "bus_id": "B06", "parent_of": None,
+                "licence_no": None, "password_hash": _hash("student@123"),
+                "is_active": 1, "created_at": now_str(), "last_login": None
+            })
         existing_bus = await db.buses.find_one({"$or": [{"id": "B06"}, {"number": "TN-06"}]})
         new_stops = ["KRCE Campus", "TVS Tollgate", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Kalkandar Kottai"]
         if not existing_bus:
@@ -427,12 +438,31 @@ async def init_db():
                 "stops": new_stops,
                 "is_active": 1, "created_at": now_str()
             })
-            logger.info("B06 bus and driver successfully seeded into production database.")
+        # Ensure Kalkandar Kottai Route B07 and driver drv07 are present and updated in the database
+        existing_b07 = await db.buses.find_one({"$or": [{"id": "B07"}, {"number": "TN-07"}]})
+        b07_stops = ["KRCE Campus", "BVM Trichy", "Armory Gate", "Kadai Veethi", "Mandabam", "Aathupalam"]
+        if not existing_b07:
+            logger.info("Seeding B07 bus and driver drv07...")
+            existing_drv7 = await db.users.find_one({"id": "drv07"})
+            if not existing_drv7:
+                await db.users.insert_one({
+                    "id": "drv07", "name": "Ganesh K.", "email": "ganesh@krce.ac.in",
+                    "phone": "9840177777", "role": "driver", "college_id": None,
+                    "rfid_card": None, "bus_id": "B07", "parent_of": None,
+                    "licence_no": "TN-DL-007", "password_hash": _hash("driver@123"),
+                    "is_active": 1, "created_at": now_str(), "last_login": None
+                })
+            await db.buses.insert_one({
+                "id": "B07", "number": "TN-07", "route_name": "Route G — Kalkandar Kottai (BVM Trichy)",
+                "driver_id": "drv07", "capacity": 50,
+                "stops": b07_stops,
+                "is_active": 1, "created_at": now_str()
+            })
+            logger.info("B07 bus and driver successfully seeded into database.")
         else:
-            # Update existing B06 route name and stops to match new Kalkandar Kottai route
             await db.buses.update_many(
-                {"$or": [{"id": "B06"}, {"number": "TN-06"}]},
-                {"$set": {"route_name": "Route F — Kalkandar Kottai", "stops": new_stops}}
+                {"$or": [{"id": "B07"}, {"number": "TN-07"}]},
+                {"$set": {"route_name": "Route G — Kalkandar Kottai (BVM Trichy)", "stops": b07_stops}}
             )
 
     logger.info("MongoDB connected — database: %s", MONGO_DB_NAME)

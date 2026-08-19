@@ -45,9 +45,9 @@ async def trigger_system_alert(title: str, message: str, alert_type: str = "info
             pass
 
 
-async def initialize_route_geometry(bus_id: str, start_lat: float, start_lon: float):
-    """Fetch OSRM route from start position to college campus."""
-    route_data = await fetch_osrm_route(start_lat, start_lon, COLLEGE_LAT, COLLEGE_LON)
+async def initialize_route_geometry(bus_id: str, start_lat: float, start_lon: float, dest_lat: float = COLLEGE_LAT, dest_lon: float = COLLEGE_LON):
+    """Fetch OSRM route from start position to active destination target (campus or terminal stop)."""
+    route_data = await fetch_osrm_route(start_lat, start_lon, dest_lat, dest_lon)
     if route_data and "routes" in route_data:
         routes = route_data["routes"]
         if routes:
@@ -153,8 +153,10 @@ async def run_safety_checks(bus_id: str, lat: float, lon: float, speed: float, n
 
 async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat: float, lon: float, speed: float, heading: float, passengers: int):
     """Consolidated GPS processing — update state, persist, geofence, safety."""
+    from datetime import datetime
     db = db_module.db
     now_ts = time.time()
+    current_hour = datetime.now().hour
     is_first_ping = bus_id not in live_buses
     
     current_pax = live_buses[bus_id].get("passengers", 0) if not is_first_ping else passengers
@@ -180,6 +182,11 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
                 if is_first_ping or bus_id not in live_buses:
                     live_buses[bus_id]["active_variant"] = "SIT Branch"
 
+    # Smart Time-of-Day direction heuristic:
+    # Morning (before 12:00 PM): Coming to college -> "reverse" (towards index 0: KRCE Campus)
+    # Afternoon/Evening (12:00 PM and after): Departing college -> "forward" (towards terminal stop: stops[-1])
+    default_direction = "reverse" if current_hour < 12 else "forward"
+
     # 2. Find nearest stop index
     nearest_stop_idx = 0
     min_dist = float('inf')
@@ -201,9 +208,12 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
             "last_active": now_ts,
             "recent_stop_indices": [nearest_stop_idx],
             "confirmed_stop_idx": nearest_stop_idx,
-            "direction": "forward"
+            "direction": default_direction
         }
-        asyncio.create_task(initialize_route_geometry(bus_id, lat, lon))
+        # Target campus in morning, terminal stop in evening
+        initial_dest = stops[0] if default_direction == "reverse" else (stops[-1] if stops else "KRCE Campus")
+        dest_c = STOP_COORDS.get(initial_dest, (COLLEGE_LAT, COLLEGE_LON))
+        asyncio.create_task(initialize_route_geometry(bus_id, lat, lon, dest_c[0], dest_c[1]))
     else:
         live_buses[bus_id].update({
             "lat": lat, "lon": lon, "speed": round(speed, 1),
@@ -230,7 +240,7 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
         live_buses[bus_id]["confirmed_stop_idx"] = confirmed_idx
 
     # 4. Calculate dynamic destination and remaining stops
-    direction = live_buses[bus_id].get("direction", "forward")
+    direction = live_buses[bus_id].get("direction", default_direction)
     confirmed_idx = live_buses[bus_id].get("confirmed_stop_idx", nearest_stop_idx)
     
     if direction == "forward":

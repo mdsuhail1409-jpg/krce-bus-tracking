@@ -508,6 +508,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
               target: _campus,
               zoom: 12.5,
             ),
+            minMaxZoomPreference: const MinMaxZoomPreference(7.0, null),
             zoomControlsEnabled: false,
             compassEnabled: true,
             myLocationButtonEnabled: false,
@@ -725,15 +726,21 @@ class _RouteInfoPanel extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(children: [
-                const Icon(Icons.route, color: AppColors.indigoPrimary),
-                const SizedBox(width: 8),
-                Text(
-                  '${bus.number} — ${bus.routeName}',
-                  style: const TextStyle(
-                      color: AppColors.textColor, fontWeight: FontWeight.bold),
-                ),
-              ]),
+              Expanded(
+                child: Row(children: [
+                  const Icon(Icons.route, color: AppColors.indigoPrimary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${bus.number} — ${bus.routeName}',
+                      style: const TextStyle(
+                          color: AppColors.textColor, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ]),
+              ),
               IconButton(
                 icon: const Icon(Icons.close, color: AppColors.mutedText),
                 onPressed: onClose,
@@ -743,17 +750,21 @@ class _RouteInfoPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 16,
-            runSpacing: 6,
-            children: [
-              _infoChip('Driver', bus.live?.driverName ?? '--'),
-              _infoChip('Speed', '${bus.live?.speed.toInt() ?? 0} km/h'),
-              _infoChip('ETA',
-                  formatEta(remainingDuration),
-                  color: AppColors.successGreen),
-              _infoChip('Passengers', '${bus.live?.passengers ?? 0}'),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _infoChip('Driver', bus.live?.driverName ?? '--'),
+                const SizedBox(width: 18),
+                _infoChip('Speed', '${bus.live?.speed.toInt() ?? 0} km/h'),
+                const SizedBox(width: 18),
+                _infoChip('ETA',
+                    formatEta(remainingDuration),
+                    color: AppColors.successGreen),
+                const SizedBox(width: 18),
+                _infoChip('Passengers', '${bus.live?.passengers ?? 0}/${bus.capacity}'),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
           Row(

@@ -18,7 +18,16 @@ router = APIRouter()
 @router.post("/api/rfid/tap")
 async def rfid_tap(req: RfidTap):
     db = db_module.db
-    stu = await db.users.find_one({"rfid_card": req.rfid_card, "is_active": 1}, {"_id": 0, "id": 1, "name": 1})
+    raw_card = req.rfid_card.replace(":", "").replace(" ", "").upper() if req.rfid_card else ""
+    formatted_card = f"{raw_card[0:2]}:{raw_card[2:4]}:{raw_card[4:6]}:{raw_card[6:8]}" if len(raw_card) == 8 else raw_card
+    stu = await db.users.find_one({
+        "$or": [
+            {"rfid_card": req.rfid_card},
+            {"rfid_card": formatted_card},
+            {"rfid_card": raw_card}
+        ],
+        "is_active": 1
+    }, {"_id": 0, "id": 1, "name": 1})
     if not stu:
         stu = {"id": f"card_{req.rfid_card}", "name": f"Card #{req.rfid_card}"}
 
@@ -30,6 +39,11 @@ async def rfid_tap(req: RfidTap):
     taps = await cursor.to_list(length=1)
     last_tap = taps[0] if taps else None
     tap_type = "exited" if (last_tap and last_tap["tap_type"] == "boarded") else "boarded"
+
+    bus_live = live_buses.get(req.bus_id)
+    is_offline = not bus_live or bus_live.get("status") == "offline"
+    if is_offline and tap_type == "boarded":
+        raise HTTPException(status_code=400, detail="Bus is offline. Passengers cannot board an offline bus.")
 
     await db.attendance.insert_one({
         "id": str(uuid.uuid4()), "user_id": stu["id"], "bus_id": req.bus_id,

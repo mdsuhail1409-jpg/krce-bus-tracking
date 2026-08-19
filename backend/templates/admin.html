@@ -2132,6 +2132,16 @@
             map = new google.maps.Map(document.getElementById('admin-map'), {
                 center: { lat: 10.927669, lng: 78.7410 },
                 zoom: 12,
+                minZoom: 7,
+                restriction: {
+                    latLngBounds: {
+                        north: 14.0,
+                        south: 7.5,
+                        west: 75.5,
+                        east: 81.0
+                    },
+                    strictBounds: false
+                },
                 styles: darkMapStyle,
                 disableDefaultUI: true,
                 zoomControl: true
