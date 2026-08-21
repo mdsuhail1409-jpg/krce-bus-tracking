@@ -172,6 +172,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
       if (auth.token.isNotEmpty && !auth.token.startsWith('demo_')) {
         _wsService.connect(auth.token, _handleWsMessage);
       }
+      // Auto-load single bus for student/parent roles
+      final role = auth.role;
+      if (role == 'student' || role == 'parent') {
+        _autoLoadMyBus();
+      }
     });
   }
 
@@ -211,6 +216,18 @@ class _MapScreenState extends ConsumerState<MapScreen>
   void _startPolling() {
     _fetchBuses();
     _pollTimer = Timer.periodic(AppConfig.busPollInterval, (_) => _fetchBuses());
+  }
+
+  Future<void> _autoLoadMyBus() async {
+    await Future.delayed(const Duration(seconds: 2)); // wait for first poll
+    if (!mounted || _buses.isEmpty) return;
+    final bus = _buses.first;
+    if (bus.live != null && _mapCtrl != null) {
+      _mapCtrl!.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(bus.live!.lat, bus.live!.lon), 15),
+      );
+      _drawRoute(bus);
+    }
   }
 
   Future<void> _fetchBuses() async {
@@ -708,6 +725,10 @@ class _RouteInfoPanel extends StatelessWidget {
     final totalDist = 15000.0;
     final coveredDist = (totalDist - remainingDist).clamp(0, totalDist);
     final progress = (coveredDist / totalDist).clamp(0.0, 1.0);
+    final live = bus.live;
+    final remaining = live?.remainingStops ?? [];
+    final nextStop = remaining.isNotEmpty ? remaining[0] : null;
+    final destStop = live?.destinationStop;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -723,6 +744,7 @@ class _RouteInfoPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -750,6 +772,7 @@ class _RouteInfoPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
+          // Live stats chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -766,7 +789,67 @@ class _RouteInfoPanel extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          // Stop info row
+          Row(
+            children: [
+              Expanded(
+                child: _stopChip(
+                  label: 'Next Stop',
+                  value: nextStop ?? '—',
+                  color: const Color(0xFFFBBF24),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _stopChip(
+                  label: 'Destination',
+                  value: destStop ?? '—',
+                  color: const Color(0xFFEF4444),
+                ),
+              ),
+            ],
+          ),
+          // Upcoming stops compact list (up to 4)
+          if (remaining.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Text('Upcoming Stops',
+                style: TextStyle(
+                    color: AppColors.mutedText,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5)),
+            const SizedBox(height: 6),
+            ...remaining.take(4).map((s) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: s == destStop
+                            ? const Color(0xFFEF4444)
+                            : s == nextStop
+                                ? const Color(0xFFFBBF24)
+                                : AppColors.borderColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(s,
+                          style: const TextStyle(
+                              color: AppColors.textColor, fontSize: 12)),
+                    ),
+                  ]),
+                )),
+            if (remaining.length > 4)
+              Text('+ ${remaining.length - 4} more stops',
+                  style: const TextStyle(
+                      color: AppColors.mutedText, fontSize: 11)),
+          ],
           const SizedBox(height: 10),
+          // Progress bar
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -806,6 +889,26 @@ class _RouteInfoPanel extends StatelessWidget {
                   fontSize: 13)),
         ],
       );
+
+  Widget _stopChip({required String label, required String value, required Color color}) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withOpacity(0.25)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: TextStyle(color: color.withOpacity(0.7), fontSize: 10, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 2),
+        Text(value,
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+            overflow: TextOverflow.ellipsis, maxLines: 1),
+      ],
+    ),
+  );
 }
 
 // ── Bus List Item ─────────────────────────────────────────

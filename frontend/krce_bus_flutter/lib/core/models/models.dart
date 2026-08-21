@@ -63,6 +63,7 @@ class LiveBus {
   final double? destinationLat;
   final double? destinationLon;
   final List<String>? remainingStops;
+  final String? destinationStop;
 
   LiveBus({
     required this.busId,
@@ -79,6 +80,7 @@ class LiveBus {
     this.destinationLat,
     this.destinationLon,
     this.remainingStops,
+    this.destinationStop,
   });
 
   factory LiveBus.fromJson(Map<String, dynamic> json) => LiveBus(
@@ -96,6 +98,7 @@ class LiveBus {
         destinationLat: json['destination_lat'] != null ? (json['destination_lat']).toDouble() : null,
         destinationLon: json['destination_lon'] != null ? (json['destination_lon']).toDouble() : null,
         remainingStops: json['remaining_stops'] != null ? List<String>.from(json['remaining_stops']) : null,
+        destinationStop: json['destination_stop'],
       );
 }
 

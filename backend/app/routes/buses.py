@@ -28,7 +28,7 @@ async def get_buses(u=Depends(optional_user)):
     db = db_module.db
     td = today()
 
-    # If parent, only fetch their child's assigned bus
+    # Role-based bus filtering: each role sees only their assigned bus
     if u and u.get("role") == "parent":
         parent_of = u.get("parent_of")
         if not parent_of:
@@ -37,6 +37,11 @@ async def get_buses(u=Depends(optional_user)):
         if not child or not child.get("bus_id"):
             return []
         cursor = db.buses.find({"id": child["bus_id"], "is_active": 1}, {"_id": 0})
+    elif u and u.get("role") in ("student", "driver"):
+        bus_id = u.get("bus_id") or ""
+        if not bus_id:
+            return []
+        cursor = db.buses.find({"id": bus_id, "is_active": 1}, {"_id": 0})
     else:
         cursor = db.buses.find({"is_active": 1}, {"_id": 0})
 

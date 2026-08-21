@@ -726,6 +726,130 @@
             50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px var(--success); }
             100% { transform: scale(0.9); opacity: 0.6; }
         }
+        /* Bus Detail Slide-in Side Panel */
+        #bus-detail-panel {
+            position: absolute;
+            top: 0;
+            right: -420px;
+            width: 400px;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.97);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255,255,255,0.08);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+        #bus-detail-panel.open {
+            right: 0;
+        }
+        .bp-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 20px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            position: sticky;
+            top: 0;
+            background: rgba(15, 23, 42, 0.98);
+            z-index: 1;
+        }
+        .bp-bus-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .bp-close {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            transition: color 0.2s;
+        }
+        .bp-close:hover { color: #f8fafc; }
+        .bp-section {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .bp-section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #475569;
+            margin-bottom: 10px;
+        }
+        .bp-stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .bp-stat {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .bp-stat-label {
+            font-size: 0.72rem;
+            color: #64748b;
+            margin-bottom: 3px;
+        }
+        .bp-stat-value {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+        .bp-stop-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .bp-stop-item:last-child { border-bottom: none; }
+        .bp-stop-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .bp-stop-name {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+        .bp-stop-badge {
+            margin-left: auto;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .bp-progress-bar-wrap {
+            background: rgba(255,255,255,0.07);
+            border-radius: 8px;
+            height: 10px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+        .bp-progress-bar-fill {
+            height: 100%;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #10b981, #3b82f6);
+            transition: width 0.5s ease;
+        }
     </style>
 </head>
 <body>
@@ -917,6 +1041,79 @@
                 <button class="sos-btn" onclick="sendDriverEmergency()">
                     <i class="fa-solid fa-triangle-exclamation"></i> Send SOS Emergency Alert
                 </button>
+            </div>
+
+            <!-- Bus Detail Slide-In Panel (Admin) -->
+            <div id="bus-detail-panel">
+                <div class="bp-header">
+                    <div class="bp-bus-title">
+                        <i class="fa-solid fa-bus" style="color: #6366f1;"></i>
+                        <span id="bp-bus-number">Bus</span>
+                    </div>
+                    <button class="bp-close" onclick="closeBusDetailPanel()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- Status Row -->
+                <div class="bp-section">
+                    <div class="bp-section-title">Status</div>
+                    <div class="bp-stat-grid">
+                        <div class="bp-stat">
+                            <div class="bp-stat-label">Status</div>
+                            <div class="bp-stat-value" id="bp-status">—</div>
+                        </div>
+                        <div class="bp-stat">
+                            <div class="bp-stat-label">Speed</div>
+                            <div class="bp-stat-value" id="bp-speed">—</div>
+                        </div>
+                        <div class="bp-stat">
+                            <div class="bp-stat-label">Passengers</div>
+                            <div class="bp-stat-value" id="bp-passengers">—</div>
+                        </div>
+                        <div class="bp-stat">
+                            <div class="bp-stat-label">Driver</div>
+                            <div class="bp-stat-value" style="font-size:0.82rem;" id="bp-driver">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Route Progress -->
+                <div class="bp-section">
+                    <div class="bp-section-title">Route Progress</div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#94a3b8; margin-bottom:4px;">
+                        <span id="bp-route-name" style="color:#f8fafc; font-weight:600;">Route</span>
+                        <span>ETA: <span id="bp-eta" style="color:#10b981; font-weight:700;">—</span></span>
+                    </div>
+                    <div class="bp-progress-bar-wrap"><div class="bp-progress-bar-fill" id="bp-progress-fill" style="width:0%"></div></div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#64748b; margin-top:6px;">
+                        <span>Covered: <span id="bp-covered">—</span></span>
+                        <span>Remaining: <span id="bp-remaining-dist">—</span></span>
+                    </div>
+                </div>
+
+                <!-- Stop Info -->
+                <div class="bp-section">
+                    <div class="bp-section-title">Stop Information</div>
+                    <div class="bp-stat-grid" style="margin-bottom:12px;">
+                        <div class="bp-stat" style="border-color: rgba(16,185,129,0.3);">
+                            <div class="bp-stat-label">Last Departed</div>
+                            <div class="bp-stat-value" style="font-size:0.82rem; color:#10b981;" id="bp-last-stop">—</div>
+                        </div>
+                        <div class="bp-stat" style="border-color: rgba(251,191,36,0.3);">
+                            <div class="bp-stat-label">Next Stop</div>
+                            <div class="bp-stat-value" style="font-size:0.82rem; color:#fbbf24;" id="bp-next-stop">—</div>
+                        </div>
+                    </div>
+                    <div class="bp-stat" style="border-color: rgba(239,68,68,0.3); margin-bottom:0;">
+                        <div class="bp-stat-label">Destination</div>
+                        <div class="bp-stat-value" style="color:#ef4444;" id="bp-destination">—</div>
+                    </div>
+                </div>
+
+                <!-- Remaining Stops List -->
+                <div class="bp-section">
+                    <div class="bp-section-title">Upcoming Stops</div>
+                    <div id="bp-stops-list"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -1480,9 +1677,20 @@
                 buses.forEach(bus => {
                     const isOnline = bus.live && bus.live.status !== 'offline';
                     const busStatus = isOnline ? 'online' : 'offline';
+                    const role = userProfile ? userProfile.role : 'student';
                     
                     // Add/update map marker
                     updateMapMarker(bus);
+
+                    // For non-admin roles: auto-draw route immediately on load
+                    if (role !== 'admin' && role !== 'driver' && bus.live) {
+                        if (!activeBusId) {
+                            activeBusId = bus.id;
+                            map.setCenter({ lat: bus.live.lat, lng: bus.live.lon });
+                            map.setZoom(15);
+                            drawRouteOSRM(bus, bus.live);
+                        }
+                    }
 
                     if (activeBusId === bus.id && bus.live) {
                         drawRouteOSRM(bus, bus.live);
@@ -1490,18 +1698,30 @@
 
                     const card = document.createElement('div');
                     card.className = 'bus-item';
+
+                    // Card click: open side panel for admin, center map for all
                     card.onclick = () => {
                         if (bus.live && bus.live.lat) {
                             activeBusId = bus.id;
                             map.setCenter({ lat: bus.live.lat, lng: bus.live.lon });
                             map.setZoom(14);
-                            busMarkers[bus.id].openPopup();
                             drawRouteOSRM(bus, bus.live);
-                            loadBusRoutes(); // Re-render markers instantly to show yellow
+                            openBusDetailPanel(bus);
+                            loadBusRoutes();
                         } else {
                             showToast('Bus Offline', `${bus.number} is currently offline and at KRCE Campus.`, 'info');
                         }
                     };
+
+                    // Sidebar label changes for non-admin
+                    const sidebarLabel = (role === 'student' || role === 'parent') ? 'My Bus' : 'Live Fleet';
+                    const firstCard = container.children.length === 0;
+                    if (firstCard) {
+                        const header = document.createElement('div');
+                        header.style.cssText = 'font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#475569; margin-bottom:10px;';
+                        header.textContent = sidebarLabel;
+                        container.appendChild(header);
+                    }
 
                     card.innerHTML = `
                         <div class="bus-header">
@@ -1517,6 +1737,12 @@
                                 <span><i class="fa-solid fa-users"></i> Boarded: ${bus.boarded_today || 0} / ${bus.capacity}</span>
                                 <span><i class="fa-solid fa-gauge-high"></i> Speed: ${bus.live ? bus.live.speed : 0} km/h</span>
                             </div>
+                            ${bus.live && bus.live.remaining_stops && bus.live.remaining_stops.length > 0 ? `
+                            <div class="bus-metric" style="margin-top:8px; color:#fbbf24;">
+                                <span><i class="fa-solid fa-location-dot"></i> Next: ${bus.live.remaining_stops[0] || '—'}</span>
+                                <span><i class="fa-solid fa-flag-checkered"></i> → ${bus.live.destination_stop || '—'}</span>
+                            </div>
+                            ` : ''}
                             ${userProfile.role === 'student' && userProfile.rfid_card ? `
                             <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
                                 <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem; width: auto;" onclick="event.stopPropagation(); demoBoardBus('${bus.id}')">
@@ -1580,8 +1806,8 @@
                             activeBusId = bus.id;
                             map.setCenter({ lat: live.lat, lng: live.lon });
                             map.setZoom(14);
-                            marker.openPopup();
                             drawRouteOSRM(bus, live);
+                            openBusDetailPanel(bus);
                             loadBusRoutes();
                         }
                     },
@@ -2053,6 +2279,96 @@
             document.getElementById('route-progress-bar-remaining').style.width = `${remainingPct}%`;
 
             document.getElementById('route-info-panel').style.display = 'block';
+
+            // Also update side panel ETA & distance after OSRM result arrives
+            if (typeof updateBusPanelRouteStats === 'function') {
+                updateBusPanelRouteStats(remainingDistance, remainingDuration, completedCount, totalStops);
+            }
+        }
+
+        // ── Bus Detail Side Panel ──────────────────────────────────
+        function openBusDetailPanel(bus) {
+            const live = bus.live;
+            const isOnline = live && live.status !== 'offline';
+            const panel = document.getElementById('bus-detail-panel');
+
+            // Header
+            document.getElementById('bp-bus-number').textContent = `${bus.number} — ${bus.route_name}`;
+
+            // Status stats
+            const statusColor = isOnline ? '#10b981' : '#64748b';
+            document.getElementById('bp-status').innerHTML = `<span style="color:${statusColor};">${isOnline ? '🟢 Online' : '⚫ Offline'}</span>`;
+            document.getElementById('bp-speed').textContent = live ? `${live.speed} km/h` : '—';
+            document.getElementById('bp-passengers').textContent = live ? `${live.passengers} / ${bus.capacity}` : '—';
+            document.getElementById('bp-driver').textContent = bus.driver_name || '—';
+
+            // Route name & ETA (will be populated by updateRouteInfoPanel after OSRM)
+            document.getElementById('bp-route-name').textContent = bus.route_name || '—';
+            document.getElementById('bp-eta').textContent = '…';
+            document.getElementById('bp-progress-fill').style.width = '0%';
+            document.getElementById('bp-covered').textContent = '—';
+            document.getElementById('bp-remaining-dist').textContent = '—';
+
+            // Stop info
+            const remaining = (live && live.remaining_stops) ? live.remaining_stops : [];
+            const nextStop = remaining.length > 0 ? remaining[0] : '—';
+            const destStop = (live && live.destination_stop) ? live.destination_stop : '—';
+
+            // Last departed: find stops not in remaining (completed)
+            const allStops = bus.stops || [];
+            let lastDeparted = '—';
+            if (live && live.confirmed_stop_idx !== undefined && allStops.length > 0) {
+                const idx = live.confirmed_stop_idx;
+                if (idx > 0) lastDeparted = allStops[idx - 1] || allStops[0];
+                else lastDeparted = allStops[0];
+            } else if (allStops.length > 0) {
+                lastDeparted = allStops[0];
+            }
+
+            document.getElementById('bp-last-stop').textContent = lastDeparted;
+            document.getElementById('bp-next-stop').textContent = nextStop;
+            document.getElementById('bp-destination').textContent = destStop;
+
+            // Upcoming stops list
+            const stopsListEl = document.getElementById('bp-stops-list');
+            stopsListEl.innerHTML = '';
+            if (remaining.length === 0) {
+                stopsListEl.innerHTML = '<p style="color:#64748b; font-size:0.82rem;">No upcoming stops.</p>';
+            } else {
+                remaining.forEach((stopName, i) => {
+                    const isNext = i === 0;
+                    const isLast = i === remaining.length - 1;
+                    const dotColor = isLast ? '#ef4444' : isNext ? '#fbbf24' : '#475569';
+                    const item = document.createElement('div');
+                    item.className = 'bp-stop-item';
+                    item.innerHTML = `
+                        <div class="bp-stop-dot" style="background:${dotColor};"></div>
+                        <span class="bp-stop-name">${stopName}</span>
+                        ${isNext ? '<span class="bp-stop-badge" style="background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.3);">Next</span>' : ''}
+                        ${isLast ? '<span class="bp-stop-badge" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3);">Dest</span>' : ''}
+                    `;
+                    stopsListEl.appendChild(item);
+                });
+            }
+
+            panel.classList.add('open');
+        }
+
+        function updateBusPanelRouteStats(remainingDistance, remainingDuration, completedCount, totalStops) {
+            const totalDistMeters = 15000;
+            const remainingDistMeters = remainingDistance || 0;
+            const coveredDistMeters = Math.max(0, totalDistMeters - remainingDistMeters);
+            const progressPct = Math.min(100, Math.round((coveredDistMeters / totalDistMeters) * 100));
+
+            document.getElementById('bp-eta').textContent = formatETA(remainingDuration);
+            document.getElementById('bp-progress-fill').style.width = `${progressPct}%`;
+            document.getElementById('bp-covered').textContent = `${(coveredDistMeters / 1000).toFixed(1)} km`;
+            document.getElementById('bp-remaining-dist').textContent = `${(remainingDistMeters / 1000).toFixed(1)} km`;
+        }
+
+        function closeBusDetailPanel() {
+            document.getElementById('bus-detail-panel').classList.remove('open');
+            clearActiveRoute();
         }
 
         function clearRouteOverlays() {
@@ -2085,3 +2401,4 @@
     </script>
 </body>
 </html>
+
