@@ -1820,18 +1820,22 @@
             const busLat = live.lat;
             const busLon = live.lon;
 
+            // Determine direction of travel & dynamic destination
+            const isForward = live.direction !== "reverse";
+            const travelStops = isForward ? stopsCoords : [...stopsCoords].reverse();
+
             let closestIdx = 0;
             let minD = Infinity;
-            for (let i = 0; i < stopsCoords.length; i++) {
-                let d = getDistance(busLat, busLon, stopsCoords[i].lat, stopsCoords[i].lon);
+            for (let i = 0; i < travelStops.length; i++) {
+                let d = getDistance(busLat, busLon, travelStops[i].lat, travelStops[i].lon);
                 if (d < minD) {
                     minD = d;
                     closestIdx = i;
                 }
             }
 
-            const completedStops = stopsCoords.slice(0, closestIdx + 1);
-            const remainingStops = stopsCoords.slice(closestIdx);
+            const completedStops = travelStops.slice(0, closestIdx + 1);
+            const remainingStops = travelStops.slice(closestIdx + 1);
 
             let completedCoords = [];
             if (completedStops.length > 0) {
@@ -1849,13 +1853,18 @@
                 }
             }
 
+            // Determine dynamic target destination name & coordinates
+            let destName = live.destination_stop || (isForward ? travelStops[travelStops.length - 1].name : "KRCE Campus");
+            let destLat = live.destination_lat || (STOP_COORDS[destName] ? STOP_COORDS[destName][0] : STOP_COORDS["KRCE Campus"][0]);
+            let destLon = live.destination_lon || (STOP_COORDS[destName] ? STOP_COORDS[destName][1] : STOP_COORDS["KRCE Campus"][1]);
+
             let remainingCoords = [];
             let remainingWaypoints = `${busLon},${busLat}`;
             if (remainingStops.length > 0) {
                 remainingWaypoints += ';' + remainingStops.map(s => `${s.lon},${s.lat}`).join(';');
             }
-            if (stopsCoords[stopsCoords.length - 1].name !== "KRCE Campus") {
-                remainingWaypoints += `;${STOP_COORDS["KRCE Campus"][1]},${STOP_COORDS["KRCE Campus"][0]}`;
+            if (remainingStops.length === 0 || remainingStops[remainingStops.length - 1].name !== destName) {
+                remainingWaypoints += `;${destLon},${destLat}`;
             }
 
             let remainingDistance = 0;
@@ -1871,7 +1880,7 @@
             } catch(e) {
                 remainingCoords = [[busLat, busLon]];
                 remainingStops.forEach(s => remainingCoords.push([s.lat, s.lon]));
-                remainingCoords.push([STOP_COORDS["KRCE Campus"][0], STOP_COORDS["KRCE Campus"][1]]);
+                remainingCoords.push([destLat, destLon]);
             }
 
             // Draw Completed segment (GREEN)
@@ -1906,7 +1915,7 @@
             }
 
             // Start marker (Green Flag)
-            const startStop = stopsCoords[0];
+            const startStop = travelStops[0];
             if (startStop) {
                 const startMarker = new CustomHTMLMarker(
                     new google.maps.LatLng(startStop.lat, startStop.lon),
@@ -1921,7 +1930,7 @@
                 );
                 
                 const startInfoWindow = new google.maps.InfoWindow({
-                    content: `<b>Start Stop: ${startStop.name}</b><br>Departure: 07:45 AM`
+                    content: `<b>Origin: ${startStop.name}</b>`
                 });
                 startMarker.infoWindow = startInfoWindow;
                 startMarker.openPopup = () => {
@@ -1933,9 +1942,9 @@
                 routeMarkers.start = startMarker;
             }
 
-            // Destination marker (Red Flag)
+            // Destination marker (Red Flag) - DYNAMIC FOR MORNING & EVENING
             const destMarker = new CustomHTMLMarker(
-                new google.maps.LatLng(STOP_COORDS["KRCE Campus"][0], STOP_COORDS["KRCE Campus"][1]),
+                new google.maps.LatLng(destLat, destLon),
                 '<i class="fa-solid fa-flag" style="color: #ef4444; font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i>',
                 'dest-marker-icon',
                 map,
@@ -1947,7 +1956,7 @@
             );
             
             const destInfoWindow = new google.maps.InfoWindow({
-                content: `<b>Destination: KRCE Campus</b><br>Arrival ETA: ${formatETA(remainingDuration)}`
+                content: `<b>Destination: ${destName}</b><br>Arrival ETA: ${formatETA(remainingDuration)}`
             });
             destMarker.infoWindow = destInfoWindow;
             destMarker.openPopup = () => {
@@ -1958,8 +1967,8 @@
             };
             routeMarkers.destination = destMarker;
 
-            // Orange Bus Stop Markers
-            stopsCoords.forEach((stop, index) => {
+            // Orange Bus Stop Markers along travelStops
+            travelStops.forEach((stop, index) => {
                 if (index === 0) return;
                 
                 const stopHtml = `<div style="width: 18px; height: 18px; background: #f97316; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: bold;">${index}</div>`;
@@ -1999,7 +2008,7 @@
             });
 
             // Update Panel stats
-            updateRouteInfoPanel(bus, live, remainingDistance, remainingDuration, completedStops.length, stopsCoords.length);
+            updateRouteInfoPanel(bus, live, remainingDistance, remainingDuration, completedStops.length, travelStops.length, destName);
         }
 
         function formatETA(durationSeconds) {
@@ -2011,7 +2020,7 @@
             return `${hours}h ${mins}m`;
         }
 
-        function updateRouteInfoPanel(bus, live, remainingDistance, remainingDuration, completedCount, totalStops) {
+        function updateRouteInfoPanel(bus, live, remainingDistance, remainingDuration, completedCount, totalStops, destName) {
             document.getElementById('route-panel-name').innerText = bus.route_name || bus.routeName || "Route";
             document.getElementById('route-panel-bus').innerText = bus.number;
             document.getElementById('route-panel-driver').innerText = bus.driver_name || "Unassigned";
@@ -2028,7 +2037,8 @@
             document.getElementById('route-panel-eta').innerText = formatETA(remainingDuration);
 
             // Stops info
-            const nextStopName = (bus.stops && bus.stops[completedCount]) ? bus.stops[completedCount] : "KRCE Campus";
+            const targetDest = destName || live.destination_stop || "KRCE Campus";
+            const nextStopName = (bus.stops && bus.stops[completedCount]) ? bus.stops[completedCount] : targetDest;
             const currStopName = (bus.stops && bus.stops[completedCount - 1]) ? bus.stops[completedCount - 1] : "Start";
             document.getElementById('route-panel-currstop').innerText = currStopName;
             document.getElementById('route-panel-nextstop').innerText = nextStopName;

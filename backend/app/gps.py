@@ -250,6 +250,7 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
         remaining_stops = stops[:confirmed_idx+1][::-1]
         dest_stop = stops[0] if stops else None
 
+    live_buses[bus_id]["direction"] = direction
     live_buses[bus_id]["destination_stop"] = dest_stop
     if dest_stop and dest_stop in STOP_COORDS:
         coords = STOP_COORDS[dest_stop]
