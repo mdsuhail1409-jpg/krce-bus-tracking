@@ -9,10 +9,12 @@ import time
 
 from fastapi import WebSocket, WebSocketDisconnect, Query, HTTPException
 
+from datetime import datetime
 from app.auth import verify_token
-from app.config import COLLEGE_LAT, COLLEGE_LON, logger
+from app.config import COLLEGE_LAT, COLLEGE_LON, STOP_COORDS, logger
 from app.state import live_buses, ws_pool, last_seen
 from app.gps import process_gps_update, initialize_route_geometry
+from app.utils import IST
 from app import database as db_module
 
 
@@ -36,28 +38,44 @@ async def websocket_ep(ws: WebSocket, token: str = Query(...)):
     db = db_module.db
 
     if role == "driver" and bus_id:
+        bus = await db.buses.find_one({"id": bus_id})
+        stops = bus.get("stops", []) if bus else []
+        current_hour = datetime.now(IST).hour
+        default_dir = "reverse" if current_hour < 12 else "forward"
+        dest_stop = stops[0] if default_dir == "reverse" else (stops[-1] if stops else "KRCE Campus")
+        dest_coord = STOP_COORDS.get(dest_stop, (COLLEGE_LAT, COLLEGE_LON))
+
         last_pos = await db.live_bus_positions.find_one({"bus_id": bus_id})
         if last_pos:
-            live_buses[bus_id] = {
-                "bus_id": bus_id, "driver_id": uid, "driver_name": name,
-                "lat": last_pos["lat"], "lon": last_pos["lon"],
-                "speed": last_pos["speed"], "heading": last_pos["heading"], "passengers": last_pos["passengers"],
-                "updated_at": time.time(),
-                "status": "moving" if last_pos["speed"] > 2 else "idle",
-                "route_geometry": [],
-                "last_active": time.time()
-            }
-            asyncio.create_task(initialize_route_geometry(bus_id, last_pos["lat"], last_pos["lon"]))
+            start_lat = last_pos["lat"]
+            start_lon = last_pos["lon"]
+            spd = last_pos.get("speed", 0)
+            hdg = last_pos.get("heading", 0)
+            pax = last_pos.get("passengers", 0)
+            status = "moving" if spd > 2 else "idle"
         else:
-            live_buses[bus_id] = {
-                "bus_id": bus_id, "driver_id": uid, "driver_name": name,
-                "lat": COLLEGE_LAT, "lon": COLLEGE_LON,
-                "speed": 0, "heading": 0, "passengers": 0,
-                "updated_at": time.time(), "status": "idle",
-                "route_geometry": [],
-                "last_active": time.time()
-            }
-            asyncio.create_task(initialize_route_geometry(bus_id, COLLEGE_LAT, COLLEGE_LON))
+            start_lat = COLLEGE_LAT
+            start_lon = COLLEGE_LON
+            spd = 0
+            hdg = 0
+            pax = 0
+            status = "idle"
+
+        live_buses[bus_id] = {
+            "bus_id": bus_id, "driver_id": uid, "driver_name": name,
+            "lat": start_lat, "lon": start_lon,
+            "speed": spd, "heading": hdg, "passengers": pax,
+            "updated_at": time.time(),
+            "status": status,
+            "route_geometry": [],
+            "last_active": time.time(),
+            "direction": default_dir,
+            "destination_stop": dest_stop,
+            "destination_lat": dest_coord[0],
+            "destination_lon": dest_coord[1],
+            "remaining_stops": stops if default_dir == "forward" else (stops[::-1] if stops else [])
+        }
+        asyncio.create_task(initialize_route_geometry(bus_id, start_lat, start_lon, dest_coord[0], dest_coord[1]))
 
     logger.info("WS+ %s (%s)", uid, role)
 

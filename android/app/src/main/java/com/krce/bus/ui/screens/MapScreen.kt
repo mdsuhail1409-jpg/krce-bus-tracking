@@ -74,6 +74,43 @@ fun LiveMapScreen(authToken: String, busId: String?) {
 
     val collegeLatLng = LatLng(10.927669, 78.7410) // Actual KRCE campus coordinates
 
+    val stopCoordinates = remember {
+        mapOf(
+            "KRCE Campus" to LatLng(10.927669, 78.7410),
+            "Samayapuram" to LatLng(10.9310, 78.8130),
+            "Woraiyur Bus Stand" to LatLng(10.7905, 78.7047),
+            "Woraiyur Town" to LatLng(10.7920, 78.7020),
+            "Gandhi Market" to LatLng(10.8190, 78.6990),
+            "Panjappur" to LatLng(10.7516, 78.6830),
+            "Srirangam" to LatLng(10.8631, 78.6933),
+            "Cauvery Bridge" to LatLng(10.8416, 78.7010),
+            "K.K. Nagar" to LatLng(10.8176, 78.6960),
+            "Thuvakudi" to LatLng(10.8730, 78.7680),
+            "Ariyamangalam" to LatLng(10.8280, 78.7380),
+            "Cantonment" to LatLng(10.8116, 78.6860),
+            "Collector Office" to LatLng(10.8080, 78.6820),
+            "Palakarai" to LatLng(10.8120, 78.6930),
+            "Chatram Bus Stand" to LatLng(10.8096, 78.6964),
+            "Central" to LatLng(10.8050, 78.6840),
+            "Junction" to LatLng(10.8020, 78.6810),
+            "Thillai Nagar" to LatLng(10.8240, 78.6890),
+            "Mannarpuram" to LatLng(10.8182, 78.7030),
+            "Rockfort" to LatLng(10.8300, 78.6970),
+            "Chinthamani" to LatLng(10.8350, 78.7020),
+            "TVS Tollgate" to LatLng(10.8015, 78.6890),
+            "SIT" to LatLng(10.8055, 78.6912),
+            "Ambigapuram" to LatLng(10.7985, 78.7050),
+            "Manjathidal" to LatLng(10.7950, 78.7110),
+            "Armory Gate" to LatLng(10.7915, 78.7180),
+            "Panjayat Office" to LatLng(10.7880, 78.7240),
+            "Kalkandar Kottai" to LatLng(10.7850, 78.7310),
+            "BVM Trichy" to LatLng(10.8100, 78.6950),
+            "Kadai Veethi" to LatLng(10.8050, 78.7000),
+            "Mandabam" to LatLng(10.8000, 78.7080),
+            "Aathupalam" to LatLng(10.7930, 78.7150)
+        )
+    }
+
     // Keep track of the currently selected/tracked bus
     var selectedBusId by remember { mutableStateOf(busId) }
     
@@ -275,6 +312,24 @@ fun LiveMapScreen(authToken: String, busId: String?) {
                                 true
                             }
                         )
+                    }
+                }
+
+                // Bus Stop Markers for active route
+                val activeBus = liveBuses.find { it.id == selectedBusId } ?: liveBuses.firstOrNull()
+                val busStopBitmap = remember(context) { createBusStopMarkerIcon(context) }
+                activeBus?.stops?.forEachIndexed { index, stopName ->
+                    if (stopName != "KRCE Campus") {
+                        val pos = stopCoordinates[stopName]
+                        if (pos != null) {
+                            val isDest = index == activeBus.stops.size - 1
+                            Marker(
+                                state = rememberMarkerState(position = pos),
+                                title = if (isDest) "Destination: $stopName" else "Stop #${index + 1}: $stopName",
+                                snippet = "Route: ${activeBus.routeName}",
+                                icon = BitmapDescriptorFactory.fromBitmap(busStopBitmap)
+                            )
+                        }
                     }
                 }
 
@@ -599,6 +654,78 @@ fun createCampusMarkerIcon(context: Context): android.graphics.Bitmap {
     return bitmap
 }
 
+fun createBusStopMarkerIcon(context: Context): android.graphics.Bitmap {
+    val width = 72
+    val height = 100
+    val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    val paint = android.graphics.Paint().apply { isAntiAlias = true }
+
+    // Drop shadow
+    paint.color = android.graphics.Color.parseColor("#44000000")
+    val shadowPath = android.graphics.Path().apply {
+        moveTo(width / 2f, height - 2f)
+        cubicTo(width / 2f - 4f, height - 8f, 2f, height * 0.55f, 2f, width / 2f + 4f)
+        arcTo(android.graphics.RectF(2f, 4f, width - 2f, width + 4f), 180f, 180f, false)
+        cubicTo(width - 2f, height * 0.55f, width / 2f + 4f, height - 8f, width / 2f, height - 2f)
+        close()
+    }
+    canvas.drawPath(shadowPath, paint)
+
+    // Pin body (Black)
+    val pinPath = android.graphics.Path().apply {
+        moveTo(width / 2f, height - 6f)
+        cubicTo(width / 2f - 4f, height - 12f, 4f, height * 0.55f, 4f, width / 2f)
+        arcTo(android.graphics.RectF(4f, 2f, width - 4f, width - 2f), 180f, 180f, false)
+        cubicTo(width - 4f, height * 0.55f, width / 2f + 4f, height - 12f, width / 2f, height - 6f)
+        close()
+    }
+    paint.color = android.graphics.Color.parseColor("#111827")
+    paint.style = android.graphics.Paint.Style.FILL
+    canvas.drawPath(pinPath, paint)
+
+    // White outline
+    paint.color = android.graphics.Color.WHITE
+    paint.style = android.graphics.Paint.Style.STROKE
+    paint.strokeWidth = 3f
+    canvas.drawPath(pinPath, paint)
+
+    // Inner white circle
+    paint.style = android.graphics.Paint.Style.FILL
+    paint.color = android.graphics.Color.WHITE
+    canvas.drawCircle(width / 2f, width / 2f, 24f, paint)
+
+    // Bus body inside (Black)
+    paint.color = android.graphics.Color.parseColor("#111827")
+    val busRect = android.graphics.RectF(width / 2f - 14f, width / 2f - 18f, width / 2f + 14f, width / 2f + 14f)
+    canvas.drawRoundRect(busRect, 6f, 6f, paint)
+
+    // Top signboard (White)
+    paint.color = android.graphics.Color.WHITE
+    canvas.drawRoundRect(android.graphics.RectF(width / 2f - 8f, width / 2f - 16f, width / 2f + 8f, width / 2f - 13f), 2f, 2f, paint)
+
+    // Windshield (White)
+    canvas.drawRoundRect(android.graphics.RectF(width / 2f - 11f, width / 2f - 11f, width / 2f + 11f, width / 2f + 2f), 3f, 3f, paint)
+
+    // Headlights (White)
+    canvas.drawRect(width / 2f - 11f, width / 2f + 6f, width / 2f - 5f, width / 2f + 9f, paint)
+    canvas.drawRect(width / 2f + 5f, width / 2f + 6f, width / 2f + 11f, width / 2f + 9f, paint)
+
+    // License plate (White)
+    canvas.drawRect(width / 2f - 3f, width / 2f + 10f, width / 2f + 3f, width / 2f + 12f, paint)
+
+    // Side mirrors (Black)
+    paint.color = android.graphics.Color.parseColor("#111827")
+    canvas.drawRect(width / 2f - 17f, width / 2f - 9f, width / 2f - 14f, width / 2f - 3f, paint)
+    canvas.drawRect(width / 2f + 14f, width / 2f - 9f, width / 2f + 17f, width / 2f - 3f, paint)
+
+    // Wheels (Black)
+    canvas.drawRect(width / 2f - 12f, width / 2f + 14f, width / 2f - 7f, width / 2f + 17f, paint)
+    canvas.drawRect(width / 2f + 7f, width / 2f + 14f, width / 2f + 12f, width / 2f + 17f, paint)
+
+    return bitmap
+}
+
 fun createBusMarkerIcon(context: Context, busNumber: String, isOnline: Boolean): android.graphics.Bitmap {
     val width = 140
     val height = 100
@@ -606,50 +733,87 @@ fun createBusMarkerIcon(context: Context, busNumber: String, isOnline: Boolean):
     val canvas = android.graphics.Canvas(bitmap)
     val paint = android.graphics.Paint().apply { isAntiAlias = true }
 
-    // Shadow
-    paint.color = android.graphics.Color.parseColor("#44000000")
-    canvas.drawRoundRect(4f, 6f, width - 4f, height - 4f, 20f, 20f, paint)
-
-    // Bus body: white outline
-    paint.color = android.graphics.Color.WHITE
-    canvas.drawRoundRect(2f, 2f, width - 2f, height - 14f, 18f, 18f, paint)
-
-    // Bus body fill: Green for online, grey for offline
+    val cx = width / 2f
+    val cy = 38f
+    val radius = 30f
     val bodyColor = if (isOnline) "#10B981" else "#64748B"
-    paint.color = android.graphics.Color.parseColor(bodyColor)
-    canvas.drawRoundRect(6f, 6f, width - 6f, height - 18f, 14f, 14f, paint)
 
-    // Tail / pointer triangle at bottom center
+    // Drop Shadow
+    paint.style = android.graphics.Paint.Style.FILL
+    paint.color = android.graphics.Color.parseColor("#44000000")
+    canvas.drawCircle(cx, cy + 3f, radius + 2f, paint)
+
+    // White disc background
+    paint.color = android.graphics.Color.WHITE
+    canvas.drawCircle(cx, cy, radius, paint)
+
+    // Colored / dark status ring
+    paint.style = android.graphics.Paint.Style.STROKE
+    paint.strokeWidth = 3.5f
+    paint.color = android.graphics.Color.parseColor(bodyColor)
+    canvas.drawCircle(cx, cy, radius - 1.75f, paint)
+
+    // Heading pointer triangle at top
     val triPath = android.graphics.Path().apply {
-        moveTo(width / 2f - 14f, height - 18f)
-        lineTo(width / 2f + 14f, height - 18f)
-        lineTo(width / 2f, height.toFloat())
+        moveTo(cx - 6f, cy - radius - 1f)
+        lineTo(cx + 6f, cy - radius - 1f)
+        lineTo(cx, cy - radius - 8f)
         close()
     }
+    paint.style = android.graphics.Paint.Style.FILL
     paint.color = android.graphics.Color.parseColor(bodyColor)
     canvas.drawPath(triPath, paint)
 
-    // White outline for triangle
+    // Bus Silhouette — Dark body (#111827)
+    paint.color = android.graphics.Color.parseColor("#111827")
+
+    // Left and right rear-view mirrors
+    canvas.drawRoundRect(cx - 24f, cy - 8f, cx - 20f, cy + 1.5f, 2f, 2f, paint)
+    canvas.drawRoundRect(cx + 20f, cy - 8f, cx + 24f, cy + 1.5f, 2f, 2f, paint)
+
+    // Wheels
+    canvas.drawRoundRect(cx - 15f, cy + 13f, cx - 8f, cy + 20f, 2f, 2f, paint)
+    canvas.drawRoundRect(cx + 8f, cy + 13f, cx + 15f, cy + 20f, 2f, 2f, paint)
+
+    // Bus Body
+    canvas.drawRoundRect(cx - 18f, cy - 19f, cx + 18f, cy + 13f, 10f, 10f, paint)
+
+    // Route Destination Box (White)
+    paint.color = android.graphics.Color.WHITE
+    canvas.drawRoundRect(cx - 7.5f, cy - 16f, cx + 7.5f, cy - 12f, 2f, 2f, paint)
+
+    // Front Windshield (White)
+    canvas.drawRoundRect(cx - 14f, cy - 10f, cx + 14f, cy + 3.5f, 3.5f, 3.5f, paint)
+
+    // Headlights (White circles)
+    canvas.drawCircle(cx - 10f, cy + 8f, 2.8f, paint)
+    canvas.drawCircle(cx + 10f, cy + 8f, 2.8f, paint)
+
+    // Bus Number Pill Badge at bottom
+    val label = if (busNumber.contains("-")) busNumber.split("-").last() else busNumber
+    paint.textSize = 20f
+    paint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+    val textWidth = paint.measureText(label)
+    val pillW = (textWidth + 24f).coerceIn(36f, 76f)
+    val pillH = 22f
+    val pillTop = cy + radius - 6f
+
+    // Pill background (#0F172A)
+    paint.color = android.graphics.Color.parseColor("#0F172A")
+    paint.style = android.graphics.Paint.Style.FILL
+    canvas.drawRoundRect(cx - pillW / 2f, pillTop, cx + pillW / 2f, pillTop + pillH, 11f, 11f, paint)
+
+    // Pill border (White)
     paint.color = android.graphics.Color.WHITE
     paint.style = android.graphics.Paint.Style.STROKE
-    paint.strokeWidth = 2f
-    canvas.drawPath(triPath, paint)
+    paint.strokeWidth = 1.8f
+    canvas.drawRoundRect(cx - pillW / 2f, pillTop, cx + pillW / 2f, pillTop + pillH, 11f, 11f, paint)
+
+    // Pill text
     paint.style = android.graphics.Paint.Style.FILL
-
-    // Bus windows — three small white rounded rects
-    paint.color = android.graphics.Color.parseColor("#CCFFFFFF")
-    canvas.drawRoundRect(14f, 14f, 50f, 46f, 6f, 6f, paint)
-    canvas.drawRoundRect(58f, 14f, 94f, 46f, 6f, 6f, paint)
-    canvas.drawRoundRect(102f, 14f, 128f, 46f, 6f, 6f, paint)
-
-    // Bus number label at bottom of body
-    paint.color = android.graphics.Color.WHITE
-    paint.textSize = 26f
-    paint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
     paint.textAlign = android.graphics.Paint.Align.CENTER
-    val label = if (busNumber.contains("-")) busNumber.split("-").last() else busNumber
-    val textY = height - 22f - ((paint.descent() + paint.ascent()) / 2f)
-    canvas.drawText(label, width / 2f, textY, paint)
+    val textY = pillTop + pillH / 2f - ((paint.descent() + paint.ascent()) / 2f)
+    canvas.drawText(label, cx, textY, paint)
 
     return bitmap
 }

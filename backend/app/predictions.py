@@ -5,7 +5,7 @@ ETA, demand, and occupancy prediction.
 
 from datetime import datetime
 from app.state import live_buses
-from app.utils import haversine
+from app.utils import haversine, IST
 
 
 def predict_eta_delay(bus_id: str, stop_lat: float, stop_lon: float, speed: float) -> dict:
@@ -24,7 +24,7 @@ def predict_eta_delay(bus_id: str, stop_lat: float, stop_lon: float, speed: floa
     duration_secs = d / est_speed
 
     # Rush Hour Multipliers
-    hour = datetime.now().hour
+    hour = datetime.now(IST).hour
     multiplier = 1.0
     if 8 <= hour <= 9 or 16 <= hour <= 18:
         multiplier = 1.4
@@ -50,7 +50,7 @@ def predict_student_demand(bus_id: str, stop_name: str) -> int:
     import random
     random.seed(len(stop_name))
     base_demand = random.randint(3, 12)
-    day_of_week = datetime.now().weekday()
+    day_of_week = datetime.now(IST).weekday()
     if day_of_week in (0, 4):  # Mon/Fri peak
         return int(base_demand * 1.3)
     return base_demand

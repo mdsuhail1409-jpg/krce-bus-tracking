@@ -49,3 +49,6 @@ diff.txt
 build/
 bin/
 obj/
+.agents/
+/krce_bus_flutter/
+generate_summary.py

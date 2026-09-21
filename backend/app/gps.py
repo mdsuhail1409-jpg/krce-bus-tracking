@@ -6,14 +6,15 @@ import asyncio
 import json
 import time
 import uuid
+from datetime import datetime
 
 from app.config import COLLEGE_LAT, COLLEGE_LON, STOP_COORDS, VEHICLE_TTL, VEHICLE_WARN_TTL, logger
 from app.state import live_buses, ws_pool, last_seen, geofence_states
-from app.utils import haversine, fetch_osrm_route, today, now_str
+from app.utils import haversine, fetch_osrm_route, today, now_str, IST
 from app import database as db_module
 
 
-async def trigger_system_alert(title: str, message: str, alert_type: str = "info", target_bus: str = None):
+async def trigger_system_alert(title: str, message: str, alert_type: str = "info", target_bus: str = None, target_role: str = "all"):
     """Create a system alert and broadcast to all WebSocket clients."""
     db = db_module.db
     aid = str(uuid.uuid4())[:8]
@@ -22,7 +23,7 @@ async def trigger_system_alert(title: str, message: str, alert_type: str = "info
         "title": title,
         "message": message,
         "alert_type": alert_type,
-        "target_role": "all",
+        "target_role": target_role,
         "target_bus": target_bus,
         "sent_by": "system",
         "sent_at": now_str(),
@@ -36,6 +37,7 @@ async def trigger_system_alert(title: str, message: str, alert_type: str = "info
         "title": title,
         "message": message,
         "alert_type": alert_type,
+        "target_role": target_role,
         "target_bus": target_bus
     })
     for cid, cws in list(ws_pool.items()):
@@ -45,8 +47,12 @@ async def trigger_system_alert(title: str, message: str, alert_type: str = "info
             pass
 
 
-async def initialize_route_geometry(bus_id: str, start_lat: float, start_lon: float, dest_lat: float = COLLEGE_LAT, dest_lon: float = COLLEGE_LON):
+async def initialize_route_geometry(bus_id: str, start_lat: float, start_lon: float, dest_lat: float = None, dest_lon: float = None):
     """Fetch OSRM route from start position to active destination target (campus or terminal stop)."""
+    if dest_lat is None or dest_lon is None:
+        live = live_buses.get(bus_id, {})
+        dest_lat = live.get("destination_lat", COLLEGE_LAT)
+        dest_lon = live.get("destination_lon", COLLEGE_LON)
     route_data = await fetch_osrm_route(start_lat, start_lon, dest_lat, dest_lon)
     if route_data and "routes" in route_data:
         routes = route_data["routes"]
@@ -59,7 +65,7 @@ async def initialize_route_geometry(bus_id: str, start_lat: float, start_lon: fl
 
 
 async def run_geofencing_check(bus_id: str, lat: float, lon: float):
-    """Check if bus has entered/exited any stop geofences."""
+    """Check if bus has entered/exited any stop geofences (100m proximity)."""
     db = db_module.db
     bus = await db.buses.find_one({"id": bus_id})
     if not bus:
@@ -81,19 +87,19 @@ async def run_geofencing_check(bus_id: str, lat: float, lon: float):
 
         prev_status = bus_state.get(stop_name, "outside")
 
-        # Enters geofence (within 150m)
-        if d <= 150 and prev_status == "outside":
+        # Enters geofence (within 100 meters)
+        if d <= 100 and prev_status == "outside":
             bus_state[stop_name] = "inside"
-            title = f"Bus Reached {stop_name}" if stop_name != "KRCE Campus" else "Bus Reached College"
-            msg = f"Bus {bus_number} has arrived at {stop_name}."
-            await trigger_system_alert(title, msg, alert_type="info", target_bus=bus_id)
+            title = f"Bus Approaching {stop_name}" if stop_name != "KRCE Campus" else "Bus Arriving at College"
+            msg = f"Bus {bus_number} is within 100 meters of {stop_name}. Please be ready!"
+            await trigger_system_alert(title, msg, alert_type="info", target_bus=bus_id, target_role="all")
 
-        # Leaves geofence (exceeds 250m)
-        elif d > 250 and prev_status == "inside":
+        # Leaves geofence (exceeds 150 meters)
+        elif d > 150 and prev_status == "inside":
             bus_state[stop_name] = "outside"
             title = f"Bus Departed {stop_name}" if stop_name != "KRCE Campus" else "Bus Left College"
             msg = f"Bus {bus_number} has departed from {stop_name}."
-            await trigger_system_alert(title, msg, alert_type="info", target_bus=bus_id)
+            await trigger_system_alert(title, msg, alert_type="info", target_bus=bus_id, target_role="all")
 
 
 async def run_safety_checks(bus_id: str, lat: float, lon: float, speed: float, now_ts: float):
@@ -153,13 +159,19 @@ async def run_safety_checks(bus_id: str, lat: float, lon: float, speed: float, n
 
 async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat: float, lon: float, speed: float, heading: float, passengers: int):
     """Consolidated GPS processing — update state, persist, geofence, safety."""
-    from datetime import datetime
     db = db_module.db
     now_ts = time.time()
-    current_hour = datetime.now().hour
-    is_first_ping = bus_id not in live_buses
+    current_hour = datetime.now(IST).hour
     
-    current_pax = live_buses[bus_id].get("passengers", 0) if not is_first_ping else passengers
+    is_inactive = (now_ts - live_buses.get(bus_id, {}).get("last_active", 0)) > 300
+    is_first_ping = (
+        bus_id not in live_buses
+        or "direction" not in live_buses[bus_id]
+        or live_buses[bus_id].get("status") == "offline"
+        or is_inactive
+    )
+    
+    current_pax = live_buses[bus_id].get("passengers", 0) if (bus_id in live_buses and not is_first_ping) else passengers
 
     # 1. Fetch Bus Route to determine progression
     bus = await db.buses.find_one({"id": bus_id})
@@ -176,15 +188,15 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
             if d_tvs <= d_sit:
                 stops = ["KRCE Campus", "TVS Tollgate", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Kalkandar Kottai"]
                 if is_first_ping or bus_id not in live_buses:
-                    live_buses[bus_id]["active_variant"] = "TVS Tollgate Branch"
+                    live_buses.setdefault(bus_id, {})["active_variant"] = "TVS Tollgate Branch"
             else:
                 stops = ["KRCE Campus", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Kalkandar Kottai"]
                 if is_first_ping or bus_id not in live_buses:
-                    live_buses[bus_id]["active_variant"] = "SIT Branch"
+                    live_buses.setdefault(bus_id, {})["active_variant"] = "SIT Branch"
 
     # Smart Time-of-Day direction heuristic:
-    # Morning (before 12:00 PM): Coming to college -> "reverse" (towards index 0: KRCE Campus)
-    # Afternoon/Evening (12:00 PM and after): Departing college -> "forward" (towards terminal stop: stops[-1])
+    # Morning (before 12:00 PM IST): Coming to college -> "reverse" (towards index 0: KRCE Campus)
+    # Afternoon/Evening (12:00 PM IST and after): Departing college -> "forward" (towards terminal stop: stops[-1])
     default_direction = "reverse" if current_hour < 12 else "forward"
 
     # 2. Find nearest stop index
@@ -197,6 +209,14 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
             if d < min_dist:
                 min_dist = d
                 nearest_stop_idx = idx
+
+    # If bus is at or near the trip origin:
+    # At college campus (index 0) in the afternoon/evening (>= 12:00 PM IST): departing college -> always "forward"
+    if nearest_stop_idx == 0 and current_hour >= 12:
+        default_direction = "forward"
+    # At terminal stop (last index) in the morning (< 12:00 PM IST): starting towards college -> always "reverse"
+    elif stops and nearest_stop_idx == len(stops) - 1 and current_hour < 12:
+        default_direction = "reverse"
 
     if is_first_ping:
         live_buses[bus_id] = {
@@ -239,6 +259,12 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
                 live_buses[bus_id]["direction"] = "reverse"
         live_buses[bus_id]["confirmed_stop_idx"] = confirmed_idx
 
+    # If bus is at origin stop, enforce correct trip direction regardless of previous stale state
+    if nearest_stop_idx == 0 and current_hour >= 12:
+        live_buses[bus_id]["direction"] = "forward"
+    elif stops and nearest_stop_idx == len(stops) - 1 and current_hour < 12:
+        live_buses[bus_id]["direction"] = "reverse"
+
     # 4. Calculate dynamic destination and remaining stops
     direction = live_buses[bus_id].get("direction", default_direction)
     confirmed_idx = live_buses[bus_id].get("confirmed_stop_idx", nearest_stop_idx)
@@ -257,6 +283,11 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
         live_buses[bus_id]["destination_lat"] = coords[0]
         live_buses[bus_id]["destination_lon"] = coords[1]
     live_buses[bus_id]["remaining_stops"] = remaining_stops
+
+    # Fetch route geometry if missing
+    if not live_buses[bus_id].get("route_geometry") and dest_stop and dest_stop in STOP_COORDS:
+        coords = STOP_COORDS[dest_stop]
+        asyncio.create_task(initialize_route_geometry(bus_id, lat, lon, coords[0], coords[1]))
 
     # Log to history collection for playback
     await db.live_bus_positions_history.insert_one({

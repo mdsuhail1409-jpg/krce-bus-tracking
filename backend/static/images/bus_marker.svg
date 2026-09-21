@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <circle cx="24" cy="24" r="22" fill="#ffffff" stroke="#111827" stroke-width="2.6"/>
+  <!-- Mirrors -->
+  <rect x="7.5" y="18" width="2.5" height="6.5" rx="1.2" fill="#111827"/>
+  <rect x="38" y="18" width="2.5" height="6.5" rx="1.2" fill="#111827"/>
+  <!-- Wheels -->
+  <rect x="13.5" y="32.5" width="4.5" height="5" rx="1.5" fill="#111827"/>
+  <rect x="30" y="32.5" width="4.5" height="5" rx="1.5" fill="#111827"/>
+  <!-- Main Bus Body -->
+  <path d="M 11.5 19 C 11.5 12 16 9.5 24 9.5 C 32 9.5 36.5 12 36.5 19 L 36.5 33 C 36.5 34.2 35 34.5 33.5 34.5 L 14.5 34.5 C 13 34.5 11.5 34.2 11.5 33 Z" fill="#111827"/>
+  <!-- Route Display Sign -->
+  <rect x="18.5" y="11.5" width="11" height="2.8" rx="1" fill="#ffffff"/>
+  <!-- Front Windshield -->
+  <rect x="14" y="15.5" width="20" height="10.5" rx="2.5" fill="#ffffff"/>
+  <!-- Headlights -->
+  <circle cx="16.5" cy="29" r="2.2" fill="#ffffff"/>
+  <circle cx="31.5" cy="29" r="2.2" fill="#ffffff"/>
+</svg>

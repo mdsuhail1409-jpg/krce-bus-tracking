@@ -604,6 +604,138 @@
             box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
         }
 
+        
+        /* Custom Circular Bus Marker Styling */
+        .bus-marker-wrapper {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .bus-marker-wrapper:hover {
+            transform: scale(1.18);
+            z-index: 1000 !important;
+        }
+        .bus-marker-pulse {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .bus-marker-wrapper.online .bus-marker-pulse {
+            background: rgba(16, 185, 129, 0.3);
+            animation: markerPulse 2s infinite ease-out;
+        }
+        .bus-marker-wrapper.selected .bus-marker-pulse {
+            background: rgba(234, 179, 8, 0.45);
+            animation: markerPulse 1.5s infinite ease-out;
+        }
+        .bus-marker-wrapper.delay .bus-marker-pulse,
+        .bus-marker-wrapper.danger .bus-marker-pulse {
+            background: rgba(239, 68, 68, 0.35);
+            animation: markerPulse 1.5s infinite ease-out;
+        }
+        @keyframes markerPulse {
+            0% { transform: scale(0.9); opacity: 0.9; }
+            100% { transform: scale(1.75); opacity: 0; }
+        }
+        .bus-marker-rotator {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.4s ease;
+        }
+        .bus-marker-disc {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 2.5px solid #1e293b;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        .bus-marker-wrapper.online .bus-marker-disc {
+            border-color: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+        }
+        .bus-marker-wrapper.selected .bus-marker-disc {
+            border-color: #eab308;
+            box-shadow: 0 0 14px rgba(234, 179, 8, 0.9);
+        }
+        .bus-marker-wrapper.delay .bus-marker-disc,
+        .bus-marker-wrapper.danger .bus-marker-disc {
+            border-color: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+        }
+        .bus-marker-wrapper.offline .bus-marker-disc {
+            border-color: #64748b;
+            filter: grayscale(80%) opacity(0.85);
+        }
+        .bus-marker-img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            display: block;
+            pointer-events: none;
+        }
+        .bus-marker-pointer {
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 7px solid #10b981;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+        }
+        .bus-marker-wrapper.selected .bus-marker-pointer {
+            border-bottom-color: #eab308;
+        }
+        .bus-marker-wrapper.delay .bus-marker-pointer,
+        .bus-marker-wrapper.danger .bus-marker-pointer {
+            border-bottom-color: #ef4444;
+        }
+        .bus-marker-wrapper.offline .bus-marker-pointer {
+            display: none;
+        }
+        .bus-marker-badge-num {
+            position: absolute;
+            bottom: -9px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0f172a;
+            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 9.5px;
+            font-weight: 800;
+            padding: 1px 5px;
+            border-radius: 9px;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            border: 1.5px solid #ffffff;
+            z-index: 5;
+            letter-spacing: 0.3px;
+        }
+        .bus-marker-wrapper.selected .bus-marker-badge-num {
+            background: #eab308;
+            color: #0f172a;
+            border-color: #0f172a;
+        }
+
         /* Campus Marker Styling */
         .campus-marker-icon {
             background: #ffffff;
@@ -1683,17 +1815,21 @@
                     updateMapMarker(bus);
 
                     // For non-admin roles: auto-draw route immediately on load
-                    if (role !== 'admin' && role !== 'driver' && bus.live) {
+                    if (role !== 'admin' && role !== 'driver') {
                         if (!activeBusId) {
                             activeBusId = bus.id;
-                            map.setCenter({ lat: bus.live.lat, lng: bus.live.lon });
-                            map.setZoom(15);
-                            drawRouteOSRM(bus, bus.live);
+                            const busLat = (bus.live && bus.live.lat) ? bus.live.lat : STOP_COORDS["KRCE Campus"][0];
+                            const busLon = (bus.live && bus.live.lon) ? bus.live.lon : STOP_COORDS["KRCE Campus"][1];
+                            map.setCenter({ lat: busLat, lng: busLon });
+                            map.setZoom(13);
+                            drawRouteOSRM(bus, bus.live || { lat: busLat, lon: busLon, direction: "forward" });
                         }
                     }
 
-                    if (activeBusId === bus.id && bus.live) {
-                        drawRouteOSRM(bus, bus.live);
+                    if (activeBusId === bus.id) {
+                        const busLat = (bus.live && bus.live.lat) ? bus.live.lat : STOP_COORDS["KRCE Campus"][0];
+                        const busLon = (bus.live && bus.live.lon) ? bus.live.lon : STOP_COORDS["KRCE Campus"][1];
+                        drawRouteOSRM(bus, bus.live || { lat: busLat, lon: busLon, direction: "forward" });
                     }
 
                     const card = document.createElement('div');
@@ -1701,15 +1837,16 @@
 
                     // Card click: open side panel for admin, center map for all
                     card.onclick = () => {
-                        if (bus.live && bus.live.lat) {
-                            activeBusId = bus.id;
-                            map.setCenter({ lat: bus.live.lat, lng: bus.live.lon });
-                            map.setZoom(14);
-                            drawRouteOSRM(bus, bus.live);
-                            openBusDetailPanel(bus);
-                            loadBusRoutes();
-                        } else {
-                            showToast('Bus Offline', `${bus.number} is currently offline and at KRCE Campus.`, 'info');
+                        activeBusId = bus.id;
+                        const busLat = (bus.live && bus.live.lat) ? bus.live.lat : STOP_COORDS["KRCE Campus"][0];
+                        const busLon = (bus.live && bus.live.lon) ? bus.live.lon : STOP_COORDS["KRCE Campus"][1];
+                        map.setCenter({ lat: busLat, lng: busLon });
+                        map.setZoom(14);
+                        drawRouteOSRM(bus, bus.live || { lat: busLat, lon: busLon, direction: "forward" });
+                        openBusDetailPanel(bus);
+                        loadBusRoutes();
+                        if (!bus.live || bus.live.status === 'offline') {
+                            showToast('Bus Route', `Showing scheduled stops for ${bus.number}. (Bus offline)`, 'info');
                         }
                     };
 
@@ -1759,6 +1896,7 @@
             }
         }
 
+                const BUS_MARKER_ICON_DATA = "data:image/png;base64,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";
         // Update bus marker position on map
         function updateMapMarker(bus) {
             const busId = bus.id;
@@ -1780,10 +1918,17 @@
             const textHeading = isOnline ? `transform: rotate(${-heading}deg);` : '';
             const containerHeading = isOnline ? `transform: rotate(${heading}deg);` : '';
 
+            const busNumBadge = bus.number.split('-')[1] || bus.number;
             const markerHtml = `
-                <div class="bus-marker-icon ${markerClass}" style="${markerBg} ${containerHeading}">
-                    <span style="display: inline-block; ${textHeading}">${bus.number.split('-')[1] || bus.number}</span>
-                    <div style="position: absolute; top: -6px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid #ffffff;"></div>
+                <div class="bus-marker-wrapper ${markerClass}" title="${bus.number} (${bus.route_name})">
+                    <div class="bus-marker-pulse"></div>
+                    <div class="bus-marker-rotator" style="${containerHeading}">
+                        <div class="bus-marker-disc" style="${markerBg}">
+                            <img src="${BUS_MARKER_ICON_DATA}" class="bus-marker-img" alt="Bus ${bus.number}" />
+                        </div>
+                        <div class="bus-marker-pointer"></div>
+                    </div>
+                    <div class="bus-marker-badge-num">${busNumBadge}</div>
                 </div>
             `;
 
@@ -1811,8 +1956,8 @@
                             loadBusRoutes();
                         }
                     },
-                    [30, 30],
-                    [15, 15]
+                    [44, 44],
+                    [22, 22]
                 );
                 busMarkers[busId] = marker;
             }
@@ -2008,7 +2153,18 @@
             "Thillai Nagar": [10.8240, 78.6890],
             "Mannarpuram": [10.8182, 78.7030],
             "Rockfort": [10.8300, 78.6970],
-            "Chinthamani": [10.8350, 78.7020]
+            "Chinthamani": [10.8350, 78.7020],
+            "TVS Tollgate": [10.8015, 78.6890],
+            "SIT": [10.8055, 78.6912],
+            "Ambigapuram": [10.7985, 78.7050],
+            "Manjathidal": [10.7950, 78.7110],
+            "Armory Gate": [10.7915, 78.7180],
+            "Panjayat Office": [10.7880, 78.7240],
+            "Kalkandar Kottai": [10.7850, 78.7310],
+            "BVM Trichy": [10.8100, 78.6950],
+            "Kadai Veethi": [10.8050, 78.7000],
+            "Mandabam": [10.8000, 78.7080],
+            "Aathupalam": [10.7930, 78.7150]
         };
 
         function getDistance(lat1, lon1, lat2, lon2) {
@@ -2043,8 +2199,9 @@
 
             if (stopsCoords.length === 0) return;
 
-            const busLat = live.lat;
-            const busLon = live.lon;
+            live = live || { lat: stopsCoords[0].lat, lon: stopsCoords[0].lon, direction: "forward" };
+            const busLat = (live && live.lat != null) ? live.lat : stopsCoords[0].lat;
+            const busLon = (live && live.lon != null) ? live.lon : stopsCoords[0].lon;
 
             // Determine direction of travel & dynamic destination
             const isForward = live.direction !== "reverse";
@@ -2193,11 +2350,29 @@
             };
             routeMarkers.destination = destMarker;
 
-            // Orange Bus Stop Markers along travelStops
+            // Bus Stop Markers along travelStops
             travelStops.forEach((stop, index) => {
                 if (index === 0) return;
                 
-                const stopHtml = `<div style="width: 18px; height: 18px; background: #f97316; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 6px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: white; font-size: 9px; font-weight: bold;">${index}</div>`;
+                const stopHtml = `
+                <div style="width: 30px; height: 42px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45)); cursor: pointer;">
+                  <svg viewBox="0 0 100 138" width="100%" height="100%">
+                    <path d="M50 0 C22.4 0 0 22.4 0 50 C0 85 45 132 48 136 C49 137.5 51 137.5 52 136 C55 132 100 85 100 50 C100 22.4 77.6 0 50 0 Z" fill="#111827" stroke="#ffffff" stroke-width="3"/>
+                    <circle cx="50" cy="50" r="36" fill="#ffffff"/>
+                    <g fill="#111827">
+                      <rect x="30" y="24" width="40" height="48" rx="8" ry="8"/>
+                      <rect x="39" y="27" width="22" height="4" rx="2" fill="#ffffff"/>
+                      <rect x="34" y="34" width="32" height="20" rx="3" fill="#ffffff"/>
+                      <rect x="34" y="60" width="8" height="4" rx="1" fill="#ffffff"/>
+                      <rect x="58" y="60" width="8" height="4" rx="1" fill="#ffffff"/>
+                      <rect x="46" y="67" width="8" height="3" rx="1" fill="#ffffff"/>
+                      <rect x="26" y="37" width="3" height="8" rx="1"/>
+                      <rect x="71" y="37" width="3" height="8" rx="1"/>
+                      <rect x="33" y="72" width="6" height="4" rx="1"/>
+                      <rect x="61" y="72" width="6" height="4" rx="1"/>
+                    </g>
+                  </svg>
+                </div>`;
 
                 const d = getDistance(busLat, busLon, stop.lat, stop.lon);
                 const distanceText = d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${d.toFixed(0)} m`;
@@ -2211,8 +2386,8 @@
                     () => {
                         stopMarker.openPopup();
                     },
-                    [18, 18],
-                    [9, 9]
+                    [30, 42],
+                    [15, 42]
                 );
 
                 const stopInfoWindow = new google.maps.InfoWindow({
