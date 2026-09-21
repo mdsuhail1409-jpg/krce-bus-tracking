@@ -9,6 +9,7 @@ import '../../../core/models/models.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/websocket_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/notification_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'package:dio/dio.dart';
 
@@ -23,7 +24,6 @@ class BusMarkerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
-    final h = size.height;
     final paint = Paint()..isAntiAlias = true;
     final bodyColor = customColor ??
         (isOnline ? const Color(0xFF10B981) : const Color(0xFF64748B));
@@ -277,6 +277,15 @@ class _MapScreenState extends ConsumerState<MapScreen>
     } else if (type == 'alert') {
       final title = data['title'] as String? ?? 'Bus Alert';
       final msg = data['message'] as String? ?? '';
+
+      // Trigger audio alert ringtone, vibration, and system notification
+      NotificationService.showNotification(
+        title: title,
+        body: msg,
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        playAudioFeedback: true,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
