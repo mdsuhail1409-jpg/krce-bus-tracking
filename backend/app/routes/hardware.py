@@ -57,6 +57,7 @@ async def _verify_hw_key(x_device_key: str = "", x_api_key: str = ""):
 
 class HardwareGpsUpdate(BaseModel):
     bus_id: str = ""
+    busId: str = ""
     deviceId: str = ""
     lat: float = 0.0
     latitude: float = 0.0
@@ -67,6 +68,8 @@ class HardwareGpsUpdate(BaseModel):
     passengers: int = 0
     satellites: int = 0
     hdop: float = 0.0
+    altitude: float = 0.0
+    gpsFix: bool = False
     tripActive: bool = False
 
 
@@ -187,7 +190,7 @@ async def hardware_gps_post(req: HardwareGpsUpdate, x_device_key: str = Header(d
     """Handle hardware GPS location broadcast via generic hardware route."""
     await _verify_hw_key(x_device_key, x_api_key)
 
-    target_bus = normalize_bus_id(req.bus_id or req.deviceId or "B07")
+    target_bus = normalize_bus_id(req.bus_id or req.busId or req.deviceId or "B07")
     actual_lat = req.lat if req.lat != 0.0 else req.latitude
     actual_lon = req.lon if req.lon != 0.0 else req.longitude
 
