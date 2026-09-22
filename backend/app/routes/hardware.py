@@ -158,10 +158,10 @@ async def hardware_status(bus_id: str = "B07"):
 async def hardware_bus_live_post(bus_id: str, req: GpsUpdate):
     """Handle hardware GPS location broadcast from ESP32 / SIM900A."""
     db = db_module.db
-    bus = await db.buses.find_one({"id": bus_id})
+    bus = await db.buses.find_one({"id": bus_id}) if db is not None else None
     driver_name = "Hardware ESP32"
     driver_id = "hw_node"
-    if bus and bus.get("driver_id"):
+    if bus and bus.get("driver_id") and db is not None:
         drv = await db.users.find_one({"id": bus["driver_id"]})
         if drv:
             driver_name = drv.get("name", driver_name)

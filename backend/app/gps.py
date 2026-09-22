@@ -29,7 +29,8 @@ async def trigger_system_alert(title: str, message: str, alert_type: str = "info
         "sent_at": now_str(),
         "is_resolved": 0
     }
-    await db.alerts.insert_one(alert_doc)
+    if db is not None:
+        await db.alerts.insert_one(alert_doc)
 
     payload = json.dumps({
         "type": "alert",
@@ -67,6 +68,8 @@ async def initialize_route_geometry(bus_id: str, start_lat: float, start_lon: fl
 async def run_geofencing_check(bus_id: str, lat: float, lon: float):
     """Check if bus has entered/exited any stop geofences (100m proximity)."""
     db = db_module.db
+    if db is None:
+        return
     bus = await db.buses.find_one({"id": bus_id})
     if not bus:
         return
@@ -105,6 +108,8 @@ async def run_geofencing_check(bus_id: str, lat: float, lon: float):
 async def run_safety_checks(bus_id: str, lat: float, lon: float, speed: float, now_ts: float):
     """Run overspeed, idle, and route deviation checks."""
     db = db_module.db
+    if db is None:
+        return
     bus = await db.buses.find_one({"id": bus_id})
     if not bus:
         return
@@ -174,7 +179,7 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
     current_pax = live_buses[bus_id].get("passengers", 0) if (bus_id in live_buses and not is_first_ping) else passengers
 
     # 1. Fetch Bus Route to determine progression
-    bus = await db.buses.find_one({"id": bus_id})
+    bus = await db.buses.find_one({"id": bus_id}) if db is not None else None
     stops = bus.get("stops", []) if bus else []
     
     from app.config import STOP_COORDS
@@ -290,20 +295,21 @@ async def process_gps_update(bus_id: str, driver_id: str, driver_name: str, lat:
         asyncio.create_task(initialize_route_geometry(bus_id, lat, lon, coords[0], coords[1]))
 
     # Log to history collection for playback
-    await db.live_bus_positions_history.insert_one({
-        "bus_id": bus_id, "lat": lat, "lon": lon, "speed": speed,
-        "heading": heading, "passengers": current_pax, "ts": now_ts,
-        "date": today()
-    })
+    if db is not None:
+        await db.live_bus_positions_history.insert_one({
+            "bus_id": bus_id, "lat": lat, "lon": lon, "speed": speed,
+            "heading": heading, "passengers": current_pax, "ts": now_ts,
+            "date": today()
+        })
 
-    # Persist live state to DB
-    save_data = live_buses[bus_id].copy()
-    save_data.pop("route_geometry", None)
-    await db.live_bus_positions.update_one(
-        {"bus_id": bus_id},
-        {"$set": save_data},
-        upsert=True
-    )
+        # Persist live state to DB
+        save_data = live_buses[bus_id].copy()
+        save_data.pop("route_geometry", None)
+        await db.live_bus_positions.update_one(
+            {"bus_id": bus_id},
+            {"$set": save_data},
+            upsert=True
+        )
     last_seen[driver_id] = now_ts
 
     # Perform geofencing and safety checks
@@ -333,11 +339,12 @@ async def stale_cleaner():
                 info["status"] = "offline"
                 save_data = info.copy()
                 save_data.pop("route_geometry", None)
-                await db.live_bus_positions.update_one(
-                    {"bus_id": bid},
-                    {"$set": {"status": "offline", "updated_at": now}},
-                    upsert=True
-                )
+                if db is not None:
+                    await db.live_bus_positions.update_one(
+                        {"bus_id": bid},
+                        {"$set": {"status": "offline", "updated_at": now}},
+                        upsert=True
+                    )
                 await trigger_system_alert(
                     "Driver Offline",
                     f"Bus {bid} (Driver: {info.get('driver_name', 'Unknown')}) is offline.",
@@ -346,10 +353,11 @@ async def stale_cleaner():
                 )
             elif elapsed > VEHICLE_WARN_TTL and curr_status != "signal_loss":
                 info["status"] = "signal_loss"
-                await db.live_bus_positions.update_one(
-                    {"bus_id": bid},
-                    {"$set": {"status": "signal_loss"}},
-                    upsert=True
-                )
+                if db is not None:
+                    await db.live_bus_positions.update_one(
+                        {"bus_id": bid},
+                        {"$set": {"status": "signal_loss"}},
+                        upsert=True
+                    )
 
 
