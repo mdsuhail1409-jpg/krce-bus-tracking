@@ -3655,23 +3655,30 @@
             }
         });
 
-        async function deleteBus(id) {
-            if (!confirm("Are you sure you want to delete this bus?")) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/buses/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    loadBuses();
-                    loadStats();
+        function deleteBus(id) {
+            showConfirmDialog(
+                "Delete Vehicle Configuration",
+                "Are you sure you want to delete this vehicle from fleet operations?",
+                "Delete Bus",
+                true,
+                async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/buses/${id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) {
+                            loadBuses();
+                            loadStats();
+                        }
+                    } catch (e) {
+                        const idx = mockBuses.findIndex(b => b.id === id);
+                        if (idx > -1) mockBuses.splice(idx, 1);
+                        loadBuses();
+                        loadStats();
+                    }
                 }
-            } catch (e) {
-                const idx = mockBuses.findIndex(b => b.id === id);
-                if (idx > -1) mockBuses.splice(idx, 1);
-                loadBuses();
-                loadStats();
-            }
+            );
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -3837,31 +3844,34 @@
             renderUsersTable(filtered);
         }
 
-        // Bug 4: Confirmation popup on Deactivate button
-        async function toggleUserStatus(uid) {
+        function toggleUserStatus(uid) {
             const usr = globalUsers.find(u => u.id === uid);
             const actionText = usr && usr.is_active ? 'deactivate' : 'activate';
-            if (!confirm(`Are you sure you want to ${actionText} account for ${usr ? usr.name : 'this user'}?`)) {
-                return;
-            }
-
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/users/${uid}/toggle`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    await loadUsers();
-                    filterUsers(true);
+            showConfirmDialog(
+                `${actionText === 'deactivate' ? 'Deactivate' : 'Activate'} User Account`,
+                `Are you sure you want to ${actionText} account for ${usr ? usr.name : 'this user'}?`,
+                actionText === 'deactivate' ? 'Deactivate' : 'Activate',
+                actionText === 'deactivate',
+                async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/users/${uid}/toggle`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) {
+                            await loadUsers();
+                            filterUsers(true);
+                        }
+                    } catch (e) {
+                        const idx = mockUsers.findIndex(u => u.id === uid);
+                        if (idx > -1) {
+                            mockUsers[idx].is_active = mockUsers[idx].is_active ? 0 : 1;
+                        }
+                        await loadUsers();
+                        filterUsers(true);
+                    }
                 }
-            } catch (e) {
-                const idx = mockUsers.findIndex(u => u.id === uid);
-                if (idx > -1) {
-                    mockUsers[idx].is_active = mockUsers[idx].is_active ? 0 : 1;
-                }
-                await loadUsers();
-                filterUsers(true);
-            }
+            );
         }
 
         function exportUsersCSV() {
@@ -4084,27 +4094,34 @@
             }
         });
 
-        async function rejectRegistration(id) {
-            if (!confirm("Reject this registration request?")) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/registrations/action`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ reg_id: id, action: 'rejected', notes: 'Rejected by Admin' })
-                });
-                if (res.ok) {
-                    refreshAllData();
+        function rejectRegistration(id) {
+            showConfirmDialog(
+                "Reject Registration Request",
+                "Are you sure you want to reject this registration request?",
+                "Reject",
+                true,
+                async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/registrations/action`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ reg_id: id, action: 'rejected', notes: 'Rejected by Admin' })
+                        });
+                        if (res.ok) {
+                            refreshAllData();
+                        }
+                    } catch (e) {
+                        const idx = mockRegistrations.findIndex(r => r.id === id);
+                        if (idx > -1) {
+                            mockRegistrations[idx].status = 'rejected';
+                        }
+                        refreshAllData();
+                    }
                 }
-            } catch (e) {
-                const idx = mockRegistrations.findIndex(r => r.id === id);
-                if (idx > -1) {
-                    mockRegistrations[idx].status = 'rejected';
-                }
-                refreshAllData();
-            }
+            );
         }
 
         // ═══════════════════════════════════════════════════════════════════
