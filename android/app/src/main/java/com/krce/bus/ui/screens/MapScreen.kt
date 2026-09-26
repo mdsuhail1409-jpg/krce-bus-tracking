@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -275,7 +276,7 @@ fun LiveMapScreen(authToken: String, busId: String?) {
                 cameraPositionState = cameraPositionState,
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = false,
-                    compassEnabled = true,
+                    compassEnabled = false,
                     myLocationButtonEnabled = false,
                     mapToolbarEnabled = false
                 ),
@@ -426,6 +427,27 @@ fun LiveMapScreen(authToken: String, busId: String?) {
                         imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
                         contentDescription = "Toggle Fullscreen"
                     )
+                }
+
+                // North Realignment Button (Bottom Corner)
+                FloatingActionButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            val cur = cameraPositionState.position
+                            cameraPositionState.animate(
+                                CameraUpdateFactory.newCameraPosition(
+                                    CameraPosition(cur.target, cur.zoom, 0f, 0f)
+                                ),
+                                800
+                            )
+                        }
+                    },
+                    containerColor = Color.White,
+                    contentColor = IndigoPrimary,
+                    shape = CircleShape,
+                    modifier = Modifier.size(50.dp)
+                ) {
+                    Icon(Icons.Default.Explore, contentDescription = "Align North")
                 }
             }
 

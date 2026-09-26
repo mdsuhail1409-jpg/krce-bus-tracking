@@ -24,10 +24,17 @@ class _LogsScreenState extends ConsumerState<LogsScreen>
   bool _loadingAlerts = true;
   bool _loadingBreakdowns = true;
 
+  bool get _isPassenger {
+    final role = ref.read(authProvider).role;
+    return role == 'student' || role == 'parent' || role == 'staff';
+  }
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    final role = ref.read(authProvider).role;
+    final isPassenger = role == 'student' || role == 'parent' || role == 'staff';
+    _tabController = TabController(length: isPassenger ? 2 : 3, vsync: this);
     _fetchAll();
   }
 
@@ -40,7 +47,11 @@ class _LogsScreenState extends ConsumerState<LogsScreen>
   Future<void> _fetchAll() async {
     _fetchAttendance();
     _fetchAlerts();
-    _fetchBreakdowns();
+    if (!_isPassenger) {
+      _fetchBreakdowns();
+    } else {
+      if (mounted) setState(() => _loadingBreakdowns = false);
+    }
   }
 
   Future<void> _fetchAttendance() async {
@@ -133,10 +144,10 @@ class _LogsScreenState extends ConsumerState<LogsScreen>
           unselectedLabelColor: AppColors.mutedText,
           indicatorColor: AppColors.indigoPrimary,
           indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'Attendance'),
-            Tab(text: 'Alerts'),
-            Tab(text: 'Breakdowns'),
+          tabs: [
+            const Tab(text: 'Attendance'),
+            const Tab(text: 'Alerts'),
+            if (!_isPassenger) const Tab(text: 'Breakdowns'),
           ],
         ),
       ),
@@ -145,7 +156,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen>
         children: [
           _buildAttendanceTab(),
           _buildAlertsTab(),
-          _buildBreakdownsTab(),
+          if (!_isPassenger) _buildBreakdownsTab(),
         ],
       ),
     );

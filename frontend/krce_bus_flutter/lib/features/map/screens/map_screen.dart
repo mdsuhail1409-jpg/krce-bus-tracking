@@ -13,7 +13,7 @@ import '../../../core/services/notification_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'package:dio/dio.dart';
 
-// ── Bus marker custom painter ─────────────────────────────
+// ── Bus marker custom painter (Compact Size) ──────────────
 class BusMarkerPainter extends CustomPainter {
   final String label;
   final bool isOnline;
@@ -29,13 +29,13 @@ class BusMarkerPainter extends CustomPainter {
         (isOnline ? const Color(0xFF10B981) : const Color(0xFF64748B));
 
     final cx = w / 2;
-    const cy = 38.0;
-    const radius = 30.0;
+    const cy = 24.0;
+    const radius = 18.0;
 
     // Drop shadow
     paint.style = PaintingStyle.fill;
     paint.color = Colors.black.withOpacity(0.25);
-    canvas.drawCircle(Offset(cx, cy + 3), radius + 2, paint);
+    canvas.drawCircle(Offset(cx, cy + 2), radius + 1.5, paint);
 
     // White disc background
     paint.color = Colors.white;
@@ -43,15 +43,15 @@ class BusMarkerPainter extends CustomPainter {
 
     // Colored / dark status ring
     paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 3.2;
+    paint.strokeWidth = 2.2;
     paint.color = bodyColor;
-    canvas.drawCircle(Offset(cx, cy), radius - 1.6, paint);
+    canvas.drawCircle(Offset(cx, cy), radius - 1.1, paint);
 
     // Heading pointer at top
     final triPath = ui.Path()
-      ..moveTo(cx - 5, cy - radius - 1)
-      ..lineTo(cx + 5, cy - radius - 1)
-      ..lineTo(cx, cy - radius - 7)
+      ..moveTo(cx - 3.5, cy - radius - 1)
+      ..lineTo(cx + 3.5, cy - radius - 1)
+      ..lineTo(cx, cy - radius - 4.5)
       ..close();
     paint.style = PaintingStyle.fill;
     paint.color = bodyColor;
@@ -64,15 +64,15 @@ class BusMarkerPainter extends CustomPainter {
     // Side mirrors
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx - 23, cy - 8, 3.5, 9),
-        const Radius.circular(1.5),
+        Rect.fromLTWH(cx - 14.5, cy - 5, 2.2, 5.5),
+        const Radius.circular(1.0),
       ),
       paint,
     );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx + 19.5, cy - 8, 3.5, 9),
-        const Radius.circular(1.5),
+        Rect.fromLTWH(cx + 12.3, cy - 5, 2.2, 5.5),
+        const Radius.circular(1.0),
       ),
       paint,
     );
@@ -80,15 +80,15 @@ class BusMarkerPainter extends CustomPainter {
     // Wheels
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx - 15, cy + 12.5, 6.5, 7),
-        const Radius.circular(2),
+        Rect.fromLTWH(cx - 9.5, cy + 7.5, 4.0, 4.5),
+        const Radius.circular(1.2),
       ),
       paint,
     );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx + 8.5, cy + 12.5, 6.5, 7),
-        const Radius.circular(2),
+        Rect.fromLTWH(cx + 5.5, cy + 7.5, 4.0, 4.5),
+        const Radius.circular(1.2),
       ),
       paint,
     );
@@ -96,11 +96,11 @@ class BusMarkerPainter extends CustomPainter {
     // Main Bus Body
     canvas.drawRRect(
       RRect.fromRectAndCorners(
-        Rect.fromLTWH(cx - 17.5, cy - 18, 35, 31),
-        topLeft: const Radius.circular(10),
-        topRight: const Radius.circular(10),
-        bottomLeft: const Radius.circular(4),
-        bottomRight: const Radius.circular(4),
+        Rect.fromLTWH(cx - 11.0, cy - 11.5, 22.0, 19.5),
+        topLeft: const Radius.circular(6),
+        topRight: const Radius.circular(6),
+        bottomLeft: const Radius.circular(2.5),
+        bottomRight: const Radius.circular(2.5),
       ),
       paint,
     );
@@ -109,8 +109,8 @@ class BusMarkerPainter extends CustomPainter {
     paint.color = Colors.white;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx - 7, cy - 15.5, 14, 3.5),
-        const Radius.circular(1.5),
+        Rect.fromLTWH(cx - 4.5, cy - 10.0, 9.0, 2.2),
+        const Radius.circular(1.0),
       ),
       paint,
     );
@@ -118,15 +118,15 @@ class BusMarkerPainter extends CustomPainter {
     // Front windshield (White)
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(cx - 13.5, cy - 10, 27, 13),
-        const Radius.circular(3),
+        Rect.fromLTWH(cx - 8.5, cy - 6.5, 17.0, 8.2),
+        const Radius.circular(2.0),
       ),
       paint,
     );
 
     // Headlights (White circles)
-    canvas.drawCircle(Offset(cx - 9.5, cy + 7.5), 2.7, paint);
-    canvas.drawCircle(Offset(cx + 9.5, cy + 7.5), 2.7, paint);
+    canvas.drawCircle(Offset(cx - 6.0, cy + 4.5), 1.7, paint);
+    canvas.drawCircle(Offset(cx + 6.0, cy + 4.5), 1.7, paint);
 
     // Bus Number Pill Badge at bottom
     final tp = TextPainter(
@@ -135,44 +135,44 @@ class BusMarkerPainter extends CustomPainter {
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w800,
-          fontSize: 11,
-          letterSpacing: 0.3,
+          fontSize: 8.5,
+          letterSpacing: 0.2,
         ),
       ),
       textDirection: TextDirection.ltr,
     );
     tp.layout();
 
-    final badgeW = (tp.width + 14).clamp(32.0, 70.0);
-    const badgeH = 18.0;
-    final badgeRect = Rect.fromLTWH(cx - badgeW / 2, cy + radius - 5, badgeW, badgeH);
+    final badgeW = (tp.width + 10).clamp(24.0, 48.0);
+    const badgeH = 13.0;
+    final badgeRect = Rect.fromLTWH(cx - badgeW / 2, cy + radius - 3, badgeW, badgeH);
 
     // Pill background
     paint.color = const Color(0xFF0F172A);
     canvas.drawRRect(
-      RRect.fromRectAndRadius(badgeRect, const Radius.circular(9)),
+      RRect.fromRectAndRadius(badgeRect, const Radius.circular(6.5)),
       paint,
     );
 
     // Pill border
     paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = 1.5;
+    paint.strokeWidth = 1.0;
     paint.color = Colors.white;
     canvas.drawRRect(
-      RRect.fromRectAndRadius(badgeRect, const Radius.circular(9)),
+      RRect.fromRectAndRadius(badgeRect, const Radius.circular(6.5)),
       paint,
     );
 
     // Pill text
     tp.paint(
       canvas,
-      Offset(cx - tp.width / 2, cy + radius - 5 + (badgeH - tp.height) / 2),
+      Offset(cx - tp.width / 2, cy + radius - 3 + (badgeH - tp.height) / 2),
     );
   }
 
   @override
   bool shouldRepaint(covariant BusMarkerPainter old) =>
-      old.label != label || old.isOnline != isOnline;
+      old.label != label || old.isOnline != isOnline || old.customColor != customColor;
 }
 
 // ── Map Screen ────────────────────────────────────────────
@@ -212,6 +212,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
   Bus? _trackedBus;
   bool _showRoutePanel = false;
   EmergencyAssignmentResponse? _activeEmergency;
+  CameraPosition? _currentCameraPosition;
+
+  bool get _isPassenger {
+    final role = ref.read(authProvider).role;
+    return role == 'student' || role == 'parent';
+  }
 
   static const String _darkMapStyle = '''
   [
@@ -282,6 +288,19 @@ class _MapScreenState extends ConsumerState<MapScreen>
     } else if (type == 'alert') {
       final title = data['title'] as String? ?? 'Bus Alert';
       final msg = data['message'] as String? ?? '';
+      final targetRole = data['target_role'] as String?;
+      final targetBus = data['target_bus'] as String?;
+      final auth = ref.read(authProvider);
+
+      // Task 4: Filter alerts so passengers only receive notifications about their bus or universal admin alerts
+      if (auth.role != 'admin' && auth.role != 'committee') {
+        if (targetRole != null && targetRole != 'all' && targetRole != auth.role && targetRole != 'passenger') {
+          return;
+        }
+        if (targetBus != null && targetBus.isNotEmpty && targetBus != 'all' && targetBus != auth.busId) {
+          return;
+        }
+      }
 
       // Trigger audio alert ringtone, vibration, and system notification
       NotificationService.showNotification(
@@ -340,14 +359,22 @@ class _MapScreenState extends ConsumerState<MapScreen>
   }
 
   Future<void> _autoLoadMyBus() async {
-    await Future.delayed(const Duration(seconds: 2)); // wait for first poll
+    if (!mounted) return;
+    if (_buses.isEmpty) {
+      await Future.delayed(const Duration(milliseconds: 600));
+    }
     if (!mounted || _buses.isEmpty) return;
-    final bus = _buses.first;
+    final auth = ref.read(authProvider);
+    final bus = _buses.firstWhere(
+      (b) => b.id == auth.busId || b.number == auth.busId,
+      orElse: () => _buses.first,
+    );
+    _trackedBus = bus;
+    _drawRoute(bus);
     if (bus.live != null && _mapCtrl != null) {
       _mapCtrl!.animateCamera(
-        CameraUpdate.newLatLngZoom(LatLng(bus.live!.lat, bus.live!.lon), 15),
+        CameraUpdate.newLatLngZoom(LatLng(bus.live!.lat, bus.live!.lon), 16),
       );
-      _drawRoute(bus);
     }
   }
 
@@ -376,6 +403,18 @@ class _MapScreenState extends ConsumerState<MapScreen>
         );
         if (updated.live != null) {
           _drawRoute(updated);
+        }
+      } else if (_isPassenger && buses.isNotEmpty) {
+        final myBus = buses.firstWhere(
+          (b) => b.id == auth.busId || b.number == auth.busId,
+          orElse: () => buses.first,
+        );
+        _trackedBus = myBus;
+        _drawRoute(myBus);
+        if (myBus.live != null && _mapCtrl != null) {
+          _mapCtrl!.animateCamera(
+            CameraUpdate.newLatLngZoom(LatLng(myBus.live!.lat, myBus.live!.lon), 16),
+          );
         }
       }
     } catch (e) {
@@ -495,10 +534,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
   void _clearRoute() {
     setState(() {
-      _trackedBus = null;
       _showRoutePanel = false;
-      _completedRoute = [];
-      _remainingRoute = [];
+      if (!_isPassenger) {
+        _trackedBus = null;
+        _completedRoute = [];
+        _remainingRoute = [];
+      }
     });
   }
 
@@ -512,20 +553,20 @@ class _MapScreenState extends ConsumerState<MapScreen>
   Future<BitmapDescriptor> _getCampusMarkerIcon() async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    const size = Size(96, 96);
+    const size = Size(56, 56);
     
     final paint = Paint()..isAntiAlias = true;
     paint.color = Colors.white;
-    canvas.drawCircle(const Offset(48, 48), 48, paint);
+    canvas.drawCircle(const Offset(28, 28), 28, paint);
     
     paint.color = const Color(0xFF8B5CF6);
-    canvas.drawCircle(const Offset(48, 48), 42, paint);
+    canvas.drawCircle(const Offset(28, 28), 24, paint);
     
     paint.color = Colors.white;
-    canvas.drawCircle(const Offset(48, 48), 19, paint);
+    canvas.drawCircle(const Offset(28, 28), 11, paint);
 
     final picture = recorder.endRecording();
-    final img = await picture.toImage(96, 96);
+    final img = await picture.toImage(56, 56);
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
     final bytes = byteData!.buffer.asUint8List();
     return BitmapDescriptor.fromBytes(bytes);
@@ -534,13 +575,13 @@ class _MapScreenState extends ConsumerState<MapScreen>
   Future<BitmapDescriptor> _getBusStopMarkerIcon() async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    const size = Size(60, 84);
+    const size = Size(36, 50);
 
     final path = Path()
-      ..moveTo(30, 82)
-      ..cubicTo(27, 78, 2, 50, 2, 30)
-      ..arcTo(Rect.fromCircle(center: const Offset(30, 30), radius: 28), 3.14159, 3.14159, false)
-      ..cubicTo(58, 50, 33, 78, 30, 82)
+      ..moveTo(18, 48)
+      ..cubicTo(16, 45, 1, 29, 1, 18)
+      ..arcTo(Rect.fromCircle(center: const Offset(18, 18), radius: 17), 3.14159, 3.14159, false)
+      ..cubicTo(35, 29, 20, 45, 18, 48)
       ..close();
 
     final pinPaint = Paint()
@@ -551,13 +592,13 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final borderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
+      ..strokeWidth = 1.8;
     canvas.drawPath(path, borderPaint);
 
     final whiteCirclePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(const Offset(30, 30), 20, whiteCirclePaint);
+    canvas.drawCircle(const Offset(18, 18), 12, whiteCirclePaint);
 
     // Front-facing bus icon inside circle
     final busPaint = Paint()..color = const Color(0xFF111827);
@@ -565,41 +606,34 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
     // Bus body
     final busRect = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(19, 16, 22, 26),
-      const Radius.circular(5),
+      const Rect.fromLTWH(11.5, 9.5, 13, 15.5),
+      const Radius.circular(3),
     );
     canvas.drawRRect(busRect, busPaint);
 
     // Top sign board
     canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(24, 18, 12, 2.5), const Radius.circular(1)),
+      const RRect.fromRectAndRadius(Rect.fromLTWH(14.5, 10.5, 7, 1.5), Radius.circular(0.8)),
       whitePaint,
     );
 
     // Windshield
     final windshieldRect = RRect.fromRectAndRadius(
-      const Rect.fromLTWH(21.5, 22, 17, 10),
-      const Radius.circular(2),
+      const Rect.fromLTWH(13, 13, 10, 6),
+      const Radius.circular(1.5),
     );
     canvas.drawRRect(windshieldRect, whitePaint);
 
     // Headlights
-    canvas.drawRect(const Rect.fromLTWH(21.5, 35, 4.5, 2.5), whitePaint);
-    canvas.drawRect(const Rect.fromLTWH(34, 35, 4.5, 2.5), whitePaint);
-
-    // Bumper / Grille
-    canvas.drawRect(const Rect.fromLTWH(28, 39, 4, 1.5), whitePaint);
-
-    // Mirrors
-    canvas.drawRect(const Rect.fromLTWH(17, 24, 2, 4.5), busPaint);
-    canvas.drawRect(const Rect.fromLTWH(41, 24, 2, 4.5), busPaint);
+    canvas.drawRect(const Rect.fromLTWH(13, 20.8, 2.7, 1.5), whitePaint);
+    canvas.drawRect(const Rect.fromLTWH(20.3, 20.8, 2.7, 1.5), whitePaint);
 
     // Wheels
-    canvas.drawRect(const Rect.fromLTWH(21, 41, 3.5, 2.5), busPaint);
-    canvas.drawRect(const Rect.fromLTWH(35.5, 41, 3.5, 2.5), busPaint);
+    canvas.drawRect(const Rect.fromLTWH(12.7, 24.5, 2.2, 1.5), busPaint);
+    canvas.drawRect(const Rect.fromLTWH(21.1, 24.5, 2.2, 1.5), busPaint);
 
     final picture = recorder.endRecording();
-    final img = await picture.toImage(60, 84);
+    final img = await picture.toImage(36, 50);
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
     final bytes = byteData!.buffer.asUint8List();
     return BitmapDescriptor.fromBytes(bytes);
@@ -608,11 +642,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
   Future<BitmapDescriptor> _getBusMarkerIcon(String label, bool isOnline, {Color? customColor}) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    const size = Size(140, 100);
+    const size = Size(84, 60);
     final painter = BusMarkerPainter(label: label, isOnline: isOnline, customColor: customColor);
     painter.paint(canvas, size);
     final picture = recorder.endRecording();
-    final img = await picture.toImage(140, 100);
+    final img = await picture.toImage(84, 60);
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
     final bytes = byteData!.buffer.asUint8List();
     return BitmapDescriptor.fromBytes(bytes);
@@ -748,10 +782,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
             ),
             minMaxZoomPreference: const MinMaxZoomPreference(7.0, null),
             zoomControlsEnabled: false,
-            compassEnabled: true,
+            compassEnabled: false, // Task 2: Disable top-left compass under notification bar
             myLocationButtonEnabled: false,
             markers: _buildMarkers(),
             polylines: _buildPolylines(),
+            onCameraMove: (pos) => _currentCameraPosition = pos,
             onMapCreated: (controller) {
               _mapCtrl = controller;
               _updateMapStyle();
@@ -775,7 +810,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ),
             ),
 
-          // ── FAB Controls ─────────────────────────────────
+          // ── FAB Controls (Top-Right) ─────────────────────
           Positioned(
             right: 16,
             top: MediaQuery.of(context).padding.top + 60,
@@ -783,6 +818,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
               children: [
                 _mapFab(
                     icon: Icons.layers,
+                    tooltip: 'Toggle Dark Style',
                     onTap: () {
                       setState(() => _isDarkMode = !_isDarkMode);
                       _updateMapStyle();
@@ -790,6 +826,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 const SizedBox(height: 10),
                 _mapFab(
                     icon: Icons.my_location,
+                    tooltip: 'Locate Me',
                     onTap: () {
                       _getMyLocation();
                       if (_myLocation != null && _mapCtrl != null) {
@@ -803,9 +840,39 @@ class _MapScreenState extends ConsumerState<MapScreen>
                     icon: _isFullscreen
                         ? Icons.fullscreen_exit
                         : Icons.fullscreen,
+                    tooltip: 'Fullscreen',
                     onTap: () =>
                         setState(() => _isFullscreen = !_isFullscreen)),
               ],
+            ),
+          ),
+
+          // ── North Alignment FAB (Bottom Corner) ───────────
+          Positioned(
+            right: 16,
+            bottom: (_showRoutePanel && _trackedBus != null) ? 175 : 30,
+            child: _mapFab(
+              icon: Icons.explore,
+              tooltip: 'Align North',
+              onTap: () async {
+                if (_mapCtrl != null) {
+                  final target = _currentCameraPosition?.target ??
+                      (_trackedBus?.live != null
+                          ? LatLng(_trackedBus!.live!.lat, _trackedBus!.live!.lon)
+                          : (_myLocation ?? _campus));
+                  final zoom = _currentCameraPosition?.zoom ?? 15.0;
+                  _mapCtrl!.animateCamera(
+                    CameraUpdate.newCameraPosition(
+                      CameraPosition(
+                        target: target,
+                        zoom: zoom,
+                        bearing: 0.0,
+                        tilt: 0.0,
+                      ),
+                    ),
+                  );
+                }
+              },
             ),
           ),
 
@@ -824,8 +891,61 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ),
             ),
 
-          // ── Bus List bottom card (scrollable) ──────────────
-          if (!_showRoutePanel)
+          // ── Compact Track My Bus Pill (for passengers when route panel closed) ──
+          if (!_showRoutePanel && _isPassenger && _trackedBus != null)
+            Positioned(
+              bottom: 24,
+              left: 16,
+              right: 76,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => _showRoutePanel = true);
+                  if (_trackedBus?.live != null && _mapCtrl != null) {
+                    _mapCtrl!.animateCamera(
+                      CameraUpdate.newLatLngZoom(
+                        LatLng(_trackedBus!.live!.lat, _trackedBus!.live!.lon),
+                        16,
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceColor,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.directions_bus, color: AppColors.indigoPrimary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '${_trackedBus!.number} • Tap to view route details',
+                          style: const TextStyle(
+                            color: AppColors.textColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.keyboard_arrow_up, color: AppColors.mutedText),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // ── Bus List bottom card (scrollable, Admin/Driver fleet picker) ──────────────
+          if (!_showRoutePanel && !_isPassenger)
             DraggableScrollableSheet(
               initialChildSize: 0.25,
               minChildSize: 0.10,
@@ -893,20 +1013,23 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
   }
 
-  Widget _mapFab({required IconData icon, required VoidCallback onTap}) =>
-      GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8)
-            ],
+  Widget _mapFab({required IconData icon, required VoidCallback onTap, String? tooltip}) =>
+      Tooltip(
+        message: tooltip ?? '',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8)
+              ],
+            ),
+            child: Icon(icon, color: AppColors.indigoPrimary),
           ),
-          child: Icon(icon, color: AppColors.indigoPrimary),
         ),
       );
 }

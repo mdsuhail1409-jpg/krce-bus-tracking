@@ -79,10 +79,39 @@ async def change_password(req: ChangePasswordReq, u=Depends(current_user)):
 @router.get("/api/alerts")
 async def get_alerts(u=Depends(current_user)):
     db = db_module.db
-    cursor = db.alerts.find(
-        {"is_resolved": 0, "$or": [{"target_role": "all"}, {"target_role": u["role"]}]},
-        {"_id": 0}
-    ).sort("sent_at", -1).limit(20)
+    user_role = u.get("role", "student")
+
+    if user_role in ("admin", "committee"):
+        cursor = db.alerts.find(
+            {"is_resolved": 0},
+            {"_id": 0}
+        ).sort("sent_at", -1).limit(30)
+        return await cursor.to_list(length=None)
+
+    # For passengers (student, parent, staff):
+    user_doc = await db.users.find_one({"id": u["sub"]})
+    user_bus = user_doc.get("bus_id") if user_doc else None
+
+    # Role matching: 'all', specific role, or 'passenger'
+    role_filter = {
+        "$or": [
+            {"target_role": "all"},
+            {"target_role": user_role},
+            {"target_role": "passenger"} if user_role in ("student", "parent", "staff") else {"target_role": user_role}
+        ]
+    }
+
+    # Bus matching:
+    # 1. Universal announcements from admin (target_bus is None, empty, or 'all')
+    # 2. Alerts specifically targeting the user's assigned bus
+    allowed_bus_targets = [None, "", "all"]
+    if user_bus:
+        allowed_bus_targets.append(user_bus)
+
+    bus_filter = {"target_bus": {"$in": allowed_bus_targets}}
+
+    query = {"is_resolved": 0, "$and": [role_filter, bus_filter]}
+    cursor = db.alerts.find(query, {"_id": 0}).sort("sent_at", -1).limit(20)
     return await cursor.to_list(length=None)
 
 

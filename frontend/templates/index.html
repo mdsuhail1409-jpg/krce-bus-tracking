@@ -1814,15 +1814,20 @@
                     // Add/update map marker
                     updateMapMarker(bus);
 
-                    // For non-admin roles: auto-draw route immediately on load
+                    // For non-admin roles: auto-draw route and focus bus immediately on load
                     if (role !== 'admin' && role !== 'driver') {
                         if (!activeBusId) {
                             activeBusId = bus.id;
                             const busLat = (bus.live && bus.live.lat) ? bus.live.lat : STOP_COORDS["KRCE Campus"][0];
                             const busLon = (bus.live && bus.live.lon) ? bus.live.lon : STOP_COORDS["KRCE Campus"][1];
-                            map.setCenter({ lat: busLat, lng: busLon });
-                            map.setZoom(13);
+                            map.panTo({ lat: busLat, lng: busLon });
+                            map.setZoom(16);
                             drawRouteOSRM(bus, bus.live || { lat: busLat, lon: busLon, direction: "forward" });
+                            setTimeout(() => {
+                                if (busMarkers[bus.id] && busMarkers[bus.id].openPopup) {
+                                    busMarkers[bus.id].openPopup();
+                                }
+                            }, 500);
                         }
                     }
 
@@ -1835,15 +1840,20 @@
                     const card = document.createElement('div');
                     card.className = 'bus-item';
 
-                    // Card click: open side panel for admin, center map for all
+                    // Card click: center map with closer zoom (17); open side panel for admin
                     card.onclick = () => {
                         activeBusId = bus.id;
                         const busLat = (bus.live && bus.live.lat) ? bus.live.lat : STOP_COORDS["KRCE Campus"][0];
                         const busLon = (bus.live && bus.live.lon) ? bus.live.lon : STOP_COORDS["KRCE Campus"][1];
-                        map.setCenter({ lat: busLat, lng: busLon });
-                        map.setZoom(14);
+                        map.panTo({ lat: busLat, lng: busLon });
+                        map.setZoom(17);
                         drawRouteOSRM(bus, bus.live || { lat: busLat, lon: busLon, direction: "forward" });
-                        openBusDetailPanel(bus);
+                        if (busMarkers[bus.id] && busMarkers[bus.id].openPopup) {
+                            busMarkers[bus.id].openPopup();
+                        }
+                        if (role === 'admin' || role === 'committee') {
+                            openBusDetailPanel(bus);
+                        }
                         loadBusRoutes();
                         if (!bus.live || bus.live.status === 'offline') {
                             showToast('Bus Route', `Showing scheduled stops for ${bus.number}. (Bus offline)`, 'info');
@@ -1932,10 +1942,31 @@
                 </div>
             `;
 
+            const role = userProfile ? userProfile.role : 'student';
+            const clickHandler = () => {
+                const clickLat = (live && live.lat) ? live.lat : lat;
+                const clickLon = (live && live.lon) ? live.lon : lon;
+                activeBusId = bus.id;
+                map.panTo({ lat: clickLat, lng: clickLon });
+                map.setZoom(17);
+                drawRouteOSRM(bus, live || { lat: clickLat, lon: clickLon, direction: "forward" });
+                if (busMarkers[busId] && busMarkers[busId].openPopup) {
+                    busMarkers[busId].openPopup();
+                }
+                if (role === 'admin' || role === 'committee') {
+                    openBusDetailPanel(bus);
+                }
+                loadBusRoutes();
+                if (!live || live.status === 'offline') {
+                    showToast('Bus Route', `Showing scheduled stops for ${bus.number}. (Bus offline)`, 'info');
+                }
+            };
+
             if (busMarkers[busId]) {
                 // Smooth transition if marker exists
                 busMarkers[busId].setPosition(new google.maps.LatLng(lat, lon));
                 busMarkers[busId].html = markerHtml;
+                busMarkers[busId].onClick = clickHandler;
                 if (busMarkers[busId].div) {
                     busMarkers[busId].div.innerHTML = markerHtml;
                 }
@@ -1946,16 +1977,7 @@
                     markerHtml,
                     'custom-bus-marker',
                     map,
-                    () => {
-                        if (live && live.lat) {
-                            activeBusId = bus.id;
-                            map.setCenter({ lat: live.lat, lng: live.lon });
-                            map.setZoom(14);
-                            drawRouteOSRM(bus, live);
-                            openBusDetailPanel(bus);
-                            loadBusRoutes();
-                        }
-                    },
+                    clickHandler,
                     [44, 44],
                     [22, 22]
                 );

@@ -179,7 +179,8 @@ async def report_breakdown(req: BreakdownReport, u: Optional[dict] = Depends(sec
         title="🚨 Bus Breakdown Emergency",
         message=f"Bus {bus_number} (Driver: {driver_name}) has experienced a breakdown near {current_stop}!",
         alert_type="danger",
-        target_bus=bus_id
+        target_bus=bus_id,
+        target_role="admin"
     )
 
     # Broadcast emergency-specific event to WebSocket connections
@@ -447,8 +448,8 @@ async def accept_assignment(emergency_id: str, u=Depends(current_user)):
         "title": "Assigned Bus Breakdown — Replacement Ready",
         "message": f"Your assigned Bus {emerg['bus_number']} has experienced a mechanical issue. Replacement Bus: {emerg['backup_bus_number']} (Driver: {emerg['backup_driver_name']}, ETA: {emerg['eta_minutes']} mins). Please remain at your current location.",
         "alert_type": "emergency",
-        "target_role": "passenger",
-        "target_bus": backup_bus_id,
+        "target_role": "student",
+        "target_bus": emerg["bus_id"],
         "sent_by": "system",
         "sent_at": now_str(),
         "is_resolved": 0
@@ -459,7 +460,7 @@ async def accept_assignment(emergency_id: str, u=Depends(current_user)):
         "message": f"Your child's assigned Bus {emerg['bus_number']} has encountered a breakdown. A replacement Bus: {emerg['backup_bus_number']} (Driver: {emerg['backup_driver_name']}, ETA: {emerg['eta_minutes']} mins) has been dispatched.",
         "alert_type": "emergency",
         "target_role": "parent",
-        "target_bus": backup_bus_id,
+        "target_bus": emerg["bus_id"],
         "sent_by": "system",
         "sent_at": now_str(),
         "is_resolved": 0
