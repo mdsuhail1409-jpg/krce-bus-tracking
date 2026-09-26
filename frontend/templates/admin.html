@@ -2296,6 +2296,22 @@
         </div>
     </div>
 
+    <!-- ACTION CONFIRMATION MODAL (Non-blocking, eliminates INP issues) -->
+    <div class="modal-overlay" id="confirm-action-modal"
+        style="display:none; align-items:center; justify-content:center; z-index:9999;">
+        <div class="modal-card" style="max-width: 440px; width: 90%;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="confirm-modal-title" style="color: var(--text-primary); font-size: 1.05rem;">Confirm Action</h3>
+                <button class="close-modal-btn" onclick="closeConfirmDialog()"><i data-lucide="x"></i></button>
+            </div>
+            <p id="confirm-modal-msg" style="font-size: 0.88rem; color: var(--text-secondary); margin: 12px 0 20px 0; line-height: 1.5;"></p>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeConfirmDialog()">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="confirm-modal-ok-btn" style="background: var(--status-danger); border-color: var(--status-danger);">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Google Maps JS -->
     <script
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBgybbeZKCnwUSRKc0JHw7a6CZBnD6ZJkU&libraries=geometry"></script>
@@ -4827,36 +4843,101 @@
             }
         }
 
-        async function resolveEmergency(emergId) {
-            if (!confirm("Are you sure you want to mark this emergency as resolved?")) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/emergencies/${emergId}/resolve`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    await loadEmergencies();
-                    loadAlerts();
-                }
-            } catch (e) {
-                console.error("Failed to resolve emergency:", e);
+        function showConfirmDialog(title, message, confirmBtnText, isDanger, onConfirm) {
+            const modal = document.getElementById('confirm-action-modal');
+            if (!modal) {
+                if (window.confirm(message)) onConfirm();
+                return;
             }
+            document.getElementById('confirm-modal-title').innerText = title;
+            document.getElementById('confirm-modal-msg').innerText = message;
+            const okBtn = document.getElementById('confirm-modal-ok-btn');
+            okBtn.innerText = confirmBtnText || 'Confirm';
+            if (isDanger) {
+                okBtn.style.background = 'var(--status-danger)';
+                okBtn.style.borderColor = 'var(--status-danger)';
+            } else {
+                okBtn.style.background = 'var(--accent)';
+                okBtn.style.borderColor = 'var(--accent)';
+            }
+            okBtn.onclick = async () => {
+                closeConfirmDialog();
+                await onConfirm();
+            };
+            modal.style.display = 'flex';
+            lucide.createIcons();
         }
 
-        async function resolveAllEmergencies() {
-            if (!confirm("Are you sure you want to mark ALL active emergencies and breakdowns as resolved?")) return;
-            try {
-                const res = await fetch(`${API_BASE}/api/admin/emergencies/resolve-all`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    await loadEmergencies();
-                    loadAlerts();
+        function closeConfirmDialog() {
+            const modal = document.getElementById('confirm-action-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function resolveEmergency(emergId) {
+            showConfirmDialog(
+                "Resolve Breakdown Emergency",
+                "Are you sure you want to mark this breakdown emergency as resolved? Normal transit operations will resume.",
+                "Mark Resolved",
+                true,
+                async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/emergencies/${emergId}/resolve`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) {
+                            await loadEmergencies();
+                            loadAlerts();
+                        }
+                    } catch (e) {
+                        console.error("Failed to resolve emergency:", e);
+                    }
                 }
-            } catch (e) {
-                console.error("Failed to resolve all emergencies:", e);
-            }
+            );
+        }
+
+        function resolveAllEmergencies() {
+            showConfirmDialog(
+                "Resolve All Active Breakdowns",
+                "Are you sure you want to mark ALL active emergencies and breakdowns as resolved? This will reset all active breakdown alerts.",
+                "Resolve All",
+                true,
+                async () => {
+                    const btn = document.getElementById('btn-resolve-all-emerg');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = `<span class="btn-spinner"></span> Resolving...`;
+                    }
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/emergencies/resolve-all`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (!res.ok) {
+                            // Fallback: resolve each emergency individually if server hasn't restarted with new endpoint
+                            const activeEmergencies = (globalEmergencies || []).filter(e => e && e.status !== 'resolved' && e.status !== 'rejected');
+                            await Promise.all(
+                                activeEmergencies.map(e =>
+                                    fetch(`${API_BASE}/api/admin/emergencies/${e.id}/resolve`, {
+                                        method: 'POST',
+                                        headers: { 'Authorization': `Bearer ${token}` }
+                                    }).catch(() => {})
+                                )
+                            );
+                        }
+                        await loadEmergencies();
+                        loadAlerts();
+                    } catch (e) {
+                        console.error("Failed to resolve all emergencies:", e);
+                    } finally {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = `<i data-lucide="check-check" style="width: 14px; height: 14px; margin-right: 4px;"></i> Mark All Resolved`;
+                            lucide.createIcons();
+                        }
+                    }
+                }
+            );
         }
 
         // ═══════════════════════════════════════════════════════════════════
