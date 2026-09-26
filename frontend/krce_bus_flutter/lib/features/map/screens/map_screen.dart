@@ -270,8 +270,13 @@ class _MapScreenState extends ConsumerState<MapScreen>
     if (type == 'gps_update' || type == 'bus_update') {
       final busId = data['bus_id'] as String? ?? '';
       if (busId.isEmpty || !mounted) return;
-      final updatedBus = _buses.indexWhere((b) => b.id == busId);
-      if (updatedBus == -1) return;
+      final updatedBus = _buses.indexWhere((b) => 
+        b.id == busId || 
+        b.number == busId ||
+        (busId == 'B07' && b.number == 'TN-07') ||
+        (busId == 'TN-07' && b.id == 'B07')
+      );
+      if (updatedBus == -1 && _buses.isNotEmpty) return;
       // Refresh the full bus list on any GPS update
       _fetchBuses();
     } else if (type == 'alert') {

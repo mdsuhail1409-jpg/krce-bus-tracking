@@ -334,6 +334,12 @@ async def hardware_driver_breakdown(req: HardwareEmergencyReport, x_device_key: 
         "bus_number": bus_number,
         "driver_name": "Hardware ESP32 Node",
         "driver_phone": "N/A",
+        "route_name": bus.get("route_name", "Assigned Route") if bus else "Assigned Route",
+        "current_stop": "En-route",
+        "next_stop": "Campus",
+        "remaining_stops": [],
+        "students_onboard": [],
+        "recommendations": [],
         "status": "recommended",
         "buzzer_active": 1,
         "emergency_type": etype,
@@ -341,6 +347,9 @@ async def hardware_driver_breakdown(req: HardwareEmergencyReport, x_device_key: 
         "date": today(),
         "gps": {"lat": actual_lat, "lon": actual_lon},
         "backup_bus_id": None,
+        "backup_bus_number": None,
+        "backup_driver_name": None,
+        "eta_minutes": None,
         "timeline": [
             {
                 "status": "SOS Button Pressed",

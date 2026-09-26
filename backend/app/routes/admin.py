@@ -510,5 +510,31 @@ async def send_alert(req: AlertCreate, u=Depends(admin_only)):
 @router.post("/api/admin/alerts/{aid}/resolve")
 async def resolve_alert(aid: str, u=Depends(admin_only)):
     db = db_module.db
+    alert = await db.alerts.find_one({"id": aid})
     await db.alerts.update_one({"id": aid}, {"$set": {"is_resolved": 1}})
+    
+    # If this alert is related to an emergency or bus breakdown, resolve related emergencies
+    if alert and alert.get("target_bus"):
+        t_bus = alert.get("target_bus")
+        a_type = alert.get("alert_type", "")
+        a_title = alert.get("title", "")
+        if a_type in ("danger", "emergency") or "Breakdown" in a_title or "SOS" in a_title:
+            timeline_entry = {
+                "status": "Emergency Resolved",
+                "ts": now_str(),
+                "msg": f"Emergency resolved via Alert acknowledgment by Admin {u.get('name', 'Admin')}."
+            }
+            await db.emergencies.update_many(
+                {"bus_id": t_bus, "status": {"$nin": ["resolved", "rejected"]}},
+                {"$set": {"status": "resolved", "buzzer_active": 0}, "$push": {"timeline": timeline_entry}}
+            )
+            # Broadcast emergency update so Breakdown badge updates in real time
+            ws_payload = json.dumps({"type": "emergency_update", "target_bus": t_bus, "buzzer_active": 0})
+            for cid, cws in list(ws_pool.items()):
+                try:
+                    await cws.send_text(ws_payload)
+                except Exception:
+                    pass
+
     return {"status": "ok"}
+

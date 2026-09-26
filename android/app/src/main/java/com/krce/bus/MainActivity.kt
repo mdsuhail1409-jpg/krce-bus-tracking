@@ -509,6 +509,9 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: (String) -> Unit) 
                                 } else if (trimmedEmail == "rajan@krce.ac.in" && trimmedPassword == "driver@123") {
                                     authViewModel.setAuthState("demo_token_driver", "driver", "Rajan S. (Demo)", "B01", true, null, null, "9840111111")
                                     onLoginSuccess("driver")
+                                } else if ((trimmedEmail == "ganesh@krce.ac.in" || trimmedEmail == "driver7@krce.ac.in") && trimmedPassword == "driver@123") {
+                                    authViewModel.setAuthState("demo_token_driver7", "driver", "Ganesh K. (Bus 7)", "B07", true, null, null, "9840177777")
+                                    onLoginSuccess("driver")
                                 } else if (trimmedEmail == "aravind@krce.ac.in" && trimmedPassword == "student@123") {
                                     authViewModel.setAuthState("demo_token_student", "student", "Aravind Kumar (Demo)", "B01", true, "21CS001", null, "9841100001")
                                     onLoginSuccess("student")
@@ -562,7 +565,8 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: (String) -> Unit) 
                         
                         val credentials = listOf(
                             Triple("Admin", "admin@krce.ac.in", "admin@krce"),
-                            Triple("Driver", "rajan@krce.ac.in", "driver@123"),
+                            Triple("Driver (Bus 1)", "rajan@krce.ac.in", "driver@123"),
+                            Triple("Driver (Bus 7)", "ganesh@krce.ac.in", "driver@123"),
                             Triple("Student", "aravind@krce.ac.in", "student@123"),
                             Triple("Parent", "suresh.p@gmail.com", "parent@123"),
                             Triple("Admin (Offline)", "admin@krce.ac.in", "admin"),

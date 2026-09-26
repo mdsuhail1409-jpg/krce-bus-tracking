@@ -62,8 +62,8 @@ class ApiService {
 
   // ── Auth ──────────────────────────────────────────────────
   Future<LoginRes> login(String email, String password) async {
-    final res = await _dio.post('/api/auth/login',
-        data: {'email': email, 'password': password});
+    final res = await _dio
+        .post('/api/auth/login', data: {'email': email, 'password': password});
     return LoginRes.fromJson(res.data);
   }
 
@@ -79,7 +79,14 @@ class ApiService {
           driverName: 'Rajan S. (Demo)',
           driverPhone: '9840111111',
           capacity: 50,
-          stops: ['KRCE Campus', 'Samayapuram', 'Woraiyur Bus Stand', 'Woraiyur Town', 'Gandhi Market', 'KRCE Campus'],
+          stops: [
+            'KRCE Campus',
+            'Samayapuram',
+            'Woraiyur Bus Stand',
+            'Woraiyur Town',
+            'Gandhi Market',
+            'KRCE Campus'
+          ],
           live: LiveBus(
             busId: 'B01',
             driverId: 'drv01',
@@ -102,7 +109,14 @@ class ApiService {
           driverName: 'Murugan K. (Demo)',
           driverPhone: '9840122222',
           capacity: 45,
-          stops: ['KRCE Campus', 'Panjappur', 'Srirangam', 'Cauvery Bridge', 'K.K. Nagar', 'KRCE Campus'],
+          stops: [
+            'KRCE Campus',
+            'Panjappur',
+            'Srirangam',
+            'Cauvery Bridge',
+            'K.K. Nagar',
+            'KRCE Campus'
+          ],
           boardedToday: 8,
         ),
       ];
@@ -117,14 +131,29 @@ class ApiService {
       return Bus(
         id: busId,
         number: busId == 'B02' ? 'TN-02' : 'TN-01',
-        routeName: busId == 'B02' ? 'Route B — Srirangam' : 'Route A — Woraiyur',
+        routeName:
+            busId == 'B02' ? 'Route B — Srirangam' : 'Route A — Woraiyur',
         driverId: busId == 'B02' ? 'drv02' : 'drv01',
         driverName: busId == 'B02' ? 'Murugan K. (Demo)' : 'Rajan S. (Demo)',
         driverPhone: busId == 'B02' ? '9840122222' : '9840111111',
         capacity: busId == 'B02' ? 45 : 50,
         stops: busId == 'B02'
-            ? ['KRCE Campus', 'Panjappur', 'Srirangam', 'Cauvery Bridge', 'K.K. Nagar', 'KRCE Campus']
-            : ['KRCE Campus', 'Samayapuram', 'Woraiyur Bus Stand', 'Woraiyur Town', 'Gandhi Market', 'KRCE Campus'],
+            ? [
+                'KRCE Campus',
+                'Panjappur',
+                'Srirangam',
+                'Cauvery Bridge',
+                'K.K. Nagar',
+                'KRCE Campus'
+              ]
+            : [
+                'KRCE Campus',
+                'Samayapuram',
+                'Woraiyur Bus Stand',
+                'Woraiyur Town',
+                'Gandhi Market',
+                'KRCE Campus'
+              ],
         boardedToday: busId == 'B02' ? 8 : 15,
       );
     }
@@ -160,20 +189,26 @@ class ApiService {
         Alert(
           id: 'A1',
           title: 'Welcome to KRCE Bus Tracker',
-          message: 'The new real-time bus tracking system is now live. Your bus location updates every 5 seconds.',
+          message:
+              'The new real-time bus tracking system is now live. Your bus location updates every 5 seconds.',
           alertType: 'info',
           targetRole: 'all',
-          sentAt: DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
+          sentAt: DateTime.now()
+              .subtract(const Duration(hours: 2))
+              .toIso8601String(),
           isResolved: 0,
         ),
         Alert(
           id: 'A2',
           title: 'Route A — Minor Delay',
-          message: 'Bus TN-01 is running approximately 10 minutes late due to traffic near Woraiyur Junction.',
+          message:
+              'Bus TN-01 is running approximately 10 minutes late due to traffic near Woraiyur Junction.',
           alertType: 'delay',
           targetRole: 'all',
           targetBus: 'B01',
-          sentAt: DateTime.now().subtract(const Duration(minutes: 15)).toIso8601String(),
+          sentAt: DateTime.now()
+              .subtract(const Duration(minutes: 15))
+              .toIso8601String(),
           isResolved: 0,
         ),
       ];
@@ -409,7 +444,8 @@ class ApiService {
 
   Future<GenericResponse> toggleUser(String token, String userId) async {
     if (token.startsWith('demo_token_')) {
-      return GenericResponse(status: 'ok', message: 'User status toggled (Demo)');
+      return GenericResponse(
+          status: 'ok', message: 'User status toggled (Demo)');
     }
     final res = await _dio.post('/api/admin/users/$userId/toggle',
         options: Options(headers: _authHeader(token)));
@@ -434,7 +470,8 @@ class ApiService {
   }
 
   // ── Admin Registrations ────────────────────────────────────
-  Future<List<Registration>> getAdminRegistrations(String token, {String status = "pending"}) async {
+  Future<List<Registration>> getAdminRegistrations(String token,
+      {String status = "pending"}) async {
     if (token.startsWith('demo_token_')) {
       return [
         Registration(
@@ -444,7 +481,9 @@ class ApiService {
           role: 'parent',
           parentOf: '21CS001',
           status: 'pending',
-          submittedAt: DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+          submittedAt: DateTime.now()
+              .subtract(const Duration(days: 1))
+              .toIso8601String(),
         ),
       ];
     }
@@ -455,15 +494,16 @@ class ApiService {
   }
 
   Future<GenericResponse> actionRegistration(
-      String token, {
-      required String regId,
-      required String action,
-      required String notes,
-      String? rfidCard,
-      String? busId,
+    String token, {
+    required String regId,
+    required String action,
+    required String notes,
+    String? rfidCard,
+    String? busId,
   }) async {
     if (token.startsWith('demo_token_')) {
-      return GenericResponse(status: 'ok', message: 'Registration approved/rejected (Demo)');
+      return GenericResponse(
+          status: 'ok', message: 'Registration approved/rejected (Demo)');
     }
     final res = await _dio.post('/api/admin/registrations/action',
         data: {
@@ -479,12 +519,12 @@ class ApiService {
 
   // ── Admin Alerts ──────────────────────────────────────────
   Future<GenericResponse> sendAlert(
-      String token, {
-      required String title,
-      required String message,
-      required String alertType,
-      required String targetRole,
-      String? targetBus,
+    String token, {
+    required String title,
+    required String message,
+    required String alertType,
+    required String targetRole,
+    String? targetBus,
   }) async {
     if (token.startsWith('demo_token_')) {
       return GenericResponse(status: 'ok', message: 'Alert broadcasted (Demo)');
@@ -540,15 +580,14 @@ class ApiService {
       );
     }
     final res = await _dio.post('/api/rfid/tap',
-        data: req.toJson(),
-        options: Options(headers: _authHeader(token)));
+        data: req.toJson(), options: Options(headers: _authHeader(token)));
     return RfidTapRes.fromJson(res.data);
   }
 
   // ── Token Refresh ─────────────────────────────────────────
   Future<Map<String, String>> refreshToken(String refreshToken) async {
-    final res = await _dio.post('/api/auth/refresh',
-        data: {'refresh_token': refreshToken});
+    final res = await _dio
+        .post('/api/auth/refresh', data: {'refresh_token': refreshToken});
     return {
       'token': res.data['token'] ?? '',
       'refresh_token': res.data['refresh_token'] ?? '',
@@ -556,9 +595,11 @@ class ApiService {
   }
 
   // ── Breakdown Emergency Module ──────────────────────────────
-  Future<GenericResponse> reportBreakdown(String token, double lat, double lon) async {
+  Future<GenericResponse> reportBreakdown(
+      String token, double lat, double lon) async {
     if (token.startsWith('demo_token_')) {
-      return GenericResponse(status: 'ok', message: 'Breakdown reported (Demo)');
+      return GenericResponse(
+          status: 'ok', message: 'Breakdown reported (Demo)');
     }
     final res = await _dio.post('/api/driver/breakdown',
         data: {'lat': lat, 'lon': lon, 'emergency_type': 'breakdown'},
@@ -566,7 +607,8 @@ class ApiService {
     return GenericResponse.fromJson(res.data);
   }
 
-  Future<EmergencyAssignmentResponse?> getEmergencyAssignment(String token) async {
+  Future<EmergencyAssignmentResponse?> getEmergencyAssignment(
+      String token) async {
     if (token.startsWith('demo_token_')) {
       return null;
     }
@@ -580,20 +622,26 @@ class ApiService {
     }
   }
 
-  Future<GenericResponse> acceptEmergencyAssignment(String token, String emergencyId) async {
+  Future<GenericResponse> acceptEmergencyAssignment(
+      String token, String emergencyId) async {
     if (token.startsWith('demo_token_')) {
-      return GenericResponse(status: 'ok', message: 'Assignment accepted (Demo)');
+      return GenericResponse(
+          status: 'ok', message: 'Assignment accepted (Demo)');
     }
-    final res = await _dio.post('/api/driver/emergency-assignment/$emergencyId/accept',
+    final res = await _dio.post(
+        '/api/driver/emergency-assignment/$emergencyId/accept',
         options: Options(headers: _authHeader(token)));
     return GenericResponse.fromJson(res.data);
   }
 
-  Future<GenericResponse> rejectEmergencyAssignment(String token, String emergencyId) async {
+  Future<GenericResponse> rejectEmergencyAssignment(
+      String token, String emergencyId) async {
     if (token.startsWith('demo_token_')) {
-      return GenericResponse(status: 'ok', message: 'Assignment rejected (Demo)');
+      return GenericResponse(
+          status: 'ok', message: 'Assignment rejected (Demo)');
     }
-    final res = await _dio.post('/api/driver/emergency-assignment/$emergencyId/reject',
+    final res = await _dio.post(
+        '/api/driver/emergency-assignment/$emergencyId/reject',
         options: Options(headers: _authHeader(token)));
     return GenericResponse.fromJson(res.data);
   }

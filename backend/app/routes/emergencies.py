@@ -294,6 +294,13 @@ async def resolve_emergency(emergency_id: str, u=Depends(current_user)):
         {"$set": {"status": "resolved", "buzzer_active": 0}, "$push": {"timeline": timeline_entry}}
     )
 
+    # Clean up associated unresolved breakdown/SOS alerts for this bus
+    if emerg.get("bus_id"):
+        await db.alerts.update_many(
+            {"target_bus": emerg["bus_id"], "is_resolved": 0},
+            {"$set": {"is_resolved": 1}}
+        )
+
     await trigger_system_alert(
         title="Emergency Resolved",
         message=f"Breakdown emergency for Bus {emerg['bus_number']} has been successfully resolved.",
@@ -310,6 +317,40 @@ async def resolve_emergency(emergency_id: str, u=Depends(current_user)):
             pass
 
     return {"status": "ok"}
+
+
+@router.post("/api/admin/emergencies/resolve-all")
+async def resolve_all_emergencies(u=Depends(current_user)):
+    if u["role"] not in ("admin", "committee"):
+        raise HTTPException(403, "Admin/Committee only")
+
+    db = db_module.db
+    timeline_entry = {
+        "status": "Emergency Resolved",
+        "ts": now_str(),
+        "msg": f"All active breakdowns marked resolved by Admin {u.get('name', 'Admin')}."
+    }
+
+    await db.emergencies.update_many(
+        {"status": {"$nin": ["resolved", "rejected"]}},
+        {"$set": {"status": "resolved", "buzzer_active": 0}, "$push": {"timeline": timeline_entry}}
+    )
+
+    # Also resolve all danger/breakdown alerts
+    await db.alerts.update_many(
+        {"is_resolved": 0, "$or": [{"alert_type": "danger"}, {"alert_type": "emergency"}]},
+        {"$set": {"is_resolved": 1}}
+    )
+
+    import json
+    ws_payload = json.dumps({"type": "emergency_update", "all_resolved": True, "buzzer_active": 0})
+    for cid, cws in list(ws_pool.items()):
+        try:
+            await cws.send_text(ws_payload)
+        except Exception:
+            pass
+
+    return {"status": "ok", "message": "All active breakdowns resolved successfully"}
 
 
 @router.post("/api/admin/emergencies/{emergency_id}/mute")

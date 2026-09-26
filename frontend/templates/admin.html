@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransitAdmin — Control Center</title>
     <!-- Google Fonts: Outfit -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <!-- Google Maps Integration (No stylesheet import needed) -->
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
+
     <style>
         :root {
             --bg-main: #060813;
@@ -22,20 +24,20 @@
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
             --text-muted: #475569;
-            
+
             /* Roles Colors */
             --role-admin: #3b82f6;
             --role-driver: #f59e0b;
             --role-passenger: #64748b;
             --role-parent: #a855f7;
             --role-staff: #0d9488;
-            
+
             /* Status Colors */
             --status-active: #10b981;
             --status-offline: #64748b;
             --status-warning: #f59e0b;
             --status-danger: #ef4444;
-            
+
             --glass-bg: rgba(14, 19, 36, 0.8);
             --glass-border: rgba(255, 255, 255, 0.05);
             --font-family: 'Outfit', sans-serif;
@@ -57,15 +59,31 @@
         }
 
         /* Scrollbars */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-main); }
-        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-main);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
 
         /* Login Screen */
         #login-container {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 45%), #060813;
             display: flex;
             align-items: center;
@@ -73,6 +91,7 @@
             z-index: 9999;
             padding: 20px;
         }
+
         .login-card {
             width: 100%;
             max-width: 420px;
@@ -82,10 +101,12 @@
             padding: 40px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
+
         .login-header {
             text-align: center;
             margin-bottom: 32px;
         }
+
         .login-logo {
             display: inline-flex;
             align-items: center;
@@ -93,12 +114,14 @@
             color: var(--accent);
             margin-bottom: 12px;
         }
+
         .login-logo h2 {
             font-size: 1.8rem;
             font-weight: 800;
             color: var(--text-primary);
             letter-spacing: -0.5px;
         }
+
         .login-subtitle {
             color: var(--text-secondary);
             font-size: 0.9rem;
@@ -108,6 +131,7 @@
         .form-group {
             margin-bottom: 20px;
         }
+
         .form-label {
             display: block;
             font-size: 0.75rem;
@@ -117,6 +141,7 @@
             letter-spacing: 0.5px;
             margin-bottom: 8px;
         }
+
         .form-control {
             width: 100%;
             padding: 12px 16px;
@@ -127,6 +152,7 @@
             font-size: 0.95rem;
             transition: all 0.2s;
         }
+
         .form-control:focus {
             outline: none;
             border-color: var(--accent);
@@ -147,30 +173,37 @@
             gap: 8px;
             transition: all 0.2s;
         }
+
         .btn-primary {
             background: var(--accent);
             color: white;
         }
+
         .btn-primary:hover {
             background: var(--accent-hover);
             transform: translateY(-1px);
         }
+
         .btn-secondary {
             background: #1e293b;
             color: var(--text-primary);
             border: 1px solid var(--border);
         }
+
         .btn-secondary:hover {
             background: #334155;
             color: white;
         }
+
         .btn-danger {
             background: var(--status-danger);
             color: white;
         }
+
         .btn-danger:hover {
             background: #dc2626;
         }
+
         .btn-sm {
             padding: 8px 16px;
             font-size: 0.8rem;
@@ -214,6 +247,7 @@
             padding: 24px 16px;
             overflow-y: auto;
         }
+
         .sidebar-brand {
             display: flex;
             align-items: center;
@@ -221,6 +255,7 @@
             margin-bottom: 32px;
             padding: 0 8px;
         }
+
         .brand-logo {
             display: flex;
             align-items: center;
@@ -230,9 +265,11 @@
             color: var(--text-primary);
             letter-spacing: -0.5px;
         }
+
         .brand-logo i {
             color: var(--accent);
         }
+
         .brand-org {
             font-size: 0.75rem;
             color: var(--text-secondary);
@@ -240,6 +277,7 @@
             display: block;
             margin-top: 2px;
         }
+
         .live-status {
             display: flex;
             align-items: center;
@@ -253,6 +291,7 @@
             font-weight: 700;
             letter-spacing: 0.5px;
         }
+
         .live-dot {
             width: 6px;
             height: 6px;
@@ -262,9 +301,20 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(0.9); opacity: 0.5; }
-            50% { transform: scale(1.3); opacity: 1; }
-            100% { transform: scale(0.9); opacity: 0.5; }
+            0% {
+                transform: scale(0.9);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.3);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(0.9);
+                opacity: 0.5;
+            }
         }
 
         .nav-section-label {
@@ -275,6 +325,7 @@
             letter-spacing: 1px;
             margin: 20px 8px 8px 8px;
         }
+
         .nav-item {
             display: flex;
             align-items: center;
@@ -289,20 +340,24 @@
             transition: all 0.2s;
             cursor: pointer;
         }
+
         .nav-item:hover {
             background: rgba(255, 255, 255, 0.03);
             color: var(--text-primary);
         }
+
         .nav-item.active {
             background: var(--accent);
             color: white;
             font-weight: 600;
         }
+
         .nav-item-link {
             display: flex;
             align-items: center;
             gap: 12px;
         }
+
         .nav-badge {
             background: var(--status-warning);
             color: #060813;
@@ -321,6 +376,7 @@
             flex-direction: column;
             gap: 10px;
         }
+
         .sidebar-stat-card {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--border);
@@ -330,6 +386,7 @@
             align-items: center;
             justify-content: space-between;
         }
+
         .sidebar-stat-info h4 {
             font-size: 0.7rem;
             color: var(--text-secondary);
@@ -337,11 +394,13 @@
             letter-spacing: 0.5px;
             margin-bottom: 2px;
         }
+
         .sidebar-stat-info p {
             font-size: 1.1rem;
             font-weight: 700;
             color: var(--text-primary);
         }
+
         .sidebar-stat-card i {
             color: var(--accent);
             opacity: 0.8;
@@ -369,26 +428,31 @@
             top: 0;
             z-index: 980;
         }
+
         .page-title-box {
             display: flex;
             align-items: center;
             gap: 10px;
         }
+
         .page-title {
             font-size: 1.15rem;
             font-weight: 700;
             letter-spacing: -0.2px;
         }
+
         .user-menu {
             display: flex;
             align-items: center;
             gap: 20px;
         }
+
         .user-profile {
             display: flex;
             align-items: center;
             gap: 10px;
         }
+
         .avatar {
             width: 32px;
             height: 32px;
@@ -402,6 +466,7 @@
             font-weight: 700;
             font-size: 0.85rem;
         }
+
         .username {
             font-size: 0.9rem;
             font-weight: 600;
@@ -414,13 +479,22 @@
             flex: 1;
             overflow-y: auto;
         }
+
         .sect-pane {
             display: none;
             animation: paneFadeIn 0.3s ease-out;
         }
+
         @keyframes paneFadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Stat Cards Row */
@@ -430,6 +504,7 @@
             gap: 20px;
             margin-bottom: 32px;
         }
+
         .stat-card {
             background-color: var(--bg-card);
             border: 1px solid var(--border);
@@ -442,20 +517,34 @@
             overflow: hidden;
             transition: all 0.2s;
         }
+
         .stat-card:hover {
             border-color: var(--border-hover);
             transform: translateY(-2px);
         }
+
         .stat-card::after {
             content: '';
             position: absolute;
-            bottom: 0; left: 0; right: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
             height: 3px;
             background: transparent;
         }
-        .stat-card.primary::after { background: var(--accent); }
-        .stat-card.success::after { background: var(--status-active); }
-        .stat-card.warning::after { background: var(--status-warning); }
+
+        .stat-card.primary::after {
+            background: var(--accent);
+        }
+
+        .stat-card.success::after {
+            background: var(--status-active);
+        }
+
+        .stat-card.warning::after {
+            background: var(--status-warning);
+        }
+
         .stat-card-label {
             font-size: 0.75rem;
             font-weight: 600;
@@ -464,17 +553,20 @@
             letter-spacing: 0.5px;
             margin-bottom: 8px;
         }
+
         .stat-card-value-box {
             display: flex;
             align-items: center;
             gap: 10px;
         }
+
         .stat-card-value {
             font-size: 1.8rem;
             font-weight: 800;
             color: var(--text-primary);
             letter-spacing: -0.5px;
         }
+
         .stat-card-icon {
             width: 42px;
             height: 42px;
@@ -485,9 +577,21 @@
             justify-content: center;
             color: var(--text-secondary);
         }
-        .stat-card.primary .stat-card-icon { color: var(--accent); background: rgba(59, 130, 246, 0.06); }
-        .stat-card.success .stat-card-icon { color: var(--status-active); background: rgba(16, 185, 129, 0.06); }
-        .stat-card.warning .stat-card-icon { color: var(--status-warning); background: rgba(245, 158, 11, 0.06); }
+
+        .stat-card.primary .stat-card-icon {
+            color: var(--accent);
+            background: rgba(59, 130, 246, 0.06);
+        }
+
+        .stat-card.success .stat-card-icon {
+            color: var(--status-active);
+            background: rgba(16, 185, 129, 0.06);
+        }
+
+        .stat-card.warning .stat-card-icon {
+            color: var(--status-warning);
+            background: rgba(245, 158, 11, 0.06);
+        }
 
         /* Panels layout */
         .dashboard-row-2 {
@@ -496,18 +600,21 @@
             gap: 20px;
             margin-bottom: 24px;
         }
+
         .panel {
             background-color: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 14px;
             padding: 24px;
         }
+
         .panel-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
         }
+
         .panel-title {
             font-size: 1rem;
             font-weight: 700;
@@ -515,9 +622,11 @@
             align-items: center;
             gap: 8px;
         }
+
         .panel-title i {
             color: var(--accent);
         }
+
         .view-all-link {
             font-size: 0.8rem;
             font-weight: 600;
@@ -528,6 +637,7 @@
             gap: 4px;
             transition: color 0.2s;
         }
+
         .view-all-link:hover {
             color: var(--accent-hover);
         }
@@ -538,23 +648,27 @@
             flex-direction: column;
             gap: 16px;
         }
+
         .capacity-item {
             display: flex;
             flex-direction: column;
             gap: 6px;
         }
+
         .capacity-meta {
             display: flex;
             justify-content: space-between;
             font-size: 0.85rem;
             font-weight: 600;
         }
+
         .capacity-bar-bg {
             height: 8px;
             background: #1e293b;
             border-radius: 99px;
             overflow: hidden;
         }
+
         .capacity-bar-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--accent), var(--role-staff));
@@ -572,33 +686,122 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
-        .pill-role-admin { background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); color: var(--role-admin); }
-        .pill-role-driver { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); color: var(--role-driver); }
-        .pill-role-passenger { background: rgba(100, 116, 139, 0.08); border: 1px solid rgba(100, 116, 139, 0.2); color: var(--role-passenger); }
-        .pill-role-parent { background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); color: var(--role-parent); }
-        .pill-role-staff { background: rgba(13, 148, 136, 0.08); border: 1px solid rgba(13, 148, 136, 0.2); color: var(--role-staff); }
 
-        .pill-status-active { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); color: var(--status-active); }
-        .pill-status-offline { background: rgba(100, 116, 139, 0.08); border: 1px solid rgba(100, 116, 139, 0.2); color: var(--status-offline); }
-        .pill-status-warning { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); color: var(--status-warning); }
-        .pill-status-danger { background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--status-danger); }
-        .hw-badge { display:inline-flex; align-items:center; gap:4px; font-size:0.68rem; font-weight:600; padding:2px 7px; border-radius:20px; letter-spacing:0.02em; }
-        .hw-badge.online      { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; }
-        .hw-badge.signal_loss { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; }
-        .hw-badge.offline     { background:rgba(100,116,139,0.10); border:1px solid rgba(100,116,139,0.2); color:#64748b; }
-        .hw-badge .hw-dot { width:6px; height:6px; border-radius:50%; background:currentColor; animation: hw-pulse 1.4s infinite; }
-        @keyframes hw-pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+        .pill-role-admin {
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: var(--role-admin);
+        }
+
+        .pill-role-driver {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: var(--role-driver);
+        }
+
+        .pill-role-passenger {
+            background: rgba(100, 116, 139, 0.08);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            color: var(--role-passenger);
+        }
+
+        .pill-role-parent {
+            background: rgba(168, 85, 247, 0.08);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            color: var(--role-parent);
+        }
+
+        .pill-role-staff {
+            background: rgba(13, 148, 136, 0.08);
+            border: 1px solid rgba(13, 148, 136, 0.2);
+            color: var(--role-staff);
+        }
+
+        .pill-status-active {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--status-active);
+        }
+
+        .pill-status-offline {
+            background: rgba(100, 116, 139, 0.08);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            color: var(--status-offline);
+        }
+
+        .pill-status-warning {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: var(--status-warning);
+        }
+
+        .pill-status-danger {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--status-danger);
+        }
+
+        .hw-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 20px;
+            letter-spacing: 0.02em;
+        }
+
+        .hw-badge.online {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        .hw-badge.signal_loss {
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #f59e0b;
+        }
+
+        .hw-badge.offline {
+            background: rgba(100, 116, 139, 0.10);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            color: #64748b;
+        }
+
+        .hw-badge .hw-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: hw-pulse 1.4s infinite;
+        }
+
+        @keyframes hw-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.35;
+            }
+        }
 
         /* Tables styling */
         .table-responsive {
             width: 100%;
             overflow-x: auto;
         }
+
         .table-custom {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
         }
+
         .table-custom th {
             padding: 14px 16px;
             font-size: 0.7rem;
@@ -611,6 +814,7 @@
             top: 0;
             background: var(--bg-card);
         }
+
         .table-custom td {
             padding: 16px;
             font-size: 0.88rem;
@@ -618,12 +822,15 @@
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
         }
+
         .table-custom tbody tr {
             transition: background 0.15s;
         }
+
         .table-custom tbody tr:hover {
             background-color: rgba(255, 255, 255, 0.02);
         }
+
         .table-action-btn {
             background: transparent;
             border: none;
@@ -636,14 +843,17 @@
             justify-content: center;
             transition: all 0.2s;
         }
+
         .table-action-btn:hover {
             background: rgba(255, 255, 255, 0.05);
             color: var(--text-primary);
         }
+
         .table-action-btn.danger:hover {
             background: rgba(239, 68, 68, 0.1);
             color: var(--status-danger);
         }
+
         .table-action-btn.primary:hover {
             background: rgba(59, 130, 246, 0.1);
             color: var(--accent);
@@ -661,11 +871,13 @@
             align-items: flex-end;
             margin-bottom: 24px;
         }
+
         .filter-group {
             display: flex;
             flex-direction: column;
             gap: 6px;
         }
+
         .filter-group.search {
             flex: 1;
             min-width: 200px;
@@ -679,12 +891,13 @@
             overflow: hidden;
             border: 1px solid var(--border);
         }
+
         #admin-map {
             width: 100%;
             height: 100%;
             z-index: 10;
         }
-        
+
         .floating-left-panel {
             position: absolute;
             top: 20px;
@@ -699,8 +912,9 @@
             padding: 20px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
         }
+
         .floating-right-panel {
             position: absolute;
             top: 20px;
@@ -712,9 +926,9 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
         }
-        
+
         .fleet-list {
             margin-top: 14px;
             overflow-y: auto;
@@ -723,6 +937,7 @@
             flex-direction: column;
             gap: 10px;
         }
+
         .fleet-item {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--border);
@@ -731,10 +946,81 @@
             cursor: pointer;
             transition: all 0.2s;
         }
+
         .fleet-item:hover {
             border-color: var(--accent);
             background: rgba(59, 130, 246, 0.05);
         }
+
+        .fleet-item.selected-bus {
+            border-color: var(--accent) !important;
+            background: rgba(59, 130, 246, 0.14) !important;
+            box-shadow: 0 0 14px rgba(59, 130, 246, 0.3);
+        }
+
+        .map-active-route-bar {
+            position: absolute;
+            top: 20px;
+            left: 350px;
+            right: 290px;
+            z-index: 991;
+            background: rgba(14, 19, 36, 0.94);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            border-radius: 12px;
+            padding: 10px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            animation: fadeInDown 0.2s ease-out;
+        }
+
+        @media (max-width: 1200px) {
+            .map-active-route-bar {
+                left: 20px;
+                right: 20px;
+                top: 80px;
+            }
+        }
+
+        .map-active-route-bar .active-route-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .map-active-route-bar .active-route-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .map-active-route-bar .active-route-subtitle {
+            font-size: 0.74rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .fleet-item-header {
             display: flex;
             justify-content: space-between;
@@ -750,12 +1036,14 @@
             text-align: center;
             color: var(--text-secondary);
         }
+
         .empty-state i {
             font-size: 2.2rem;
             color: var(--text-muted);
             margin-bottom: 12px;
             display: block;
         }
+
         .empty-state p {
             font-size: 0.9rem;
         }
@@ -763,7 +1051,10 @@
         /* Modal system */
         .modal-overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: rgba(6, 8, 19, 0.85);
             backdrop-filter: blur(8px);
             z-index: 9999;
@@ -772,6 +1063,7 @@
             justify-content: center;
             padding: 20px;
         }
+
         .modal-card {
             width: 100%;
             max-width: 500px;
@@ -780,22 +1072,33 @@
             border-radius: 16px;
             padding: 32px;
             animation: modalFadeIn 0.3s ease-out;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
         }
+
         @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
+
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 24px;
         }
+
         .modal-title {
             font-size: 1.15rem;
             font-weight: 700;
         }
+
         .close-modal-btn {
             background: transparent;
             border: none;
@@ -811,6 +1114,7 @@
             flex-direction: column;
             gap: 16px;
         }
+
         .alert-card-item {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -822,11 +1126,23 @@
             align-items: flex-start;
             position: relative;
         }
-        .alert-card-item.info { border-left-color: var(--accent); }
-        .alert-card-item.delay { border-left-color: var(--status-warning); }
-        .alert-card-item.emergency { border-left-color: var(--status-danger); }
-        .alert-card-item.maintenance { border-left-color: var(--text-muted); }
-        
+
+        .alert-card-item.info {
+            border-left-color: var(--accent);
+        }
+
+        .alert-card-item.delay {
+            border-left-color: var(--status-warning);
+        }
+
+        .alert-card-item.emergency {
+            border-left-color: var(--status-danger);
+        }
+
+        .alert-card-item.maintenance {
+            border-left-color: var(--text-muted);
+        }
+
         .alert-card-icon {
             width: 36px;
             height: 36px;
@@ -835,26 +1151,45 @@
             align-items: center;
             justify-content: center;
         }
-        .alert-card-item.info .alert-card-icon { background: rgba(59, 130, 246, 0.08); color: var(--accent); }
-        .alert-card-item.delay .alert-card-icon { background: rgba(245, 158, 11, 0.08); color: var(--status-warning); }
-        .alert-card-item.emergency .alert-card-icon { background: rgba(239, 68, 68, 0.08); color: var(--status-danger); }
-        .alert-card-item.maintenance .alert-card-icon { background: rgba(100, 116, 139, 0.08); color: var(--text-secondary); }
+
+        .alert-card-item.info .alert-card-icon {
+            background: rgba(59, 130, 246, 0.08);
+            color: var(--accent);
+        }
+
+        .alert-card-item.delay .alert-card-icon {
+            background: rgba(245, 158, 11, 0.08);
+            color: var(--status-warning);
+        }
+
+        .alert-card-item.emergency .alert-card-icon {
+            background: rgba(239, 68, 68, 0.08);
+            color: var(--status-danger);
+        }
+
+        .alert-card-item.maintenance .alert-card-icon {
+            background: rgba(100, 116, 139, 0.08);
+            color: var(--text-secondary);
+        }
 
         .alert-card-body {
             flex: 1;
         }
+
         .alert-card-title {
             font-size: 0.95rem;
             font-weight: 700;
             margin-bottom: 4px;
             color: var(--text-primary);
         }
+
         .alert-card-desc {
             font-size: 0.88rem;
             color: var(--text-secondary);
             margin-bottom: 12px;
             line-height: 1.4;
         }
+
         .alert-card-meta {
             display: flex;
             flex-wrap: wrap;
@@ -871,6 +1206,7 @@
             gap: 8px;
             margin-bottom: 24px;
         }
+
         .tab-btn {
             background: transparent;
             border: none;
@@ -882,16 +1218,21 @@
             position: relative;
             transition: all 0.2s;
         }
+
         .tab-btn:hover {
             color: var(--text-primary);
         }
+
         .tab-btn.active {
             color: var(--accent);
         }
+
         .tab-btn.active::after {
             content: '';
             position: absolute;
-            bottom: -1px; left: 0; right: 0;
+            bottom: -1px;
+            left: 0;
+            right: 0;
             height: 2px;
             background: var(--accent);
         }
@@ -903,12 +1244,14 @@
             align-items: center;
             margin-bottom: 28px;
         }
+
         .section-header-title h2 {
             font-size: 1.3rem;
             font-weight: 800;
             color: var(--text-primary);
             letter-spacing: -0.3px;
         }
+
         .section-header-title p {
             font-size: 0.85rem;
             color: var(--text-secondary);
@@ -920,6 +1263,7 @@
             background: transparent;
             border: none;
         }
+
         .bus-marker-icon {
             width: 28px;
             height: 28px;
@@ -932,22 +1276,25 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
             transition: all 0.2s;
         }
+
         .bus-marker-icon.online {
             border-color: var(--status-active);
             box-shadow: 0 0 12px var(--status-active);
         }
+
         .bus-marker-icon.danger {
             border-color: var(--status-danger);
             box-shadow: 0 0 12px var(--status-danger);
         }
+
         .bus-marker-icon.primary {
             border-color: var(--accent);
             box-shadow: 0 0 12px var(--accent);
         }
-        
+
         /* Custom Circular Bus Marker Styling */
         .bus-marker-wrapper {
             position: relative;
@@ -959,10 +1306,12 @@
             cursor: pointer;
             transition: transform 0.2s ease;
         }
+
         .bus-marker-wrapper:hover {
             transform: scale(1.18);
             z-index: 1000 !important;
         }
+
         .bus-marker-pulse {
             position: absolute;
             width: 40px;
@@ -970,23 +1319,35 @@
             border-radius: 50%;
             pointer-events: none;
         }
+
         .bus-marker-wrapper.online .bus-marker-pulse {
             background: rgba(16, 185, 129, 0.3);
             animation: markerPulse 2s infinite ease-out;
         }
+
         .bus-marker-wrapper.selected .bus-marker-pulse {
             background: rgba(234, 179, 8, 0.45);
             animation: markerPulse 1.5s infinite ease-out;
         }
+
         .bus-marker-wrapper.delay .bus-marker-pulse,
         .bus-marker-wrapper.danger .bus-marker-pulse {
             background: rgba(239, 68, 68, 0.35);
             animation: markerPulse 1.5s infinite ease-out;
         }
+
         @keyframes markerPulse {
-            0% { transform: scale(0.9); opacity: 0.9; }
-            100% { transform: scale(1.75); opacity: 0; }
+            0% {
+                transform: scale(0.9);
+                opacity: 0.9;
+            }
+
+            100% {
+                transform: scale(1.75);
+                opacity: 0;
+            }
         }
+
         .bus-marker-rotator {
             position: relative;
             width: 40px;
@@ -996,36 +1357,42 @@
             justify-content: center;
             transition: transform 0.4s ease;
         }
+
         .bus-marker-disc {
             width: 36px;
             height: 36px;
             border-radius: 50%;
             background: #ffffff;
             border: 2.5px solid #1e293b;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
             box-sizing: border-box;
         }
+
         .bus-marker-wrapper.online .bus-marker-disc {
             border-color: #10b981;
             box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
         }
+
         .bus-marker-wrapper.selected .bus-marker-disc {
             border-color: #eab308;
             box-shadow: 0 0 14px rgba(234, 179, 8, 0.9);
         }
+
         .bus-marker-wrapper.delay .bus-marker-disc,
         .bus-marker-wrapper.danger .bus-marker-disc {
             border-color: #ef4444;
             box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
         }
+
         .bus-marker-wrapper.offline .bus-marker-disc {
             border-color: #64748b;
             filter: grayscale(80%) opacity(0.85);
         }
+
         .bus-marker-img {
             width: 28px;
             height: 28px;
@@ -1033,6 +1400,7 @@
             display: block;
             pointer-events: none;
         }
+
         .bus-marker-pointer {
             position: absolute;
             top: -6px;
@@ -1043,18 +1411,22 @@
             border-left: 5px solid transparent;
             border-right: 5px solid transparent;
             border-bottom: 7px solid #10b981;
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
         }
+
         .bus-marker-wrapper.selected .bus-marker-pointer {
             border-bottom-color: #eab308;
         }
+
         .bus-marker-wrapper.delay .bus-marker-pointer,
         .bus-marker-wrapper.danger .bus-marker-pointer {
             border-bottom-color: #ef4444;
         }
+
         .bus-marker-wrapper.offline .bus-marker-pointer {
             display: none;
         }
+
         .bus-marker-badge-num {
             position: absolute;
             bottom: -9px;
@@ -1068,11 +1440,12 @@
             padding: 1px 5px;
             border-radius: 9px;
             white-space: nowrap;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
             border: 1.5px solid #ffffff;
             z-index: 5;
             letter-spacing: 0.3px;
         }
+
         .bus-marker-wrapper.selected .bus-marker-badge-num {
             background: #eab308;
             color: #0f172a;
@@ -1092,6 +1465,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- 1. LOGIN INTERFACE -->
@@ -1104,7 +1478,7 @@
                 </div>
                 <p class="login-subtitle">College Bus Tracking Admin Portal</p>
             </div>
-            
+
             <div id="auth-error-box" class="auth-error">
                 <i data-lucide="alert-circle" style="width: 16px; height: 16px;"></i>
                 <span id="auth-error-msg">Invalid credentials, please try again.</span>
@@ -1129,7 +1503,7 @@
 
     <!-- 2. MAIN SYSTEM PORTAL LAYOUT -->
     <div id="portal-layout" style="display: flex; flex: 1; width: 100%;">
-        
+
         <!-- SIDEBAR NAVIGATION -->
         <aside class="sidebar">
             <div class="sidebar-brand">
@@ -1192,7 +1566,8 @@
                     <i data-lucide="shield-alert" style="width: 18px; height: 18px; color: var(--status-danger);"></i>
                     <span style="color: var(--status-danger); font-weight: 700;">Breakdowns</span>
                 </span>
-                <span class="nav-badge" id="sidebar-emerg-badge" style="display: none; background: var(--status-danger);">0</span>
+                <span class="nav-badge" id="sidebar-emerg-badge"
+                    style="display: none; background: var(--status-danger);">0</span>
             </a>
 
             <div class="nav-section-label">Operations</div>
@@ -1230,7 +1605,7 @@
 
         <!-- MAIN LAYOUT WRAPPER -->
         <main class="main-layout">
-            
+
             <!-- TOP BAR HEADER -->
             <header class="top-header">
                 <div class="page-title-box">
@@ -1250,7 +1625,7 @@
 
             <!-- WORKSPACE SECTIONS -->
             <div class="content-body">
-                
+
                 <!-- SECTION 1: DASHBOARD -->
                 <div class="sect-pane" id="sect-dash" style="display: block;">
                     <!-- Stat cards -->
@@ -1260,21 +1635,24 @@
                                 <h3 class="stat-card-label">Students & Staff</h3>
                                 <p class="stat-card-value" id="dash-stat-total-students">0</p>
                             </div>
-                            <div class="stat-card-icon"><i data-lucide="users" style="width: 20px; height: 20px;"></i></div>
+                            <div class="stat-card-icon"><i data-lucide="users" style="width: 20px; height: 20px;"></i>
+                            </div>
                         </div>
                         <div class="stat-card success">
                             <div>
                                 <h3 class="stat-card-label">Boarded Today</h3>
                                 <p class="stat-card-value" id="dash-stat-boarded">0</p>
                             </div>
-                            <div class="stat-card-icon"><i data-lucide="user-check" style="width: 20px; height: 20px;"></i></div>
+                            <div class="stat-card-icon"><i data-lucide="user-check"
+                                    style="width: 20px; height: 20px;"></i></div>
                         </div>
                         <div class="stat-card primary">
                             <div>
                                 <h3 class="stat-card-label">Registered Drivers</h3>
                                 <p class="stat-card-value" id="dash-stat-drivers">0</p>
                             </div>
-                            <div class="stat-card-icon"><i data-lucide="user-cog" style="width: 20px; height: 20px;"></i></div>
+                            <div class="stat-card-icon"><i data-lucide="user-cog"
+                                    style="width: 20px; height: 20px;"></i></div>
                         </div>
                         <div class="stat-card warning">
                             <div>
@@ -1284,7 +1662,8 @@
                                     <span class="pill pill-status-warning">Pending</span>
                                 </div>
                             </div>
-                            <div class="stat-card-icon"><i data-lucide="clipboard-list" style="width: 20px; height: 20px;"></i></div>
+                            <div class="stat-card-icon"><i data-lucide="clipboard-list"
+                                    style="width: 20px; height: 20px;"></i></div>
                         </div>
                     </div>
 
@@ -1378,14 +1757,38 @@
                         <div class="floating-left-panel">
                             <h3 class="panel-title" style="margin-bottom: 4px;">Active Fleet</h3>
                             <small style="color: var(--text-secondary);" id="map-fleet-count">0 buses active</small>
+                            <small
+                                style="color: var(--text-muted); font-size: 0.7rem; margin-top: 2px; display: block;">💡
+                                Click any bus to view route & stops</small>
                             <div class="fleet-list" id="map-fleet-list">
                                 <!-- Populated dynamically -->
                             </div>
                         </div>
 
+                        <!-- Floating Route Bar -->
+                        <div id="map-active-route-bar" class="map-active-route-bar" style="display: none;">
+                            <div class="active-route-info">
+                                <div
+                                    style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59,130,246,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                    <i data-lucide="route" style="width: 18px; height: 18px; color: var(--accent);"></i>
+                                </div>
+                                <div style="min-width: 0;">
+                                    <div class="active-route-title" id="active-route-title">Bus Route</div>
+                                    <div class="active-route-subtitle" id="active-route-subtitle">Stops list</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="clearSelectedBusRoute()"
+                                style="padding: 6px 12px; font-size: 0.75rem; flex-shrink: 0; background: rgba(255,255,255,0.06); border: 1px solid var(--border);">
+                                <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                <span>Clear Route</span>
+                            </button>
+                        </div>
+
                         <!-- Floating Right Stats -->
                         <div class="floating-right-panel">
-                            <h4 style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Live Stats</h4>
+                            <h4
+                                style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">
+                                Live Stats</h4>
                             <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem;">
                                 <div style="display: flex; justify-content: space-between;">
                                     <span>Total On-Board:</span>
@@ -1399,7 +1802,8 @@
                                     <span>Idle / Offline:</span>
                                     <strong id="map-stat-offline" style="color: var(--text-muted);">0</strong>
                                 </div>
-                                <div style="border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-muted);">
+                                <div
+                                    style="border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-muted);">
                                     <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
                                     <span>Updated: <span id="map-last-update">Just now</span></span>
                                 </div>
@@ -1415,7 +1819,8 @@
                     <div class="section-header-row">
                         <div class="section-header-title">
                             <h2>Buses & Routes Register</h2>
-                            <p>Manage college transportation vehicles, seating capacities, routes, and assigned drivers</p>
+                            <p>Manage college transportation vehicles, seating capacities, routes, and assigned drivers
+                            </p>
                         </div>
                         <button class="btn btn-primary" onclick="openBusModal()">
                             <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
@@ -1480,7 +1885,8 @@
                     <div class="section-header-row">
                         <div class="section-header-title">
                             <h2>Students & Staff Register</h2>
-                            <p>Overview of all passengers, administration staff, and parents linked to the transportation network</p>
+                            <p>Overview of all passengers, administration staff, and parents linked to the
+                                transportation network</p>
                         </div>
                         <button class="btn btn-secondary" onclick="exportUsersCSV()">
                             <i data-lucide="download" style="width: 16px; height: 16px;"></i>
@@ -1492,8 +1898,11 @@
                         <div class="filter-group search">
                             <label class="form-label">Search Directory</label>
                             <div style="display: flex; gap: 8px;">
-                                <input type="text" id="user-search" class="form-control" placeholder="Search by name, college ID, bus..." onkeyup="if(event.key==='Enter') filterUsers(true)">
-                                <button class="btn btn-primary" onclick="filterUsers(true)" style="height: 44px; padding: 0 18px;">
+                                <input type="text" id="user-search" class="form-control"
+                                    placeholder="Search by name, college ID, bus..."
+                                    onkeyup="if(event.key==='Enter') filterUsers(true)">
+                                <button class="btn btn-primary" onclick="filterUsers(true)"
+                                    style="height: 44px; padding: 0 18px;">
                                     <i data-lucide="search" style="width: 16px; height: 16px;"></i>
                                     <span>Search</span>
                                 </button>
@@ -1501,7 +1910,8 @@
                         </div>
                         <div class="filter-group">
                             <label class="form-label">Role Filter</label>
-                            <select id="user-role-filter" class="form-control" style="width: 180px;" onchange="filterUsers(true)">
+                            <select id="user-role-filter" class="form-control" style="width: 180px;"
+                                onchange="filterUsers(true)">
                                 <option value="">All Roles</option>
                                 <option value="passenger">Students (Passengers)</option>
                                 <option value="staff">Staff Members</option>
@@ -1513,7 +1923,8 @@
                         </div>
                         <div class="filter-group">
                             <label class="form-label">Sort By</label>
-                            <select id="user-sort-by" class="form-control" style="width: 150px;" onchange="filterUsers(true)">
+                            <select id="user-sort-by" class="form-control" style="width: 150px;"
+                                onchange="filterUsers(true)">
                                 <option value="name-asc">Name (A-Z)</option>
                                 <option value="name-desc">Name (Z-A)</option>
                                 <option value="id-asc">College ID</option>
@@ -1540,8 +1951,10 @@
                                 <tbody id="users-table-body">
                                     <tr>
                                         <td colspan="8" class="empty-state">
-                                            <i data-lucide="search" style="width: 32px; height: 32px; color: var(--text-muted);"></i>
-                                            <p>Use the search box above or select a filter and click <strong>Search</strong> to view directory records.</p>
+                                            <i data-lucide="search"
+                                                style="width: 32px; height: 32px; color: var(--text-muted);"></i>
+                                            <p>Use the search box above or select a filter and click
+                                                <strong>Search</strong> to view directory records.</p>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1555,14 +1968,18 @@
                     <div class="section-header-row">
                         <div class="section-header-title">
                             <h2>Registration Requests</h2>
-                            <p>Approve or deny requests for bus passes, RFID cards, and dashboard account activations</p>
+                            <p>Approve or deny requests for bus passes, RFID cards, and dashboard account activations
+                            </p>
                         </div>
                     </div>
 
                     <div class="tab-switcher">
-                        <button class="tab-btn active" id="tab-reg-pending" onclick="switchRegTab('pending')">Pending Requests</button>
-                        <button class="tab-btn" id="tab-reg-approved" onclick="switchRegTab('approved')">Approved</button>
-                        <button class="tab-btn" id="tab-reg-rejected" onclick="switchRegTab('rejected')">Rejected</button>
+                        <button class="tab-btn active" id="tab-reg-pending" onclick="switchRegTab('pending')">Pending
+                            Requests</button>
+                        <button class="tab-btn" id="tab-reg-approved"
+                            onclick="switchRegTab('approved')">Approved</button>
+                        <button class="tab-btn" id="tab-reg-rejected"
+                            onclick="switchRegTab('rejected')">Rejected</button>
                     </div>
 
                     <div class="panel">
@@ -1592,7 +2009,8 @@
                     <div class="section-header-row">
                         <div class="section-header-title">
                             <h2>Daily Attendance Logs</h2>
-                            <p>Audit trail of boarding and alighting times for students and staff across the transit network</p>
+                            <p>Audit trail of boarding and alighting times for students and staff across the transit
+                                network</p>
                         </div>
                         <button class="btn btn-secondary" onclick="exportAttendanceCSV()">
                             <i data-lucide="download" style="width: 16px; height: 16px;"></i>
@@ -1613,13 +2031,15 @@
                         </div>
                         <div class="filter-group">
                             <label class="form-label">Route Coverage</label>
-                            <select id="attendance-filter-route" class="form-control" style="width: 160px;" onchange="applyAttendanceFilters()">
+                            <select id="attendance-filter-route" class="form-control" style="width: 160px;"
+                                onchange="applyAttendanceFilters()">
                                 <option value="">All Routes</option>
                             </select>
                         </div>
                         <div class="filter-group">
                             <label class="form-label">Tap Action</label>
-                            <select id="attendance-filter-status" class="form-control" style="width: 120px;" onchange="applyAttendanceFilters()">
+                            <select id="attendance-filter-status" class="form-control" style="width: 120px;"
+                                onchange="applyAttendanceFilters()">
                                 <option value="">All Statuses</option>
                                 <option value="boarded">Boarded</option>
                                 <option value="exited">Alighted</option>
@@ -1627,11 +2047,13 @@
                         </div>
                         <div class="filter-group" style="flex: 1; min-width: 180px;">
                             <label class="form-label">Search Attendance</label>
-                            <input type="text" id="attendance-search" class="form-control" placeholder="Search name, ID, stop..." oninput="applyAttendanceFilters()">
+                            <input type="text" id="attendance-search" class="form-control"
+                                placeholder="Search name, ID, stop..." oninput="applyAttendanceFilters()">
                         </div>
                         <div class="filter-group">
                             <label class="form-label">Sort By</label>
-                            <select id="attendance-sort" class="form-control" style="width: 140px;" onchange="applyAttendanceFilters()">
+                            <select id="attendance-sort" class="form-control" style="width: 140px;"
+                                onchange="applyAttendanceFilters()">
                                 <option value="time-desc">Time (Newest)</option>
                                 <option value="time-asc">Time (Oldest)</option>
                                 <option value="name-asc">Name (A-Z)</option>
@@ -1640,12 +2062,14 @@
                         </div>
                         <div class="filter-group">
                             <label class="form-label">View Layout</label>
-                            <button id="attendance-group-toggle" class="btn btn-secondary" onclick="toggleAttendanceGroupView()" style="height: 44px; padding: 0 14px;">
+                            <button id="attendance-group-toggle" class="btn btn-secondary"
+                                onclick="toggleAttendanceGroupView()" style="height: 44px; padding: 0 14px;">
                                 <i data-lucide="layers" style="width: 16px; height: 16px;"></i>
                                 <span id="attendance-group-toggle-label">Group by Bus</span>
                             </button>
                         </div>
-                        <button class="btn btn-primary" onclick="loadAttendanceLog()" style="height: 44px; align-self: flex-end;">Refresh Log</button>
+                        <button class="btn btn-primary" onclick="loadAttendanceLog()"
+                            style="height: 44px; align-self: flex-end;">Refresh Log</button>
                     </div>
 
                     <div class="panel" id="attendance-table-container">
@@ -1676,7 +2100,8 @@
                     <div class="section-header-row">
                         <div class="section-header-title">
                             <h2>Broadcast Alerts & Notifications</h2>
-                            <p>Send delays, emergency SOS messages, or routine updates to drivers, parents, and students</p>
+                            <p>Send delays, emergency SOS messages, or routine updates to drivers, parents, and students
+                            </p>
                         </div>
                         <button class="btn btn-primary" onclick="openAlertModal()">
                             <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
@@ -1694,21 +2119,30 @@
                     <div class="section-header-row">
                         <div class="section-header-title">
                             <h2>Emergency Bus Breakdowns</h2>
-                            <p>Monitor active breakdowns, review intelligent backup recommendations, and view breakdown history.</p>
+                            <p>Monitor active breakdowns, review intelligent backup recommendations, and view breakdown
+                                history.</p>
                         </div>
                     </div>
 
-                    <div class="tab-switcher" style="margin-bottom: 16px;">
-                        <button class="tab-btn active" id="tab-emerg-active" onclick="switchEmergTab('active')">Active Breakdowns</button>
-                        <button class="tab-btn" id="tab-emerg-history" onclick="switchEmergTab('history')">Breakdown History</button>
+                    <div class="tab-switcher" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 8px;">
+                            <button class="tab-btn active" id="tab-emerg-active" onclick="switchEmergTab('active')">Active Breakdowns</button>
+                            <button class="tab-btn" id="tab-emerg-history" onclick="switchEmergTab('history')">Breakdown History</button>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="btn-resolve-all-emerg" onclick="resolveAllEmergencies()" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--status-danger); color: var(--status-danger); font-weight: 700; padding: 6px 14px;">
+                            <i data-lucide="check-check" style="width: 14px; height: 14px; margin-right: 4px;"></i> Mark All Resolved
+                        </button>
                     </div>
-                    
-                    <div id="emergencies-container" style="display: flex; flex-direction: column; gap: 24px; margin-top: 16px;">
+
+                    <div id="emergencies-container"
+                        style="display: flex; flex-direction: column; gap: 24px; margin-top: 16px;">
                         <!-- Populated dynamically -->
                         <div class="empty-state">
-                            <i data-lucide="shield-check" style="width: 48px; height: 48px; color: var(--status-active);"></i>
+                            <i data-lucide="shield-check"
+                                style="width: 48px; height: 48px; color: var(--status-active);"></i>
                             <p style="font-weight: 700; font-size: 1.05rem; margin-top: 8px;">No breakdowns yet</p>
-                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">All buses are operating normally with no reported emergencies.</p>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">All buses are
+                                operating normally with no reported emergencies.</p>
                         </div>
                     </div>
                 </div>
@@ -1736,7 +2170,8 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="bus-route-name">Route Name / Description</label>
-                    <input type="text" id="bus-route-name" class="form-control" placeholder="e.g. Route A — Woraiyur" required>
+                    <input type="text" id="bus-route-name" class="form-control" placeholder="e.g. Route A — Woraiyur"
+                        required>
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="bus-driver">Assigned Operator (Driver)</label>
@@ -1750,9 +2185,10 @@
                 </div>
                 <div class="form-group" style="margin-bottom: 24px;">
                     <label class="form-label" for="bus-stops">Route Stops (Comma Separated)</label>
-                    <input type="text" id="bus-stops" class="form-control" placeholder="e.g. Woraiyur Town, Srirangam, Campus" required>
+                    <input type="text" id="bus-stops" class="form-control"
+                        placeholder="e.g. Woraiyur Town, Srirangam, Campus" required>
                 </div>
-                
+
                 <div style="display: flex; justify-content: flex-end; gap: 12px;">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="closeBusModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary btn-sm">Save Vehicle</button>
@@ -1782,7 +2218,8 @@
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="closeApproveModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary btn-sm" style="background: var(--status-active);">Approve Request</button>
+                    <button type="submit" class="btn btn-primary btn-sm"
+                        style="background: var(--status-active);">Approve Request</button>
                 </div>
             </form>
         </div>
@@ -1798,7 +2235,8 @@
             <form id="broadcast-alert-form">
                 <div class="form-group">
                     <label class="form-label" for="alert-title">Notification Title</label>
-                    <input type="text" id="alert-title" class="form-control" placeholder="e.g. Route A 10m Delay" required>
+                    <input type="text" id="alert-title" class="form-control" placeholder="e.g. Route A 10m Delay"
+                        required>
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="alert-type">Alert Type</label>
@@ -1820,7 +2258,8 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="alert-message">Alert Message Body</label>
-                    <textarea id="alert-message" class="form-control" style="height: 100px; resize: none;" placeholder="Provide details regarding coordinates, delays, etc..." required></textarea>
+                    <textarea id="alert-message" class="form-control" style="height: 100px; resize: none;"
+                        placeholder="Provide details regarding coordinates, delays, etc..." required></textarea>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
@@ -1832,17 +2271,21 @@
     </div>
 
     <!-- MINI-MAP BUS LOCATION MODAL -->
-    <div class="modal-overlay" id="minimap-modal" style="display:none; align-items:center; justify-content:center; z-index:9999;">
+    <div class="modal-overlay" id="minimap-modal"
+        style="display:none; align-items:center; justify-content:center; z-index:9999;">
         <div class="modal-card" style="max-width: 680px; width: 92%;">
             <div class="modal-header">
                 <div>
                     <h3 class="modal-title" id="minimap-modal-title">Bus Live Location</h3>
-                    <div id="minimap-modal-subtitle" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;"></div>
+                    <div id="minimap-modal-subtitle"
+                        style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;"></div>
                 </div>
                 <button class="close-modal-btn" onclick="closeMiniMapModal()"><i data-lucide="x"></i></button>
             </div>
-            
-            <div id="minimap-canvas" style="width: 100%; height: 360px; border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border); overflow: hidden; background: #0f172a;"></div>
+
+            <div id="minimap-canvas"
+                style="width: 100%; height: 360px; border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border); overflow: hidden; background: #0f172a;">
+            </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div id="minimap-details" style="font-size: 0.8rem; color: var(--text-secondary);"></div>
@@ -1854,7 +2297,8 @@
     </div>
 
     <!-- Google Maps JS -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBgybbeZKCnwUSRKc0JHw7a6CZBnD6ZJkU&libraries=geometry"></script>
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBgybbeZKCnwUSRKc0JHw7a6CZBnD6ZJkU&libraries=geometry"></script>
 
     <!-- CORE LOGIC & REST INTERACTION -->
     <script>
@@ -1883,9 +2327,13 @@
         };
 
         const mockBuses = [
-            { id: "B01", number: "Bus-01", route_name: "Route A — Woraiyur", driver_name: "Rajan S.", capacity: 50, boarded_today: 18, stops: ["Woraiyur Town", "Gandhi Market", "Campus"], is_active: 1, live: null },
-            { id: "B02", number: "Bus-02", route_name: "Route B — Srirangam", driver_name: "Murugan K.", capacity: 45, boarded_today: 25, stops: ["Srirangam", "Cauvery Bridge", "Campus"], is_active: 1, live: null },
-            { id: "B03", number: "Bus-03", route_name: "Route C — Ariyamangalam", driver_name: "Selvam P.", capacity: 50, boarded_today: 0, stops: ["Ariyamangalam", "Thuvakudi", "Campus"], is_active: 1, live: null }
+            { id: "B01", number: "TN-01", route_name: "Route A — Woraiyur", driver_name: "Rajan S.", capacity: 50, boarded_today: 18, stops: ["KRCE Campus", "Samayapuram", "Woraiyur Bus Stand", "Woraiyur Town", "Gandhi Market"], is_active: 1, live: null },
+            { id: "B02", number: "TN-02", route_name: "Route B — Srirangam", driver_name: "Murugan K.", capacity: 45, boarded_today: 25, stops: ["KRCE Campus", "Panjappur", "Srirangam", "Cauvery Bridge", "K.K. Nagar"], is_active: 1, live: null },
+            { id: "B03", number: "TN-03", route_name: "Route C — Ariyamangalam", driver_name: "Selvam P.", capacity: 50, boarded_today: 0, stops: ["KRCE Campus", "Thuvakudi", "Ariyamangalam", "Cantonment", "Collector Office"], is_active: 1, live: null },
+            { id: "B04", number: "TN-04", route_name: "Route D — Chatram Bus Stand", driver_name: "Muthu M.", capacity: 40, boarded_today: 0, stops: ["KRCE Campus", "Palakarai", "Chatram Bus Stand", "Central", "Junction"], is_active: 1, live: null },
+            { id: "B05", number: "TN-05", route_name: "Route E — Mannarpuram", driver_name: "Ganesan V.", capacity: 55, boarded_today: 0, stops: ["KRCE Campus", "Thillai Nagar", "Mannarpuram", "Rockfort", "Chinthamani"], is_active: 1, live: null },
+            { id: "B06", number: "TN-06", route_name: "Route F — Kalkandar Kottai", driver_name: "Karthik R.", capacity: 50, boarded_today: 0, stops: ["KRCE Campus", "TVS Tollgate", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Kalkandar Kottai"], is_active: 1, live: null },
+            { id: "B07", number: "TN-07", route_name: "Route G — Kalkandar Kottai (BVM Trichy)", driver_name: "Ganesh K.", capacity: 50, boarded_today: 0, stops: ["KRCE Campus", "BVM Trichy", "Armory Gate", "Kadai Veethi", "Mandabam", "Aathupalam"], is_active: 1, live: null }
         ];
 
         const mockUsers = [
@@ -1894,7 +2342,8 @@
             { id: "fac01", name: "Dr. Senthil Kumar", college_id: "FAC001", role: "staff", bus_id: "B01", bus_number: "Bus-01", rfid_card: "RF010", is_active: 1 },
             { id: "par01", name: "Suresh Kumar", college_id: "—", role: "parent", bus_id: "—", bus_number: "—", rfid_card: "—", is_active: 1 },
             { id: "drv01", name: "Rajan S.", phone: "9840111111", licence_no: "TN-DL-001", role: "driver", bus_id: "B01", bus_number: "Bus-01", route_name: "Route A — Woraiyur", status: "online", is_active: 1 },
-            { id: "drv02", name: "Murugan K.", phone: "9840122222", licence_no: "TN-DL-002", role: "driver", bus_id: "B02", bus_number: "Bus-02", route_name: "Route B — Srirangam", status: "online", is_active: 1 }
+            { id: "drv02", name: "Murugan K.", phone: "9840122222", licence_no: "TN-DL-002", role: "driver", bus_id: "B02", bus_number: "Bus-02", route_name: "Route B — Srirangam", status: "online", is_active: 1 },
+            { id: "drv07", name: "Ganesh K.", phone: "9840177777", licence_no: "TN-DL-007", role: "driver", bus_id: "B07", bus_number: "TN-07", route_name: "Route G — Kalkandar Kottai (BVM Trichy)", status: "offline", is_active: 1 }
         ];
 
         const mockAlerts = [
@@ -1913,7 +2362,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
-            
+
             // Set date picker default to today
             document.getElementById('attendance-filter-date').value = new Date().toISOString().split('T')[0];
 
@@ -1925,7 +2374,7 @@
                     } else {
                         showPortal();
                     }
-                } catch(e) {
+                } catch (e) {
                     logout();
                 }
             } else {
@@ -1972,7 +2421,7 @@
             const nowSec = Math.floor(Date.now() / 1000);
             const lastActive = live.last_active || live.updated_at || 0;
             const elapsed = lastActive > 0 ? (nowSec - lastActive) : 999;
-            
+
             if (elapsed > 180) {
                 return { status: 'offline', isOnline: false, isSignalLoss: false, stateClass: 'offline' };
             } else if (elapsed > 90 || live.status === 'signal_loss') {
@@ -1991,7 +2440,7 @@
         function showPortal() {
             document.getElementById('login-container').style.display = 'none';
             document.getElementById('portal-layout').style.display = 'flex';
-            
+
             if (userProfile) {
                 document.getElementById('admin-name').innerText = userProfile.name || "Administrator";
                 document.getElementById('user-avatar').innerText = (userProfile.name || "A").substring(0, 1).toUpperCase();
@@ -2007,7 +2456,7 @@
 
         function logout() {
             if (wsConn) {
-                try { wsConn.close(); } catch(e){}
+                try { wsConn.close(); } catch (e) { }
                 wsConn = null;
             }
             if (pollingInterval) {
@@ -2024,7 +2473,7 @@
             if (!token) return;
             if (wsConn) {
                 wsConn.onclose = null;
-                try { wsConn.close(); } catch(e){}
+                try { wsConn.close(); } catch (e) { }
             }
             const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const WS_BASE = IS_LOCAL ? window.location.origin.replace(/^http/, 'ws') : 'wss://krce-bus-tracking.onrender.com';
@@ -2055,13 +2504,16 @@
                                 updated_at: Date.now() / 1000
                             };
                             updateLiveMapMarkers();
+                            if (typeof activeSelectedBusId !== 'undefined' && activeSelectedBusId === bus.id && typeof drawBusRouteOnMap === 'function') {
+                                drawBusRouteOnMap(bus);
+                            }
                         }
                     } else if (data.type === 'alert' || data.type === 'emergency_reported' || data.type === 'emergency_update') {
                         loadAlerts();
                         loadStats();
                         loadEmergencies();
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error("Error handling WebSocket message:", e);
                 }
             };
@@ -2099,12 +2551,12 @@
         function switchSection(sectId, navElement) {
             document.querySelectorAll('.sect-pane').forEach(p => p.style.display = 'none');
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            
+
             const pane = document.getElementById(sectId);
             if (pane) {
                 pane.style.display = 'block';
             }
-            
+
             if (navElement) {
                 navElement.classList.add('active');
             }
@@ -2155,7 +2607,7 @@
                 if (res.ok) {
                     data = await res.json();
                 }
-            } catch(e) {
+            } catch (e) {
                 console.warn("Using mock stats data.");
             }
 
@@ -2278,7 +2730,7 @@
                 disableDefaultUI: true,
                 zoomControl: true
             });
-            
+
             // Add KRCE Campus Marker
             const campusMarker = new CustomHTMLMarker(
                 new google.maps.LatLng(10.927669, 78.7410),
@@ -2291,7 +2743,7 @@
                 [30, 30],
                 [15, 15]
             );
-            
+
             const campusInfoWindow = new google.maps.InfoWindow({
                 content: "<b>KRCE Campus</b><br>K. Ramakrishnan College"
             });
@@ -2302,9 +2754,476 @@
                 campusInfoWindow.open(map);
                 activeInfoWindow = campusInfoWindow;
             };
-            
+
             updateLiveMapMarkers();
             lucide.createIcons();
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  BUS ROUTE OVERLAY & STOP COORDINATES DATABASE
+        // ═══════════════════════════════════════════════════════════════════
+        const BUS_MARKER_ICON_DATA = "data:image/png;base64,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";
+
+        const STOP_COORDS = {
+            "KRCE Campus": [10.927669, 78.7410],
+            "Samayapuram": [10.9310, 78.8130],
+            "Woraiyur Bus Stand": [10.7905, 78.7047],
+            "Woraiyur Town": [10.7920, 78.7020],
+            "Gandhi Market": [10.8190, 78.6990],
+            "Panjappur": [10.7516, 78.6830],
+            "Srirangam": [10.8631, 78.6933],
+            "Cauvery Bridge": [10.8416, 78.7010],
+            "K.K. Nagar": [10.8176, 78.6960],
+            "Thuvakudi": [10.8730, 78.7680],
+            "Ariyamangalam": [10.8280, 78.7380],
+            "Cantonment": [10.8116, 78.6860],
+            "Collector Office": [10.8080, 78.6820],
+            "Palakarai": [10.8120, 78.6930],
+            "Chatram Bus Stand": [10.8096, 78.6964],
+            "Central": [10.8050, 78.6840],
+            "Junction": [10.8020, 78.6810],
+            "Thillai Nagar": [10.8240, 78.6890],
+            "Mannarpuram": [10.8182, 78.7030],
+            "Rockfort": [10.8300, 78.6970],
+            "Chinthamani": [10.8350, 78.7020],
+            "TVS Tollgate": [10.7893, 78.6964],
+            "SIT": [10.8073, 78.7270],
+            "Ambigapuram": [10.7994, 78.7297],
+            "Manjathidal": [10.7928, 78.7323],
+            "Armory Gate": [10.790023733981762, 78.73329950112438],
+            "Panjayat Office": [10.7863, 78.7348],
+            "Allathur": [10.780318, 78.741374],
+            "Kalkandar Kottai": [10.780318, 78.741374],
+            "BVM Trichy": [10.802560828249527, 78.72817457412987],
+            "Kadai Veethi": [10.787889548786595, 78.73458964366377],
+            "Mandabam": [10.784857884299807, 78.73794418059305],
+            "Aathupalam": [10.78053936291256, 78.74133985720921]
+        };
+
+        const DEFAULT_BUS_STOPS = {
+            "B01": ["KRCE Campus", "Samayapuram", "Woraiyur Bus Stand", "Woraiyur Town", "Gandhi Market"],
+            "TN-01": ["KRCE Campus", "Samayapuram", "Woraiyur Bus Stand", "Woraiyur Town", "Gandhi Market"],
+            "B02": ["KRCE Campus", "Panjappur", "Srirangam", "Cauvery Bridge", "K.K. Nagar"],
+            "TN-02": ["KRCE Campus", "Panjappur", "Srirangam", "Cauvery Bridge", "K.K. Nagar"],
+            "B03": ["KRCE Campus", "Thuvakudi", "Ariyamangalam", "Cantonment", "Collector Office"],
+            "TN-03": ["KRCE Campus", "Thuvakudi", "Ariyamangalam", "Cantonment", "Collector Office"],
+            "B04": ["KRCE Campus", "Palakarai", "Chatram Bus Stand", "Central", "Junction"],
+            "TN-04": ["KRCE Campus", "Palakarai", "Chatram Bus Stand", "Central", "Junction"],
+            "B05": ["KRCE Campus", "Thillai Nagar", "Mannarpuram", "Rockfort", "Chinthamani"],
+            "TN-05": ["KRCE Campus", "Thillai Nagar", "Mannarpuram", "Rockfort", "Chinthamani"],
+            "B06": ["KRCE Campus", "TVS Tollgate", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Kalkandar Kottai"],
+            "TN-06": ["KRCE Campus", "TVS Tollgate", "SIT", "Ambigapuram", "Manjathidal", "Armory Gate", "Panjayat Office", "Kalkandar Kottai"],
+            "B07": ["KRCE Campus", "BVM Trichy", "Armory Gate", "Kadai Veethi", "Mandabam", "Aathupalam"],
+            "TN-07": ["KRCE Campus", "BVM Trichy", "Armory Gate", "Kadai Veethi", "Mandabam", "Aathupalam"]
+        };
+
+        let activeSelectedBusId = null;
+        let routePolylines = { completed: null, remaining: null, full: null };
+        let routeMarkers = { start: null, destination: null, stops: [], offlineBus: null };
+
+        function getStopCoords(name) {
+            if (!name) return null;
+            const trimmed = name.trim();
+            if (STOP_COORDS[trimmed]) return STOP_COORDS[trimmed];
+            const lower = trimmed.toLowerCase();
+            for (const [k, v] of Object.entries(STOP_COORDS)) {
+                if (k.toLowerCase() === lower) return v;
+            }
+            for (const [k, v] of Object.entries(STOP_COORDS)) {
+                if (lower.includes(k.toLowerCase()) || k.toLowerCase().includes(lower)) return v;
+            }
+            return null;
+        }
+
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const phi1 = lat1 * Math.PI / 180;
+            const phi2 = lat2 * Math.PI / 180;
+            const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+            const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                Math.cos(phi1) * Math.cos(phi2) *
+                Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function clearRouteOverlays() {
+            if (routePolylines.completed) {
+                routePolylines.completed.setMap(null);
+                routePolylines.completed = null;
+            }
+            if (routePolylines.remaining) {
+                routePolylines.remaining.setMap(null);
+                routePolylines.remaining = null;
+            }
+            if (routePolylines.full) {
+                routePolylines.full.setMap(null);
+                routePolylines.full = null;
+            }
+            if (routeMarkers.start) {
+                routeMarkers.start.setMap(null);
+                routeMarkers.start = null;
+            }
+            if (routeMarkers.destination) {
+                routeMarkers.destination.setMap(null);
+                routeMarkers.destination = null;
+            }
+            if (routeMarkers.offlineBus) {
+                routeMarkers.offlineBus.setMap(null);
+                routeMarkers.offlineBus = null;
+            }
+            routeMarkers.stops.forEach(m => m.setMap(null));
+            routeMarkers.stops = [];
+        }
+
+        function clearSelectedBusRoute() {
+            clearRouteOverlays();
+            activeSelectedBusId = null;
+            const bar = document.getElementById('map-active-route-bar');
+            if (bar) bar.style.display = 'none';
+            document.querySelectorAll('.fleet-item').forEach(el => el.classList.remove('selected-bus'));
+        }
+
+        async function selectBusRoute(busId) {
+            if (!map) return;
+            const bus = (globalBuses || []).find(b =>
+                b.id === busId ||
+                b.number === busId ||
+                (busId === '7' && (b.id === 'B07' || b.number === 'TN-07')) ||
+                (b.id === 'B07' && (busId === 'B07' || busId === 'TN-07' || busId === 'Bus-07' || busId === '7'))
+            );
+            if (!bus) return;
+
+            activeSelectedBusId = bus.id;
+
+            // Highlight selected item in Active Fleet list
+            document.querySelectorAll('.fleet-item').forEach(el => el.classList.remove('selected-bus'));
+            const fleetItem = document.querySelector(`.fleet-item[data-bus-id="${bus.id}"]`);
+            if (fleetItem) {
+                fleetItem.classList.add('selected-bus');
+                fleetItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // Show active route banner
+            const bar = document.getElementById('map-active-route-bar');
+            const titleEl = document.getElementById('active-route-title');
+            const subtitleEl = document.getElementById('active-route-subtitle');
+            if (bar && titleEl && subtitleEl) {
+                titleEl.innerHTML = `<strong>${bus.number}</strong> — ${bus.route_name}`;
+                subtitleEl.innerText = "Loading route path & stops...";
+                bar.style.display = 'flex';
+                lucide.createIcons();
+            }
+
+            await drawBusRouteOnMap(bus);
+        }
+
+        async function drawBusRouteOnMap(bus) {
+            clearRouteOverlays();
+
+            let stops = bus.stops;
+            if (!stops || stops.length === 0) {
+                stops = DEFAULT_BUS_STOPS[bus.id] || DEFAULT_BUS_STOPS[bus.number] || [];
+            }
+            if (!stops || stops.length === 0) {
+                stops = ["KRCE Campus", "BVM Trichy", "Armory Gate", "Kadai Veethi", "Mandabam", "Aathupalam"];
+            }
+
+            const stopsCoords = [];
+            stops.forEach(name => {
+                const c = getStopCoords(name);
+                if (c) {
+                    stopsCoords.push({ name: name, lat: c[0], lon: c[1] });
+                }
+            });
+
+            if (stopsCoords.length === 0) return;
+
+            const live = bus.live;
+            const sInfo = getBusStatusInfo(live);
+            const hasLiveGps = sInfo.isOnline && live && live.lat != null && live.lon != null;
+
+            const subtitleEl = document.getElementById('active-route-subtitle');
+            if (subtitleEl) {
+                subtitleEl.innerText = `${stopsCoords.length} Stops: ${stopsCoords.map(s => s.name).join(' ➔ ')} ${hasLiveGps ? '(Live GPS Active)' : '(Hardware Offline — Scheduled Path)'}`;
+            }
+
+            const bounds = new google.maps.LatLngBounds();
+            stopsCoords.forEach(s => bounds.extend(new google.maps.LatLng(s.lat, s.lon)));
+
+            const isForward = !(live && live.direction === 'reverse');
+            const travelStops = isForward ? stopsCoords : [...stopsCoords].reverse();
+
+            if (hasLiveGps) {
+                const busLat = live.lat;
+                const busLon = live.lon;
+                bounds.extend(new google.maps.LatLng(busLat, busLon));
+
+                let closestIdx = 0;
+                let minD = Infinity;
+                for (let i = 0; i < travelStops.length; i++) {
+                    let d = getDistance(busLat, busLon, travelStops[i].lat, travelStops[i].lon);
+                    if (d < minD) {
+                        minD = d;
+                        closestIdx = i;
+                    }
+                }
+
+                const completedStops = travelStops.slice(0, closestIdx + 1);
+                const remainingStops = travelStops.slice(closestIdx + 1);
+
+                let completedCoords = [];
+                if (completedStops.length > 0) {
+                    let completedWaypoints = completedStops.map(s => `${s.lon},${s.lat}`).join(';');
+                    completedWaypoints += `;${busLon},${busLat}`;
+                    try {
+                        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${completedWaypoints}?overview=full&geometries=geojson`);
+                        const data = await res.json();
+                        if (data.routes && data.routes.length > 0) {
+                            completedCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                        }
+                    } catch (e) {
+                        completedCoords = completedStops.map(s => [s.lat, s.lon]);
+                        completedCoords.push([busLat, busLon]);
+                    }
+                }
+
+                let destName = live.destination_stop || (isForward ? travelStops[travelStops.length - 1].name : "KRCE Campus");
+                let destCoord = getStopCoords(destName) || [travelStops[travelStops.length - 1].lat, travelStops[travelStops.length - 1].lon];
+                let destLat = destCoord[0];
+                let destLon = destCoord[1];
+
+                let remainingCoords = [];
+                let remainingWaypoints = `${busLon},${busLat}`;
+                if (remainingStops.length > 0) {
+                    remainingWaypoints += ';' + remainingStops.map(s => `${s.lon},${s.lat}`).join(';');
+                }
+                if (remainingStops.length === 0 || remainingStops[remainingStops.length - 1].name !== destName) {
+                    remainingWaypoints += `;${destLon},${destLat}`;
+                }
+
+                try {
+                    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${remainingWaypoints}?overview=full&geometries=geojson`);
+                    const data = await res.json();
+                    if (data.routes && data.routes.length > 0) {
+                        remainingCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    }
+                } catch (e) {
+                    remainingCoords = [[busLat, busLon]];
+                    remainingStops.forEach(s => remainingCoords.push([s.lat, s.lon]));
+                    remainingCoords.push([destLat, destLon]);
+                }
+
+                if (completedCoords.length > 0) {
+                    routePolylines.completed = new google.maps.Polyline({
+                        path: completedCoords.map(c => ({ lat: c[0], lng: c[1] })),
+                        strokeColor: '#10b981',
+                        strokeOpacity: 0.9,
+                        strokeWeight: 6,
+                        zIndex: 20,
+                        map: map
+                    });
+                }
+
+                if (remainingCoords.length > 0) {
+                    const lineSymbol = {
+                        path: 'M 0,-1 0,1',
+                        strokeOpacity: 1,
+                        scale: 3
+                    };
+                    routePolylines.remaining = new google.maps.Polyline({
+                        path: remainingCoords.map(c => ({ lat: c[0], lng: c[1] })),
+                        strokeColor: '#3b82f6',
+                        strokeOpacity: 0,
+                        icons: [{
+                            icon: lineSymbol,
+                            offset: '0',
+                            repeat: '15px'
+                        }],
+                        zIndex: 20,
+                        map: map
+                    });
+                }
+
+                map.setCenter({ lat: busLat, lng: busLon });
+                map.setZoom(14);
+                if (busMarkers[bus.id]) {
+                    busMarkers[bus.id].openPopup();
+                }
+            } else {
+                // OFFLINE BUS (e.g. Bus 7 / TN-07)
+                let fullWaypoints = travelStops.map(s => `${s.lon},${s.lat}`).join(';');
+                let fullCoords = [];
+                try {
+                    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${fullWaypoints}?overview=full&geometries=geojson`);
+                    const data = await res.json();
+                    if (data.routes && data.routes.length > 0) {
+                        fullCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    }
+                } catch (e) {
+                    fullCoords = travelStops.map(s => [s.lat, s.lon]);
+                }
+
+                if (fullCoords.length > 0) {
+                    routePolylines.full = new google.maps.Polyline({
+                        path: fullCoords.map(c => ({ lat: c[0], lng: c[1] })),
+                        strokeColor: '#38bdf8',
+                        strokeOpacity: 0.85,
+                        strokeWeight: 6,
+                        zIndex: 20,
+                        map: map
+                    });
+                }
+
+                const startStop = travelStops[0];
+                const offlineBusHtml = `
+                    <div class="bus-marker-wrapper offline selected" title="${bus.number} (Offline)">
+                        <div class="bus-marker-rotator">
+                            <div class="bus-marker-disc" style="background: #334155; border: 2px solid #94a3b8; box-shadow: 0 0 10px rgba(0,0,0,0.6);">
+                                <img src="${BUS_MARKER_ICON_DATA}" class="bus-marker-img" alt="${bus.number}" style="opacity: 0.85;" />
+                            </div>
+                        </div>
+                        <div class="bus-marker-badge-num" style="background:#1e293b;color:#f8fafc;">${bus.number.replace('Bus-', '')}</div>
+                    </div>
+                `;
+                const offlineMarker = new CustomHTMLMarker(
+                    new google.maps.LatLng(startStop.lat, startStop.lon),
+                    offlineBusHtml,
+                    'custom-bus-marker',
+                    map,
+                    () => {
+                        offlineMarker.openPopup();
+                    },
+                    [44, 44],
+                    [22, 22]
+                );
+                const offlineInfoWindow = new google.maps.InfoWindow({
+                    content: `
+                        <div style="color: #0b0f19; font-family: Outfit, sans-serif; font-size: 0.85rem; min-width:240px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                <strong style="font-size:1rem; color:#0f172a;">${bus.number}</strong>
+                                <span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b;padding:3px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>OFFLINE</span>
+                            </div>
+                            <div style="margin-bottom:6px;">
+                                <strong>Route:</strong> ${bus.route_name}<br>
+                                <strong>Driver:</strong> ${bus.driver_name || 'Unassigned'}<br>
+                                <strong>Status:</strong> Hardware Offline — Showing Scheduled Route
+                            </div>
+                            <hr style="border:none;border-top:1px solid #e2e8f0;margin:6px 0;">
+                            <div style="color:#64748b;font-size:0.75rem;">
+                                📍 <b>Scheduled Stops:</b> ${travelStops.map(s => s.name).join(' ➔ ')}
+                            </div>
+                        </div>
+                    `
+                });
+                offlineMarker.infoWindow = offlineInfoWindow;
+                offlineMarker.openPopup = () => {
+                    if (activeInfoWindow) activeInfoWindow.close();
+                    offlineInfoWindow.setPosition(offlineMarker.position);
+                    offlineInfoWindow.open(map);
+                    activeInfoWindow = offlineInfoWindow;
+                };
+                routeMarkers.offlineBus = offlineMarker;
+
+                map.fitBounds(bounds, { top: 60, right: 300, bottom: 60, left: 340 });
+                setTimeout(() => {
+                    offlineMarker.openPopup();
+                }, 300);
+            }
+
+            // Origin Flag Marker (Green)
+            const startStop = travelStops[0];
+            if (startStop) {
+                const startMarker = new CustomHTMLMarker(
+                    new google.maps.LatLng(startStop.lat, startStop.lon),
+                    '<div style="filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6)); font-size: 1.6rem; color: #10b981; cursor: pointer;"><svg viewBox="0 0 24 24" width="28" height="28" fill="#10b981" stroke="#ffffff" stroke-width="1.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg></div>',
+                    'start-marker-icon',
+                    map,
+                    () => { startMarker.openPopup(); },
+                    [28, 28],
+                    [6, 26]
+                );
+                const startInfoWindow = new google.maps.InfoWindow({
+                    content: `<b>Origin Stop: ${startStop.name}</b><br><small style="color:#64748b;">Starting point of ${bus.number}</small>`
+                });
+                startMarker.infoWindow = startInfoWindow;
+                startMarker.openPopup = () => {
+                    if (activeInfoWindow) activeInfoWindow.close();
+                    startInfoWindow.setPosition(startMarker.position);
+                    startInfoWindow.open(map);
+                    activeInfoWindow = startInfoWindow;
+                };
+                routeMarkers.start = startMarker;
+            }
+
+            // Destination Flag Marker (Red)
+            const destStop = travelStops[travelStops.length - 1];
+            if (destStop && destStop !== startStop) {
+                const destMarker = new CustomHTMLMarker(
+                    new google.maps.LatLng(destStop.lat, destStop.lon),
+                    '<div style="filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6)); font-size: 1.6rem; color: #ef4444; cursor: pointer;"><svg viewBox="0 0 24 24" width="28" height="28" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg></div>',
+                    'dest-marker-icon',
+                    map,
+                    () => { destMarker.openPopup(); },
+                    [28, 28],
+                    [6, 26]
+                );
+                const destInfoWindow = new google.maps.InfoWindow({
+                    content: `<b>Destination: ${destStop.name}</b><br><small style="color:#64748b;">Final destination of ${bus.number}</small>`
+                });
+                destMarker.infoWindow = destInfoWindow;
+                destMarker.openPopup = () => {
+                    if (activeInfoWindow) activeInfoWindow.close();
+                    destInfoWindow.setPosition(destMarker.position);
+                    destInfoWindow.open(map);
+                    activeInfoWindow = destInfoWindow;
+                };
+                routeMarkers.destination = destMarker;
+            }
+
+            // Intermediate Numbered Stop Markers along the route
+            travelStops.forEach((stop, index) => {
+                if (index === 0 || index === travelStops.length - 1) return;
+
+                const stopHtml = `
+                <div style="width: 28px; height: 38px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); cursor: pointer;">
+                  <svg viewBox="0 0 100 138" width="100%" height="100%">
+                    <path d="M50 0 C22.4 0 0 22.4 0 50 C0 85 45 132 48 136 C49 137.5 51 137.5 52 136 C55 132 100 85 100 50 C100 22.4 77.6 0 50 0 Z" fill="#1e293b" stroke="#38bdf8" stroke-width="4"/>
+                    <circle cx="50" cy="50" r="32" fill="#38bdf8"/>
+                    <text x="50" y="60" font-size="32" font-weight="bold" fill="#0f172a" text-anchor="middle" font-family="Outfit, sans-serif">${index + 1}</text>
+                  </svg>
+                </div>`;
+
+                const stopMarker = new CustomHTMLMarker(
+                    new google.maps.LatLng(stop.lat, stop.lon),
+                    stopHtml,
+                    'stop-marker-icon',
+                    map,
+                    () => {
+                        stopMarker.openPopup();
+                    },
+                    [28, 38],
+                    [14, 38]
+                );
+
+                const stopInfoWindow = new google.maps.InfoWindow({
+                    content: `
+                        <div style="color:#0f172a; font-family:Outfit, sans-serif; font-size:0.85rem;">
+                            <b>Stop #${index + 1}: ${stop.name}</b><br>
+                            <span style="color:#64748b; font-size:0.75rem;">Route: ${bus.route_name}</span>
+                        </div>
+                    `
+                });
+                stopMarker.infoWindow = stopInfoWindow;
+                stopMarker.openPopup = () => {
+                    if (activeInfoWindow) activeInfoWindow.close();
+                    stopInfoWindow.setPosition(stopMarker.position);
+                    stopInfoWindow.open(map);
+                    activeInfoWindow = stopInfoWindow;
+                };
+
+                routeMarkers.stops.push(stopMarker);
+            });
         }
 
         function updateLiveMapMarkers() {
@@ -2324,7 +3243,7 @@
                 const speed = live ? live.speed : 0;
 
                 totalOnboard += b.boarded_today || 0;
-                
+
                 if (!live || !live.lat || !live.lon) {
                     offlineCount++;
                     // Remove marker from map if it exists
@@ -2333,21 +3252,25 @@
                         delete busMarkers[b.id];
                     }
 
-                    // Show in active fleet list but mark offline and disable map panning
+                    // Show in active fleet list and allow viewing its scheduled route
                     const div = document.createElement('div');
                     div.className = 'fleet-item';
+                    div.dataset.busId = b.id;
+                    if (activeSelectedBusId === b.id) {
+                        div.classList.add('selected-bus');
+                    }
                     div.onclick = () => {
-                        alert(`${b.number} is offline. No location received from Android app yet.`);
+                        selectBusRoute(b.id);
                     };
                     div.innerHTML = `
                         <div class="fleet-item-header">
-                            <span>${b.number}</span>
+                            <span><span style="width:8px;height:8px;border-radius:50%;background:#64748b;display:inline-block;margin-right:4px;"></span>${b.number}</span>
                             <span class="hw-badge offline"><span class="hw-dot"></span>ESP32 Offline</span>
                         </div>
                         <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:2px;">${b.route_name}</div>
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-secondary);">
                             <span>Pax: ${b.boarded_today || 0}/${b.capacity}</span>
-                            <span>No GPS signal</span>
+                            <span style="color:var(--primary); font-weight:600; cursor:pointer;">View route ➔</span>
                         </div>
                     `;
                     fleetList.appendChild(div);
@@ -2377,7 +3300,7 @@
                     markerColorClass = 'warning';
                 }
 
-                        const BUS_MARKER_ICON_DATA = "data:image/png;base64,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";
+                const BUS_MARKER_ICON_DATA = "data:image/png;base64,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";
                 // DivIcon Marker with rotation and directional arrow
                 const heading = (live && live.heading) ? live.heading : 0;
                 const textHeading = isOnline ? `transform: rotate(${-heading}deg);` : '';
@@ -2409,20 +3332,18 @@
                         'custom-bus-marker',
                         map,
                         () => {
-                            map.setCenter({ lat: lat, lng: lon });
-                            map.setZoom(14);
-                            busMarkers[b.id].openPopup();
+                            selectBusRoute(b.id);
                         },
                         [44, 44],
                         [22, 22]
                     );
                 }
-                
+
                 const hwSrc = live && live.hw_source === 'ESP32';
                 const sats = live && live.satellites != null ? live.satellites : '--';
                 const hdopVal = live && live.hdop != null ? live.hdop : '--';
-                const lastSeenTs = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour:'2-digit', minute:'2-digit', second:'2-digit' }) + ' IST' : '--';
-                
+                const lastSeenTs = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST' : '--';
+
                 let statusBadgeHtml = '';
                 if (!isOnline) {
                     statusBadgeHtml = `<span style="display:inline-flex;align-items:center;gap:4px;background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b;padding:3px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"><span style="width:6px;height:6px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>OFFLINE</span>`;
@@ -2457,6 +3378,11 @@
                             📡 Satellites: <b>${sats}</b> &nbsp;|&nbsp; HDOP: <b>${hdopVal}</b><br>
                             🕒 Last update: <b>${lastSeenTs}</b>
                         </div>
+                        <div style="margin-top:8px;">
+                            <button onclick="selectBusRoute('${b.id}')" style="width:100%; background:linear-gradient(135deg,#38bdf8,#0284c7); color:#fff; border:none; border-radius:6px; padding:6px 10px; font-size:0.78rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                <span>🛣️ Focus Route & Stops</span>
+                            </button>
+                        </div>
                     </div>
                 `;
                 const infoWindow = new google.maps.InfoWindow({
@@ -2473,6 +3399,10 @@
                 // Sidebar active list item
                 const div = document.createElement('div');
                 div.className = 'fleet-item';
+                div.dataset.busId = b.id;
+                if (activeSelectedBusId === b.id) {
+                    div.classList.add('selected-bus');
+                }
                 if (!isOnline) {
                     // Normal dark border
                 } else if (isSignalLoss) {
@@ -2485,13 +3415,11 @@
                     div.style.borderColor = 'rgba(16, 185, 129, 0.25)';
                 }
                 div.onclick = () => {
-                    map.setCenter({ lat: lat, lng: lon });
-                    map.setZoom(14);
-                    busMarkers[b.id].openPopup();
+                    selectBusRoute(b.id);
                 };
                 const isHw = live && live.hw_source === 'ESP32';
-                const lastUpd = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour:'2-digit',minute:'2-digit'}) : '--';
-                
+                const lastUpd = live && live.updated_at ? new Date(live.updated_at * 1000).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) : '--';
+
                 const statusDot = !isOnline
                     ? `<span style="width:8px;height:8px;border-radius:50%;background:#64748b;display:inline-block;margin-right:4px;"></span>`
                     : (isSignalLoss
@@ -2541,7 +3469,7 @@
                 if (res.ok) {
                     list = await res.json();
                 }
-            } catch(e) {
+            } catch (e) {
                 console.warn("Using mock buses data.");
             }
 
@@ -2591,7 +3519,7 @@
                             <button class="table-action-btn danger" title="Remove Bus" onclick="deleteBus('${b.id}')">
                                 <i data-lucide="trash-2" style="width:16px; height:16px;"></i>
                             </button>
-                            <button class="table-action-btn primary" title="Locate Bus on Map" onclick="triggerNav('sect-map'); map.setCenter({ lat: ${live ? live.lat : 10.927669}, lng: ${live ? live.lon : 78.7410} }); map.setZoom(14);">
+                            <button class="table-action-btn primary" title="Locate Bus & View Route" onclick="triggerNav('sect-map'); setTimeout(() => selectBusRoute('${b.id}'), 250);">
                                 <i data-lucide="map-pin" style="width:16px; height:16px;"></i>
                             </button>
                         </div>
@@ -2627,7 +3555,7 @@
             const filterBus = document.getElementById('attendance-filter-bus');
             const assignBus = document.getElementById('approve-bus-id');
             const filterRoute = document.getElementById('attendance-filter-route');
-            
+
             filterBus.innerHTML = '<option value="">All Buses</option>';
             assignBus.innerHTML = '<option value="">No Bus Assigned</option>';
             filterRoute.innerHTML = '<option value="">All Routes</option>';
@@ -2647,7 +3575,7 @@
         }
 
         // Open Bus Modal
-        function openBusModal(id='', number='', plate='', routeName='', driverId='', capacity=50, stops='') {
+        function openBusModal(id = '', number = '', plate = '', routeName = '', driverId = '', capacity = 50, stops = '') {
             document.getElementById('bus-form-id').value = id;
             document.getElementById('bus-number').value = number;
             document.getElementById('bus-plate').value = plate;
@@ -2655,7 +3583,7 @@
             document.getElementById('bus-driver').value = driverId;
             document.getElementById('bus-capacity').value = capacity;
             document.getElementById('bus-stops').value = decodeURIComponent(stops);
-            
+
             document.getElementById('bus-modal-title').innerText = id ? 'Edit Vehicle Configuration' : 'Add Transportation Vehicle';
             document.getElementById('bus-modal').style.display = 'flex';
             lucide.createIcons();
@@ -2681,7 +3609,7 @@
             try {
                 const res = await fetch(url, {
                     method,
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
@@ -2692,7 +3620,7 @@
                     loadBuses();
                     loadStats();
                 }
-            } catch(e) {
+            } catch (e) {
                 // Mock behavior fallback if no server
                 if (id) {
                     const idx = mockBuses.findIndex(b => b.id === id);
@@ -2701,7 +3629,7 @@
                     }
                 } else {
                     mockBuses.push({
-                        id: 'B' + Math.floor(Math.random()*1000), number, plate_number, route_name, driver_id, capacity, stops,
+                        id: 'B' + Math.floor(Math.random() * 1000), number, plate_number, route_name, driver_id, capacity, stops,
                         boarded_today: 0, is_active: 1, live: { lat: 10.927669, lon: 78.7410, status: 'offline', speed: 0 }
                     });
                 }
@@ -2722,7 +3650,7 @@
                     loadBuses();
                     loadStats();
                 }
-            } catch(e) {
+            } catch (e) {
                 const idx = mockBuses.findIndex(b => b.id === id);
                 if (idx > -1) mockBuses.splice(idx, 1);
                 loadBuses();
@@ -2747,16 +3675,16 @@
                 if (res.ok) {
                     list = await res.json();
                 }
-            } catch(e) {
+            } catch (e) {
                 console.warn("Using mock users data.");
             }
 
             globalUsers = list;
-            
+
             // Separate lists
             renderDriversTable(list.filter(u => u.role === 'driver'));
             renderUsersTable(list);
-            
+
             // Populate Driver dropdown in forms
             populateDriverDropdown(list.filter(u => u.role === 'driver'));
         }
@@ -2774,8 +3702,8 @@
             body.innerHTML = '';
 
             drivers.forEach(d => {
-                const statusPill = d.status === 'online' ? 
-                    `<span class="pill pill-status-active">Active / Online</span>` : 
+                const statusPill = d.status === 'online' ?
+                    `<span class="pill pill-status-active">Active / Online</span>` :
                     `<span class="pill pill-status-offline">Offline</span>`;
 
                 const row = document.createElement('tr');
@@ -2809,14 +3737,14 @@
                     'parent': 'Parent',
                     'committee': 'Committee'
                 };
-                
+
                 // Bug 8: Online status vs Account status separation
-                const onlinePill = (u.is_online || u.status === 'online') ? 
-                    `<span class="pill pill-status-active"><span class="live-dot"></span>Online</span>` : 
+                const onlinePill = (u.is_online || u.status === 'online') ?
+                    `<span class="pill pill-status-active"><span class="live-dot"></span>Online</span>` :
                     `<span class="pill pill-status-offline">Offline</span>`;
 
-                const accountPill = u.is_active ? 
-                    `<span style="color:var(--status-active); font-weight:600; font-size:0.8rem;">Enabled</span>` : 
+                const accountPill = u.is_active ?
+                    `<span style="color:var(--status-active); font-weight:600; font-size:0.8rem;">Enabled</span>` :
                     `<span class="pill pill-status-danger">Suspended</span>`;
 
                 const row = document.createElement('tr');
@@ -2870,8 +3798,8 @@
             }
 
             let filtered = globalUsers.filter(u => {
-                const matchesSearch = query === '' || 
-                    u.name.toLowerCase().includes(query) || 
+                const matchesSearch = query === '' ||
+                    u.name.toLowerCase().includes(query) ||
                     (u.email && u.email.toLowerCase().includes(query)) ||
                     (u.college_id && u.college_id.toLowerCase().includes(query)) ||
                     (u.rfid_card && u.rfid_card.toLowerCase().includes(query)) ||
@@ -2910,7 +3838,7 @@
                     await loadUsers();
                     filterUsers(true);
                 }
-            } catch(e) {
+            } catch (e) {
                 const idx = mockUsers.findIndex(u => u.id === uid);
                 if (idx > -1) {
                     mockUsers[idx].is_active = mockUsers[idx].is_active ? 0 : 1;
@@ -2924,8 +3852,8 @@
             const query = document.getElementById('user-search').value.toLowerCase();
             const roleFilter = document.getElementById('user-role-filter').value;
             const filtered = globalUsers.filter(u => {
-                const matchesSearch = 
-                    u.name.toLowerCase().includes(query) || 
+                const matchesSearch =
+                    u.name.toLowerCase().includes(query) ||
                     (u.college_id && u.college_id.toLowerCase().includes(query)) ||
                     (u.rfid_card && u.rfid_card.toLowerCase().includes(query)) ||
                     (u.bus_number && u.bus_number.toLowerCase().includes(query)) ||
@@ -2947,7 +3875,7 @@
                 u.created_at || '—'
             ]);
 
-            let csvContent = "data:text/csv;charset=utf-8," 
+            let csvContent = "data:text/csv;charset=utf-8,"
                 + [headers.join(",")].concat(rows.map(e => e.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(","))).join("\n");
 
             const encodedUri = encodeURI(csvContent);
@@ -2972,7 +3900,7 @@
                 if (res.ok) {
                     list = await res.json();
                 }
-            } catch(e) {
+            } catch (e) {
                 console.warn("Could not load registrations from server.");
                 list = [];
             }
@@ -3111,7 +4039,7 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/registrations/action`, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
@@ -3121,15 +4049,15 @@
                     closeApproveModal();
                     refreshAllData();
                 }
-            } catch(e) {
+            } catch (e) {
                 // Mock behavior
                 const regIdx = mockRegistrations.findIndex(r => r.id === reg_id);
                 if (regIdx > -1) {
                     const reg = mockRegistrations[regIdx];
                     reg.status = 'approved';
-                    
+
                     mockUsers.push({
-                        id: reg.role.substring(0,3) + Math.floor(Math.random()*1000),
+                        id: reg.role.substring(0, 3) + Math.floor(Math.random() * 1000),
                         name: reg.name, email: reg.email, phone: reg.phone,
                         role: reg.role, college_id: reg.college_id || '—',
                         bus_id: bus_id || '—', rfid_card: rfid_card || '—', is_active: 1
@@ -3145,7 +4073,7 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/registrations/action`, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
@@ -3154,7 +4082,7 @@
                 if (res.ok) {
                     refreshAllData();
                 }
-            } catch(e) {
+            } catch (e) {
                 const idx = mockRegistrations.findIndex(r => r.id === id);
                 if (idx > -1) {
                     mockRegistrations[idx].status = 'rejected';
@@ -3169,7 +4097,7 @@
         async function loadAttendanceLog() {
             const dateVal = document.getElementById('attendance-filter-date').value;
             const busVal = document.getElementById('attendance-filter-bus').value;
-            
+
             let logs = mockAttendance;
             try {
                 const res = await fetch(`${API_BASE}/api/admin/attendance?date_filter=${dateVal}&bus_id=${busVal}`, {
@@ -3178,7 +4106,7 @@
                 if (res.ok) {
                     logs = await res.json();
                 }
-            } catch(e) {
+            } catch (e) {
                 console.warn("Using mock attendance data.");
                 logs = mockAttendance.filter(l => {
                     return (dateVal === '' || l.date === dateVal) && (busVal === '' || l.bus_number.includes(busVal) || busVal === 'All Buses');
@@ -3218,7 +4146,7 @@
 
             // 1. Filter
             let filtered = globalAttendanceLogs.filter(l => {
-                const matchesSearch = 
+                const matchesSearch =
                     (l.student_name && l.student_name.toLowerCase().includes(query)) ||
                     (l.college_id && l.college_id.toLowerCase().includes(query)) ||
                     (l.stop_name && l.stop_name.toLowerCase().includes(query));
@@ -3246,8 +4174,8 @@
             dashLogBody.innerHTML = '';
             filtered.slice(0, 5).forEach(l => {
                 const timeStr = l.tap_time ? parseIST(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) + ' IST' : '—';
-                const tapPill = l.tap_type === 'boarded' ? 
-                    `<span class="pill pill-status-active">Boarded</span>` : 
+                const tapPill = l.tap_type === 'boarded' ?
+                    `<span class="pill pill-status-active">Boarded</span>` :
                     `<span class="pill pill-status-danger">Alighted</span>`;
                 const dRow = document.createElement('tr');
                 dRow.innerHTML = `
@@ -3291,8 +4219,8 @@
                 const body = document.getElementById('attendance-table-body');
                 filtered.forEach(l => {
                     const timeStr = l.tap_time ? parseIST(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST' : '—';
-                    const tapPill = l.tap_type === 'boarded' ? 
-                        `<span class="pill pill-status-active">Boarded</span>` : 
+                    const tapPill = l.tap_type === 'boarded' ?
+                        `<span class="pill pill-status-active">Boarded</span>` :
                         `<span class="pill pill-status-danger">Alighted</span>`;
 
                     const row = document.createElement('tr');
@@ -3329,8 +4257,8 @@
                         const routeName = logsInGroup[0]?.route_name || '';
                         const rowsHtml = logsInGroup.map(l => {
                             const timeStr = l.tap_time ? parseIST(l.tap_time).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST' : '—';
-                            const tapPill = l.tap_type === 'boarded' ? 
-                                `<span class="pill pill-status-active">Boarded</span>` : 
+                            const tapPill = l.tap_type === 'boarded' ?
+                                `<span class="pill pill-status-active">Boarded</span>` :
                                 `<span class="pill pill-status-danger">Alighted</span>`;
                             return `
                                 <tr>
@@ -3385,7 +4313,7 @@
             const sortVal = document.getElementById('attendance-sort').value;
 
             let filtered = globalAttendanceLogs.filter(l => {
-                const matchesSearch = 
+                const matchesSearch =
                     (l.student_name && l.student_name.toLowerCase().includes(query)) ||
                     (l.college_id && l.college_id.toLowerCase().includes(query)) ||
                     (l.stop_name && l.stop_name.toLowerCase().includes(query));
@@ -3414,7 +4342,7 @@
                 l.date || '—'
             ]);
 
-            let csvContent = "data:text/csv;charset=utf-8," 
+            let csvContent = "data:text/csv;charset=utf-8,"
                 + [headers.join(",")].concat(rows.map(e => e.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(","))).join("\n");
 
             const encodedUri = encodeURI(csvContent);
@@ -3443,7 +4371,7 @@
                 if (res.ok) {
                     list = await res.json();
                 }
-            } catch(e) {
+            } catch (e) {
                 console.warn("Using mock alerts data.");
             }
 
@@ -3471,8 +4399,8 @@
                 const alertDate = parseIST(a.sent_at);
                 const timeStr = alertDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' }) + ' IST';
                 const iconName = iconMap[a.alert_type] || 'bell';
-                const resolveBtn = !a.is_resolved ? 
-                    `<button class="btn btn-secondary btn-sm" onclick="resolveAlert('${a.id}')" style="padding: 4px 8px; font-size:0.75rem;">Mark Resolved</button>` : 
+                const resolveBtn = !a.is_resolved ?
+                    `<button class="btn btn-secondary btn-sm" onclick="resolveAlert('${a.id}')" style="padding: 4px 8px; font-size:0.75rem;">Mark Resolved</button>` :
                     `<span class="pill pill-status-active">Resolved</span>`;
 
                 const alertCard = document.createElement('div');
@@ -3550,7 +4478,7 @@
             try {
                 const res = await fetch(`${API_BASE}/api/admin/alerts`, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
@@ -3560,10 +4488,10 @@
                     closeAlertModal();
                     refreshAllData();
                 }
-            } catch(e) {
+            } catch (e) {
                 // Mock fallback
                 mockAlerts.unshift({
-                    id: 'a' + Math.floor(Math.random()*1000),
+                    id: 'a' + Math.floor(Math.random() * 1000),
                     title, alert_type, target_role, message,
                     sent_by: userProfile ? userProfile.name : 'System Admin',
                     sent_at: new Date().toISOString(),
@@ -3583,7 +4511,7 @@
                 if (res.ok) {
                     refreshAllData();
                 }
-            } catch(e) {
+            } catch (e) {
                 const idx = mockAlerts.findIndex(a => a.id === id);
                 if (idx > -1) {
                     mockAlerts[idx].is_resolved = 1;
@@ -3613,7 +4541,7 @@
                 });
                 const data = await res.json();
                 const tokenVal = data.token || data.access_token;
-                
+
                 if (res.ok && tokenVal) {
                     const prof = parseJwt(tokenVal);
                     if (prof.role !== 'admin') {
@@ -3627,7 +4555,7 @@
                 } else {
                     showAuthError(data.detail || 'Incorrect admin email or password.');
                 }
-            } catch(e) {
+            } catch (e) {
                 // If backend is not running or unreachable, display error
                 showAuthError('Could not reach backend server. Please verify server.py is running.');
             } finally {
@@ -3667,7 +4595,7 @@
                     globalEmergencies = data;
                     renderEmergenciesList(data);
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Failed to load emergencies:", e);
                 renderEmergenciesList(globalEmergencies || []);
             }
@@ -3675,25 +4603,32 @@
 
         function renderEmergenciesList(list) {
             const container = document.getElementById('emergencies-container');
-            const activeEmergencies = (list || []).filter(e => e.status !== 'resolved' && e.status !== 'rejected');
-            const historyEmergencies = (list || []).filter(e => e.status === 'resolved' || e.status === 'rejected');
-            
+            const activeEmergencies = (list || []).filter(e => e && e.status !== 'resolved' && e.status !== 'rejected');
+            const historyEmergencies = (list || []).filter(e => e && (e.status === 'resolved' || e.status === 'rejected'));
+
             // Update sidebar badge
             const badge = document.getElementById('sidebar-emerg-badge');
-            if (activeEmergencies.length > 0) {
-                badge.innerText = activeEmergencies.length;
-                badge.style.display = 'inline-flex';
-            } else {
-                badge.style.display = 'none';
+            if (badge) {
+                if (activeEmergencies.length > 0) {
+                    badge.innerText = activeEmergencies.length;
+                    badge.style.display = 'inline-flex';
+                } else {
+                    badge.style.display = 'none';
+                }
             }
 
-            // Bug 1 Fix: History tab should ONLY display resolved/rejected breakdowns
-            const targetList = activeEmergTab === 'active' 
-                ? activeEmergencies 
+            // Update "Mark All Resolved" button visibility
+            const resolveAllBtn = document.getElementById('btn-resolve-all-emerg');
+            if (resolveAllBtn) {
+                resolveAllBtn.style.display = (activeEmergTab === 'active' && activeEmergencies.length > 0) ? 'inline-flex' : 'none';
+            }
+
+            // History tab should ONLY display resolved/rejected breakdowns
+            const targetList = activeEmergTab === 'active'
+                ? activeEmergencies
                 : historyEmergencies;
 
-            // Bug 7: "no breakdowns yet" empty state message
-            if (targetList.length === 0) {
+            if (!targetList || targetList.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <i data-lucide="shield-check" style="width: 48px; height: 48px; color: var(--status-active);"></i>
@@ -3708,6 +4643,7 @@
             }
 
             container.innerHTML = targetList.map(e => {
+                if (!e) return '';
                 const isRecommended = e.status === 'recommended' || e.status === 'searching';
                 const isAssigned = e.status === 'assigned';
                 const isAccepted = e.status === 'accepted';
@@ -3726,26 +4662,37 @@
                     statusClass = 'pill-status-offline';
                 }
 
-                // Format time in IST (Bug 12)
-                const formattedTime = e.emergency_time ? parseIST(e.emergency_time).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST' : '—';
+                // Format time in IST
+                let formattedTime = '—';
+                try {
+                    formattedTime = e.emergency_time ? parseIST(e.emergency_time).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST' : '—';
+                } catch (_) {}
 
-                // Render Timeline
-                const timelineHtml = (e.timeline || []).map((item, idx) => `
-                    <div style="display: flex; gap: 12px; margin-bottom: 12px; font-size: 0.8rem; position: relative;">
-                        <div style="display: flex; flex-direction: column; align-items: center;">
-                            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${idx === e.timeline.length - 1 ? 'var(--status-danger)' : 'var(--text-secondary)'}; z-index: 1;"></div>
-                            ${idx < e.timeline.length - 1 ? '<div style="width: 2px; flex-grow: 1; background: var(--border); margin-top: 4px; margin-bottom: 4px;"></div>' : ''}
+                // Render Timeline safely
+                const timelineHtml = (e.timeline || []).map((item, idx) => {
+                    let itemTime = '';
+                    try {
+                        itemTime = item.ts ? parseIST(item.ts).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) + ' IST' : '';
+                    } catch (_) {}
+                    const isLast = idx === ((e.timeline || []).length - 1);
+                    return `
+                        <div style="display: flex; gap: 12px; margin-bottom: 12px; font-size: 0.8rem; position: relative;">
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: ${isLast ? 'var(--status-danger)' : 'var(--text-secondary)'}; z-index: 1;"></div>
+                                ${!isLast ? '<div style="width: 2px; flex-grow: 1; background: var(--border); margin-top: 4px; margin-bottom: 4px;"></div>' : ''}
+                            </div>
+                            <div>
+                                <span style="font-weight: 700; color: ${isLast ? 'var(--status-danger)' : 'var(--text-primary)'};">${item.status || 'Update'}</span>
+                                <span style="color: var(--text-secondary); margin-left: 8px;">${itemTime}</span>
+                                <div style="color: var(--text-secondary); margin-top: 2px;">${item.msg || ''}</div>
+                            </div>
                         </div>
-                        <div>
-                            <span style="font-weight: 700; color: ${idx === e.timeline.length - 1 ? 'var(--status-danger)' : 'var(--text-primary)'};">${item.status}</span>
-                            <span style="color: var(--text-secondary); margin-left: 8px;">${item.ts ? parseIST(item.ts).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) + ' IST' : ''}</span>
-                            <div style="color: var(--text-secondary); margin-top: 2px;">${item.msg}</div>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
 
-                // Render Backup Recommendations
+                // Render Backup Recommendations safely
                 let backupHtml = '';
+                const recs = Array.isArray(e.recommendations) ? e.recommendations : [];
                 if (isRecommended) {
                     backupHtml = `
                         <div style="margin-top: 20px; border-top: 1px solid var(--bg-hover); padding-top: 16px;">
@@ -3753,17 +4700,17 @@
                                 <i data-lucide="zap" style="width: 16px; height: 16px;"></i>
                                 Intelligent Backup Recommendations
                             </h4>
-                            ${e.recommendations.length === 0 ? '<p style="font-size: 0.8rem; color: var(--text-secondary);">No online/available backup vehicles found.</p>' : `
+                            ${recs.length === 0 ? '<p style="font-size: 0.8rem; color: var(--text-secondary);">No online/available backup vehicles found.</p>' : `
                                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                                    ${e.recommendations.map(rec => `
-                                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-hover); padding: 12px; border-radius: 8px; border-left: 4px solid ${rec.has_enough_seats ? 'var(--status-active)' : 'var(--status-warning)'};">
+                                    ${recs.map(rec => `
+                                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-hover); padding: 12px; border-radius: 8px; border-left: 4px solid ${rec && rec.has_enough_seats ? 'var(--status-active)' : 'var(--status-warning)'};">
                                             <div>
-                                                <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">${rec.bus_number} (${rec.driver_name})</div>
+                                                <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">${(rec && rec.bus_number) || 'Backup Bus'} (${(rec && rec.driver_name) || 'Driver'})</div>
                                                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">
-                                                    Distance: ${rec.distance_km} km | ETA: ${rec.eta_minutes} mins | Avail. Seats: ${rec.available_seats}
+                                                    Distance: ${(rec && rec.distance_km != null) ? rec.distance_km : '—'} km | ETA: ${(rec && rec.eta_minutes != null) ? rec.eta_minutes : '—'} mins | Avail. Seats: ${(rec && rec.available_seats != null) ? rec.available_seats : '—'}
                                                 </div>
                                             </div>
-                                            <button class="btn btn-primary btn-sm" onclick="assignBackupBus('${e.id}', '${rec.bus_id}')" style="padding: 6px 12px; font-size: 0.75rem;">
+                                            <button class="btn btn-primary btn-sm" onclick="assignBackupBus('${e.id}', '${rec && rec.bus_id}')" style="padding: 6px 12px; font-size: 0.75rem;">
                                                 Approve & Assign
                                             </button>
                                         </div>
@@ -3778,7 +4725,7 @@
                             <i data-lucide="loader" class="spin" style="width: 24px; height: 24px; color: var(--accent); margin: 0 auto 8px auto;"></i>
                             <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Awaiting Backup Response</div>
                             <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
-                                Assigned Bus: ${e.backup_bus_number} (Driver: ${e.backup_driver_name}, ETA: ${e.eta_minutes} mins).
+                                Assigned Bus: ${e.backup_bus_number || 'N/A'} (Driver: ${e.backup_driver_name || 'N/A'}, ETA: ${e.eta_minutes || '—'} mins).
                             </div>
                         </div>
                     `;
@@ -3788,7 +4735,7 @@
                             <i data-lucide="check-circle" style="width: 24px; height: 24px; color: var(--status-active); margin: 0 auto 8px auto;"></i>
                             <div style="font-weight: 700; font-size: 0.9rem; color: var(--status-active);">Trip Continuing in Backup Bus</div>
                             <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
-                                Passengers successfully transferred to Bus ${e.backup_bus_number} (Driver: ${e.backup_driver_name}).
+                                Passengers successfully transferred to Bus ${e.backup_bus_number || 'N/A'} (Driver: ${e.backup_driver_name || 'N/A'}).
                             </div>
                         </div>
                     `;
@@ -3800,20 +4747,25 @@
                     </button>
                 ` : '';
 
-                // Bug 2 Fix: Do not render Resolve Emergency button on resolved breakdown history cards
                 const resolveBtn = !isResolved ? `
                     <button class="btn btn-secondary btn-sm" onclick="resolveEmergency('${e.id}')" style="background: var(--bg-hover); color: var(--text-primary);">
                         Resolve Emergency
                     </button>
                 ` : `<span class="pill pill-status-offline">Resolved</span>`;
 
+                const latVal = (e.gps && typeof e.gps.lat === 'number') ? e.gps.lat.toFixed(5) : '—';
+                const lonVal = (e.gps && typeof e.gps.lon === 'number') ? e.gps.lon.toFixed(5) : '—';
+                const mapLat = (e.gps && typeof e.gps.lat === 'number') ? e.gps.lat : 10.927669;
+                const mapLon = (e.gps && typeof e.gps.lon === 'number') ? e.gps.lon : 78.7410;
+                const studentsOnboard = Array.isArray(e.students_onboard) ? e.students_onboard : [];
+
                 return `
                     <div class="panel" style="padding: 24px; border: 1px solid var(--bg-hover); position: relative;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
                             <div>
                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                    <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--status-danger); cursor: pointer;" onclick="openBusMiniMap('${e.bus_id}', ${e.gps ? e.gps.lat : 10.927669}, ${e.gps ? e.gps.lon : 78.7410}, '${e.bus_number}', '${formattedTime}')" title="Click to view bus position on mini-map">
-                                        Vehicle Breakdown: ${e.bus_number} 📡
+                                    <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--status-danger); cursor: pointer;" onclick="openBusMiniMap('${e.bus_id || ''}', ${mapLat}, ${mapLon}, '${e.bus_number || ''}', '${formattedTime}')" title="Click to view bus position on mini-map">
+                                        Vehicle Breakdown: ${e.bus_number || 'Bus'} 📡
                                     </h3>
                                     <span class="pill ${statusClass}">${statusText}</span>
                                 </div>
@@ -3823,7 +4775,7 @@
                             </div>
                             <div>
                                 ${muteBuzzerBtn}
-                                <button class="btn btn-secondary btn-sm" onclick="openBusMiniMap('${e.bus_id}', ${e.gps ? e.gps.lat : 10.927669}, ${e.gps ? e.gps.lon : 78.7410}, '${e.bus_number}', '${formattedTime}')" style="background: rgba(59, 130, 246, 0.15); border: 1px solid var(--accent); color: var(--accent); font-weight: 700; margin-right: 8px;">
+                                <button class="btn btn-secondary btn-sm" onclick="openBusMiniMap('${e.bus_id || ''}', ${mapLat}, ${mapLon}, '${e.bus_number || ''}', '${formattedTime}')" style="background: rgba(59, 130, 246, 0.15); border: 1px solid var(--accent); color: var(--accent); font-weight: 700; margin-right: 8px;">
                                     📡 Mini-Map
                                 </button>
                                 ${resolveBtn}
@@ -3834,10 +4786,10 @@
                             <div>
                                 <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 10px; color: var(--text-primary);">Breakdown Details</h4>
                                 <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem; color: var(--text-secondary);">
-                                    <div><strong>Driver:</strong> ${e.driver_name}</div>
-                                    <div><strong>Location Coordinates:</strong> ${e.gps.lat.toFixed(5)}, ${e.gps.lon.toFixed(5)}</div>
-                                    <div><strong>Current / Next Stop:</strong> ${e.current_stop} / ${e.next_stop}</div>
-                                    <div><strong>Students Onboard (${e.students_onboard.length}):</strong> ${e.students_onboard.length === 0 ? 'None' : e.students_onboard.join(', ')}</div>
+                                    <div><strong>Driver:</strong> ${e.driver_name || 'Hardware/Driver'}</div>
+                                    <div><strong>Location Coordinates:</strong> ${latVal}, ${lonVal}</div>
+                                    <div><strong>Current / Next Stop:</strong> ${e.current_stop || 'En-route'} / ${e.next_stop || 'Campus'}</div>
+                                    <div><strong>Students Onboard (${studentsOnboard.length}):</strong> ${studentsOnboard.length === 0 ? 'None' : studentsOnboard.join(', ')}</div>
                                 </div>
                                 
                                 ${backupHtml}
@@ -3846,14 +4798,14 @@
                             <div style="border-left: 1px solid var(--bg-hover); padding-left: 24px;">
                                 <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">Emergency Timeline</h4>
                                 <div style="margin-top: 10px;">
-                                    ${timelineHtml}
+                                    ${timelineHtml || '<div style="color:var(--text-muted);font-size:0.8rem;">No timeline updates.</div>'}
                                 </div>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
-            
+
             lucide.createIcons();
         }
 
@@ -3870,7 +4822,7 @@
                 if (res.ok) {
                     loadEmergencies();
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Failed to assign backup:", e);
             }
         }
@@ -3883,10 +4835,27 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
-                    loadEmergencies();
+                    await loadEmergencies();
+                    loadAlerts();
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error("Failed to resolve emergency:", e);
+            }
+        }
+
+        async function resolveAllEmergencies() {
+            if (!confirm("Are you sure you want to mark ALL active emergencies and breakdowns as resolved?")) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/emergencies/resolve-all`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    await loadEmergencies();
+                    loadAlerts();
+                }
+            } catch (e) {
+                console.error("Failed to resolve all emergencies:", e);
             }
         }
 
@@ -3905,13 +4874,13 @@
             const driver = bus.driver_name || "Unassigned";
             const live = bus.live || {};
             const isOnline = checkBusOnline(live);
-            
+
             const targetLat = (lat != null && !isNaN(lat)) ? parseFloat(lat) : (live.lat != null ? live.lat : 10.927669);
             const targetLon = (lon != null && !isNaN(lon)) ? parseFloat(lon) : (live.lon != null ? live.lon : 78.7410);
 
             document.getElementById('minimap-modal-title').innerText = `Bus Position: ${busNum}`;
             document.getElementById('minimap-modal-subtitle').innerText = `${title || 'Bus Alert'} | Route: ${route} (Driver: ${driver})`;
-            
+
             document.getElementById('minimap-details').innerHTML = `
                 <strong>Location:</strong> ${targetLat.toFixed(5)}, ${targetLon.toFixed(5)} &nbsp;|&nbsp; 
                 <strong>Status:</strong> ${isOnline ? '<span style="color:#10b981;font-weight:700;">ACTIVE</span>' : '<span style="color:#64748b;font-weight:700;">OFFLINE</span>'} &nbsp;|&nbsp; 
@@ -3965,4 +4934,5 @@
         }
     </script>
 </body>
+
 </html>

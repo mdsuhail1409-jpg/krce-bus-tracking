@@ -22,8 +22,17 @@ router = APIRouter()
 @router.post("/api/auth/login")
 @limiter.limit("15/minute")
 async def login(req: LoginReq, request: Request):
-    db = db_module.db
-    u = await db.users.find_one({"email": req.email, "is_active": 1})
+    clean_email = req.email.strip().lower()
+    queries = [
+        {"email": clean_email},
+        {"email": req.email.strip()},
+        {"phone": req.email.strip()},
+        {"id": req.email.strip()}
+    ]
+    if clean_email in ["driver7@krce.ac.in", "driver07@krce.ac.in", "bus7@krce.ac.in", "bus07@krce.ac.in", "driver7"]:
+        queries.extend([{"id": "drv07"}, {"email": "ganesh@krce.ac.in"}])
+
+    u = await db.users.find_one({"$or": queries, "is_active": 1})
     if not u or not _check_hash(req.password, u["password_hash"]):
         raise HTTPException(401, "Invalid email or password")
 

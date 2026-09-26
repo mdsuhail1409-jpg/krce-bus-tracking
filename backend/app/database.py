@@ -44,6 +44,7 @@ def _build_seed():
         {"id":"drv04","name":"Arun M.","email":"arun@krce.ac.in","phone":"9840144444","role":"driver","college_id":None,"rfid_card":None,"bus_id":"B04","parent_of":None,"licence_no":"TN-DL-004","password_hash":_hash("driver@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"drv05","name":"Suresh T.","email":"suresh.d@krce.ac.in","phone":"9840155555","role":"driver","college_id":None,"rfid_card":None,"bus_id":"B05","parent_of":None,"licence_no":"TN-DL-005","password_hash":_hash("driver@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"drv06","name":"Hari Prasad","email":"hari@krce.ac.in","phone":"9840166666","role":"driver","college_id":None,"rfid_card":None,"bus_id":"B06","parent_of":None,"licence_no":"TN-DL-006","password_hash":_hash("driver@123"),"is_active":1,"created_at":now_str(),"last_login":None},
+        {"id":"drv07","name":"Ganesh K.","email":"ganesh@krce.ac.in","phone":"9840177777","role":"driver","college_id":None,"rfid_card":None,"bus_id":"B07","parent_of":None,"licence_no":"TN-DL-007","password_hash":_hash("driver@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"stu01","name":"Aravind Kumar","email":"aravind@krce.ac.in","phone":"9841100001","role":"student","college_id":"21CS001","rfid_card":"RF001","bus_id":"B01","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"stu02","name":"Priya Devi","email":"priya@krce.ac.in","phone":"9841100002","role":"student","college_id":"21EC002","rfid_card":"RF002","bus_id":"B02","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"stu03","name":"Karthikeyan M","email":"karthik@krce.ac.in","phone":"9841100003","role":"student","college_id":"21ME003","rfid_card":"RF003","bus_id":"B03","parent_of":None,"licence_no":None,"password_hash":_hash("student@123"),"is_active":1,"created_at":now_str(),"last_login":None},
@@ -439,19 +440,26 @@ async def init_db():
                 "is_active": 1, "created_at": now_str()
             })
         # Ensure Kalkandar Kottai Route B07 and driver drv07 are present and updated in the database
+        existing_drv7 = await db.users.find_one({"$or": [{"id": "drv07"}, {"email": "ganesh@krce.ac.in"}]})
+        if not existing_drv7:
+            logger.info("Seeding drv07 (Bus 7 driver) into database...")
+            await db.users.insert_one({
+                "id": "drv07", "name": "Ganesh K.", "email": "ganesh@krce.ac.in",
+                "phone": "9840177777", "role": "driver", "college_id": None,
+                "rfid_card": None, "bus_id": "B07", "parent_of": None,
+                "licence_no": "TN-DL-007", "password_hash": _hash("driver@123"),
+                "is_active": 1, "created_at": now_str(), "last_login": None
+            })
+        else:
+            await db.users.update_one(
+                {"id": existing_drv7["id"]},
+                {"$set": {"bus_id": "B07", "role": "driver", "is_active": 1, "name": "Ganesh K."}}
+            )
+
         existing_b07 = await db.buses.find_one({"$or": [{"id": "B07"}, {"number": "TN-07"}]})
         b07_stops = ["KRCE Campus", "BVM Trichy", "Armory Gate", "Kadai Veethi", "Mandabam", "Aathupalam"]
         if not existing_b07:
-            logger.info("Seeding B07 bus and driver drv07...")
-            existing_drv7 = await db.users.find_one({"id": "drv07"})
-            if not existing_drv7:
-                await db.users.insert_one({
-                    "id": "drv07", "name": "Ganesh K.", "email": "ganesh@krce.ac.in",
-                    "phone": "9840177777", "role": "driver", "college_id": None,
-                    "rfid_card": None, "bus_id": "B07", "parent_of": None,
-                    "licence_no": "TN-DL-007", "password_hash": _hash("driver@123"),
-                    "is_active": 1, "created_at": now_str(), "last_login": None
-                })
+            logger.info("Seeding B07 bus...")
             await db.buses.insert_one({
                 "id": "B07", "number": "TN-07", "route_name": "Route G — Kalkandar Kottai (BVM Trichy)",
                 "driver_id": "drv07", "capacity": 50,
@@ -462,7 +470,7 @@ async def init_db():
         else:
             await db.buses.update_many(
                 {"$or": [{"id": "B07"}, {"number": "TN-07"}]},
-                {"$set": {"route_name": "Route G — Kalkandar Kottai (BVM Trichy)", "stops": b07_stops}}
+                {"$set": {"driver_id": "drv07", "route_name": "Route G — Kalkandar Kottai (BVM Trichy)", "stops": b07_stops}}
             )
 
     logger.info("MongoDB connected — database: %s", MONGO_DB_NAME)
