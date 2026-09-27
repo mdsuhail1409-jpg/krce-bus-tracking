@@ -58,6 +58,7 @@ def _build_seed():
         {"id":"fac02","name":"Dr. Senthil Kumar","email":"senthil@krce.ac.in","phone":"9841200002","role":"staff","college_id":"FAC001","rfid_card":"RF010","bus_id":"B02","parent_of":None,"licence_no":None,"password_hash":_hash("staff@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"par01","name":"Suresh Kumar","email":"suresh.p@gmail.com","phone":"9841300001","role":"parent","college_id":None,"rfid_card":None,"bus_id":None,"parent_of":"21CS001","licence_no":None,"password_hash":_hash("parent@123"),"is_active":1,"created_at":now_str(),"last_login":None},
         {"id":"par02","name":"Meenakshi Devi","email":"meenakshi@gmail.com","phone":"9841300002","role":"parent","college_id":None,"rfid_card":None,"bus_id":None,"parent_of":"21EC002","licence_no":None,"password_hash":_hash("parent@123"),"is_active":1,"created_at":now_str(),"last_login":None},
+        {"id":"par03","name":"William","email":"william@gmail.com","phone":"9841300003","role":"parent","college_id":None,"rfid_card":None,"bus_id":None,"parent_of":"21CS004","licence_no":None,"password_hash":_hash("parent@123"),"is_active":1,"created_at":now_str(),"last_login":None},
     ]
     buses = [
         {"id":"B01","number":"TN-01","route_name":"Route A — Woraiyur","driver_id":"drv01","capacity":50,"stops":["KRCE Campus","Samayapuram","Woraiyur Bus Stand","Woraiyur Town","Gandhi Market"],"is_active":1,"created_at":now_str()},
