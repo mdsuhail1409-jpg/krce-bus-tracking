@@ -613,7 +613,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
     // Top sign board
     canvas.drawRRect(
-      const RRect.fromRectAndRadius(Rect.fromLTWH(14.5, 10.5, 7, 1.5), Radius.circular(0.8)),
+      RRect.fromRectAndRadius(const Rect.fromLTWH(14.5, 10.5, 7, 1.5), const Radius.circular(0.8)),
       whitePaint,
     );
 
