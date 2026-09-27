@@ -147,15 +147,22 @@ async def admin_users(role: str = "", u=Depends(admin_only)):
         if usr.get("role") == "parent":
             parent_of = usr.get("parent_of")
             if parent_of:
+                query_conds = [
+                    {"college_id": parent_of},
+                    {"id": parent_of},
+                    {"name": {"$regex": f"^{parent_of}$", "$options": "i"}},
+                    {"name": {"$regex": parent_of, "$options": "i"}}
+                ]
+                # Prioritize active student with valid bus assignment if multiple match
                 child = await db.users.find_one(
-                    {"$or": [
-                        {"college_id": parent_of},
-                        {"id": parent_of},
-                        {"name": {"$regex": f"^{parent_of}$", "$options": "i"}},
-                        {"name": {"$regex": parent_of, "$options": "i"}}
-                    ]},
+                    {"role": {"$in": ["student", "passenger"]}, "is_active": 1, "$or": query_conds},
                     {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1}
                 )
+                if not child:
+                    child = await db.users.find_one(
+                        {"$or": query_conds},
+                        {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1}
+                    )
                 if child:
                     usr["ward_name"] = child.get("name")
                     usr["ward_college_id"] = child.get("college_id") or child.get("id")
@@ -310,7 +317,7 @@ async def reassign_bus(uid: str, req: BusReassignment, u=Depends(admin_only)):
     user_id = user.get("id") or uid
     old_bus_id = user.get("bus_id")
 
-    await db.users.update_one(
+    await db.users.update_many(
         {"$or": [{"id": user_id}, {"college_id": user.get("college_id", user_id)}]},
         {"$set": {"bus_id": target_bus_id}}
     )
@@ -346,7 +353,7 @@ async def reassign_bus(uid: str, req: BusReassignment, u=Depends(admin_only)):
         "new_bus_id": target_bus_id,
         "new_bus_number": bus["number"],
         "reason": req.reason,
-        "reassigned_by": u["id"],
+        "reassigned_by": u.get("sub", u.get("id", "admin")),
         "reassigned_at": now_str(),
     })
     return {
