@@ -347,16 +347,20 @@ async def reassign_bus(uid: str, req: BusReassignment, u=Depends(admin_only)):
                 {"$set": {"bus_id": target_bus_id}}
             )
 
-    await db.bus_reassignment_log.insert_one({
-        "user_id": user_id,
-        "user_name": user.get("name"),
-        "old_bus_id": old_bus_id,
-        "new_bus_id": target_bus_id,
-        "new_bus_number": bus["number"],
-        "reason": req.reason,
-        "reassigned_by": u.get("sub", u.get("id", "admin")),
-        "reassigned_at": now_str(),
-    })
+    try:
+        await db.bus_reassignment_log.insert_one({
+            "user_id": user_id,
+            "user_name": user.get("name"),
+            "old_bus_id": old_bus_id,
+            "new_bus_id": target_bus_id,
+            "new_bus_number": bus["number"],
+            "reason": req.reason,
+            "reassigned_by": u.get("sub", u.get("id", "admin")),
+            "reassigned_at": now_str(),
+        })
+    except Exception as log_err:
+        pass
+
     return {
         "status": "ok",
         "user_id": user_id,
