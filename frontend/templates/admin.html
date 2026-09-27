@@ -3862,8 +3862,11 @@
                 }
 
                 let busRouteHtml = '—';
-                const busNum = u.bus_number || u.ward_bus_number;
-                const busRoute = u.route_name || u.ward_route_name;
+                const wardStudent = isParent && (u.ward_college_id || u.parent_of)
+                    ? (users || []).find(x => x.role === 'student' && (((x.college_id || '').trim().toLowerCase() === (u.ward_college_id || u.parent_of || '').trim().toLowerCase()) || x.id === (u.ward_college_id || u.parent_of)))
+                    : null;
+                const busNum = isParent && wardStudent ? (wardStudent.bus_number || wardStudent.bus_id) : (u.ward_bus_number || u.bus_number);
+                const busRoute = isParent && wardStudent ? (wardStudent.route_name || u.ward_route_name || u.route_name) : (u.ward_route_name || u.route_name);
                 if (busNum) {
                     busRouteHtml = `
                         <div>

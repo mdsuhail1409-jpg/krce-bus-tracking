@@ -165,11 +165,11 @@ async def admin_users(role: str = "", u=Depends(admin_only)):
                         if ward_bus:
                             usr["ward_bus_number"] = ward_bus.get("number")
                             usr["ward_route_name"] = ward_bus.get("route_name")
-                            if not bus:
-                                bus = ward_bus
-                                if not usr.get("bus_id"):
-                                    usr["bus_id"] = child["bus_id"]
-                                    await db.users.update_one({"id": usr["id"]}, {"$set": {"bus_id": child["bus_id"]}})
+                            # Parent's bus always mirrors their ward's current bus
+                            bus = ward_bus
+                            usr["bus_id"] = child["bus_id"]
+                            if usr.get("bus_id") != child["bus_id"]:
+                                await db.users.update_one({"id": usr["id"]}, {"$set": {"bus_id": child["bus_id"]}})
 
         usr["bus_number"] = bus["number"] if bus else usr.get("ward_bus_number")
         usr["route_name"] = bus["route_name"] if bus else usr.get("ward_route_name")
@@ -286,6 +286,18 @@ async def reassign_bus(uid: str, req: BusReassignment, u=Depends(admin_only)):
         raise HTTPException(404, "Bus not found or inactive")
     old_bus_id = user.get("bus_id")
     await db.users.update_one({"id": uid}, {"$set": {"bus_id": req.bus_id}})
+    if user.get("role") == "student":
+        student_cid = user.get("college_id") or uid
+        await db.users.update_many(
+            {"role": "parent", "$or": [
+                {"parent_of": student_cid},
+                {"parent_of": uid},
+                {"parent_of": user.get("name")},
+                {"parent_of": {"$regex": f"^{student_cid}$", "$options": "i"}},
+                {"parent_of": {"$regex": f"^{user.get('name')}$", "$options": "i"}}
+            ]},
+            {"$set": {"bus_id": req.bus_id}}
+        )
     await db.bus_reassignment_log.insert_one({
         "user_id": uid,
         "user_name": user.get("name"),

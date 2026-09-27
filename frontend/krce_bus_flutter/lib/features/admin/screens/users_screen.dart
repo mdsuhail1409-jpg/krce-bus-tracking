@@ -473,52 +473,80 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                                             ),
                                           ),
                                           if (isParent) ...[
-                                            const SizedBox(height: 6),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.indigoPrimary.withOpacity(0.08),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
+                                            Builder(builder: (context) {
+                                              User? wardStudent;
+                                              final wardTarget = (user.wardCollegeId ?? user.parentOf)?.trim().toLowerCase();
+                                              if (wardTarget != null && wardTarget.isNotEmpty) {
+                                                for (final u in _allUsers) {
+                                                  if (u.role == 'student') {
+                                                    if (u.collegeId?.trim().toLowerCase() == wardTarget ||
+                                                        u.id.toLowerCase() == wardTarget ||
+                                                        u.name.trim().toLowerCase() == wardTarget) {
+                                                      wardStudent = u;
+                                                      break;
+                                                    }
+                                                  }
+                                                }
+                                              }
+
+                                              final dispWardName = wardStudent?.name ?? user.wardName ?? "Student";
+                                              final dispWardId = wardStudent?.collegeId ?? user.wardCollegeId ?? user.parentOf;
+                                              final dispBusNum = wardStudent?.busNumber ?? wardStudent?.busId ?? user.wardBusNumber ?? user.busNumber ?? user.busId;
+                                              final dispRoute = wardStudent?.routeName ?? user.wardRouteName ?? user.routeName;
+                                              final hasWard = user.wardName != null || user.parentOf != null || wardStudent != null;
+
+                                              return Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  const Icon(Icons.school, size: 12, color: AppColors.indigoPrimary),
-                                                  const SizedBox(width: 4),
-                                                  Flexible(
-                                                    child: Text(
-                                                      user.wardName != null || user.parentOf != null
-                                                          ? 'Ward: ${user.wardName ?? "Student"} (${user.wardCollegeId ?? user.parentOf})'
-                                                          : 'No Ward Linked',
-                                                      style: TextStyle(
-                                                        color: user.wardName != null || user.parentOf != null
-                                                            ? AppColors.indigoPrimary
-                                                            : AppColors.mutedText,
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.w600,
-                                                      ),
-                                                      overflow: TextOverflow.ellipsis,
+                                                  const SizedBox(height: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.indigoPrimary.withOpacity(0.08),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(Icons.school, size: 12, color: AppColors.indigoPrimary),
+                                                        const SizedBox(width: 4),
+                                                        Flexible(
+                                                          child: Text(
+                                                            hasWard
+                                                                ? 'Ward: $dispWardName ($dispWardId)'
+                                                                : 'No Ward Linked',
+                                                            style: TextStyle(
+                                                              color: hasWard
+                                                                  ? AppColors.indigoPrimary
+                                                                  : AppColors.mutedText,
+                                                              fontSize: 12,
+                                                              fontWeight: FontWeight.w600,
+                                                            ),
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Row(
-                                              children: [
-                                                const Icon(Icons.directions_bus, size: 12, color: AppColors.mutedText),
-                                                const SizedBox(width: 4),
-                                                Flexible(
-                                                  child: Text(
-                                                    user.wardBusNumber != null || user.busNumber != null || user.busId != null
-                                                        ? 'Bus ${user.wardBusNumber ?? user.busNumber ?? user.busId}${user.wardRouteName != null || user.routeName != null ? " • " + (user.wardRouteName ?? user.routeName!) : ""}'
-                                                        : 'No bus assigned',
-                                                    style: const TextStyle(color: AppColors.mutedText, fontSize: 12),
-                                                    overflow: TextOverflow.ellipsis,
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    children: [
+                                                      const Icon(Icons.directions_bus, size: 12, color: AppColors.mutedText),
+                                                      const SizedBox(width: 4),
+                                                      Flexible(
+                                                        child: Text(
+                                                          dispBusNum != null
+                                                              ? 'Bus $dispBusNum${dispRoute != null ? " • $dispRoute" : ""}'
+                                                              : 'No bus assigned',
+                                                          style: const TextStyle(color: AppColors.mutedText, fontSize: 12),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                ),
-                                              ],
-                                            ),
+                                                ],
+                                              );
+                                            }),
                                           ] else ...[
                                             if (user.collegeId != null && user.collegeId!.isNotEmpty) ...[
                                               const SizedBox(height: 4),
