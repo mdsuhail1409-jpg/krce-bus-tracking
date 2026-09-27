@@ -15,6 +15,7 @@ class RegistrationsScreen extends ConsumerStatefulWidget {
 class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
   List<Registration> _registrations = [];
   List<Bus> _buses = [];
+  List<User> _students = [];
   bool _isLoading = true;
 
   @override
@@ -30,11 +31,13 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
       final results = await Future.wait([
         api.getAdminRegistrations(auth.token, status: 'pending'),
         api.getBuses(auth.token),
+        api.getAdminUsers(auth.token, role: 'student'),
       ]);
       if (mounted) {
         setState(() {
           _registrations = results[0] as List<Registration>;
           _buses = results[1] as List<Bus>;
+          _students = results[2] as List<User>;
           _isLoading = false;
         });
       }
@@ -57,7 +60,13 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
   }
 
   void _showApproveDialog(Registration reg) {
+    final isParent = reg.role == 'parent';
     String? selectedBusId = reg.busId ?? (_buses.isNotEmpty ? _buses.first.id : null);
+    String? selectedStudentId = reg.parentOf;
+    if (isParent && selectedStudentId == null && _students.isNotEmpty) {
+      selectedStudentId = _students.first.collegeId ?? _students.first.id;
+    }
+
     final rfidController = TextEditingController(text: reg.rfidCard ?? '');
     final notesController = TextEditingController();
 
@@ -66,67 +75,139 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            final selectedStudent = isParent && _students.isNotEmpty
+                ? _students.firstWhere(
+                    (s) => s.collegeId == selectedStudentId || s.id == selectedStudentId,
+                    orElse: () => _students.first,
+                  )
+                : null;
+
             return AlertDialog(
               backgroundColor: AppColors.surfaceColor,
               shape: RoundedCornerShape(16),
-              title: const Text(
-                'Approve Registration',
-                style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
+              title: Text(
+                isParent ? 'Approve Parent Registration' : 'Approve Registration',
+                style: const TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold),
               ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Name: ${reg.name}', style: const TextStyle(color: AppColors.textColor)),
-                    const SizedBox(height: 8),
+                    Text('Applicant: ${reg.name}', style: const TextStyle(color: AppColors.textColor, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
                     Text('Email: ${reg.email}', style: const TextStyle(color: AppColors.mutedText, fontSize: 13)),
-                    const SizedBox(height: 16),
-                    const Text('Assign RFID Card (Optional)', style: TextStyle(color: AppColors.mutedText, fontSize: 12)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: rfidController,
-                      style: const TextStyle(color: AppColors.textColor),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: AppColors.backgroundColor,
-                        hintText: 'e.g. RF928410',
-                        hintStyle: const TextStyle(color: AppColors.mutedText, fontSize: 14),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Assign Bus (Optional)', style: TextStyle(color: AppColors.mutedText, fontSize: 12)),
-                    const SizedBox(height: 6),
-                    if (_buses.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.backgroundColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            dropdownColor: AppColors.surfaceColor,
-                            value: selectedBusId,
-                            isExpanded: true,
-                            items: _buses.map((bus) {
-                              return DropdownMenuItem<String>(
-                                value: bus.id,
-                                child: Text('Bus ${bus.number} (${bus.routeName})',
-                                    style: const TextStyle(color: AppColors.textColor, fontSize: 14)),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              setDialogState(() {
-                                selectedBusId = val;
-                              });
-                            },
+                    const SizedBox(height: 14),
+
+                    if (isParent) ...[
+                      const Text('Assign Student Ward', style: TextStyle(color: AppColors.mutedText, fontSize: 12, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      if (_students.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.backgroundColor,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.borderColor),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              dropdownColor: AppColors.surfaceColor,
+                              value: selectedStudentId,
+                              isExpanded: true,
+                              items: _students.map((s) {
+                                final id = s.collegeId ?? s.id;
+                                final bDisplay = s.busNumber ?? s.busId ?? 'No Bus';
+                                return DropdownMenuItem<String>(
+                                  value: id,
+                                  child: Text(
+                                    '${s.name} ($id) • Bus: $bDisplay',
+                                    style: const TextStyle(color: AppColors.textColor, fontSize: 13),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  selectedStudentId = val;
+                                });
+                              },
+                            ),
+                          ),
+                        )
+                      else
+                        const Text('No students currently registered to link.', style: TextStyle(color: AppColors.errorRed, fontSize: 12)),
+                      if (selectedStudent != null) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.indigoPrimary.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.indigoPrimary.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.directions_bus, size: 14, color: AppColors.indigoPrimary),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Linked Bus: ${selectedStudent.busNumber ?? selectedStudent.busId ?? "Unassigned"}${selectedStudent.routeName != null ? " • " + selectedStudent.routeName! : ""}',
+                                  style: const TextStyle(color: AppColors.textColor, fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      )
-                    else
-                      const Text('No active buses available', style: TextStyle(color: AppColors.errorRed)),
+                      ],
+                    ] else ...[
+                      const Text('Assign RFID Card (Optional)', style: TextStyle(color: AppColors.mutedText, fontSize: 12)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: rfidController,
+                        style: const TextStyle(color: AppColors.textColor),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: AppColors.backgroundColor,
+                          hintText: 'e.g. RF928410',
+                          hintStyle: const TextStyle(color: AppColors.mutedText, fontSize: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Assign Bus (Optional)', style: TextStyle(color: AppColors.mutedText, fontSize: 12)),
+                      const SizedBox(height: 6),
+                      if (_buses.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.backgroundColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              dropdownColor: AppColors.surfaceColor,
+                              value: selectedBusId,
+                              isExpanded: true,
+                              items: _buses.map((bus) {
+                                return DropdownMenuItem<String>(
+                                  value: bus.id,
+                                  child: Text('Bus ${bus.number} (${bus.routeName})',
+                                      style: const TextStyle(color: AppColors.textColor, fontSize: 14)),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  selectedBusId = val;
+                                });
+                              },
+                            ),
+                          ),
+                        )
+                      else
+                        const Text('No active buses available', style: TextStyle(color: AppColors.errorRed)),
+                    ],
+
                     const SizedBox(height: 16),
                     const Text('Approval Notes', style: TextStyle(color: AppColors.mutedText, fontSize: 12)),
                     const SizedBox(height: 6),
@@ -165,8 +246,9 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
                         regId: reg.id,
                         action: 'approved',
                         notes: notesController.text,
-                        rfidCard: rfidController.text.isNotEmpty ? rfidController.text : null,
-                        busId: selectedBusId,
+                        rfidCard: isParent ? null : (rfidController.text.isNotEmpty ? rfidController.text : null),
+                        busId: isParent ? null : selectedBusId,
+                        parentChildId: isParent ? selectedStudentId : null,
                       );
                       if (res.status == 'ok') {
                         setState(() {
@@ -180,7 +262,7 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
                     } catch (e) {
                       setState(() => _isLoading = false);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.errorRed),
+                        SnackBar(content: Text('Approval failed: $e'), backgroundColor: AppColors.errorRed),
                       );
                     }
                   },

@@ -427,8 +427,8 @@ class Registration {
         role: json['role'] ?? 'student',
         collegeId: json['college_id'],
         rfidCard: json['rfid_card'],
-        busId: json['bus_id'],
-        parentOf: json['parent_of'],
+        busId: json['bus_id'] ?? json['requested_bus'],
+        parentOf: json['parent_of'] ?? json['parent_child_id'],
         phone: json['phone'],
         status: json['status'] ?? 'pending',
         submittedAt: json['submitted_at'],
@@ -446,6 +446,12 @@ class User {
   final String? parentOf;
   final String? phone;
   final int isActive;
+  final String? wardName;
+  final String? wardCollegeId;
+  final String? wardBusNumber;
+  final String? wardRouteName;
+  final String? busNumber;
+  final String? routeName;
 
   User({
     required this.id,
@@ -458,6 +464,12 @@ class User {
     this.parentOf,
     this.phone,
     required this.isActive,
+    this.wardName,
+    this.wardCollegeId,
+    this.wardBusNumber,
+    this.wardRouteName,
+    this.busNumber,
+    this.routeName,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -471,6 +483,12 @@ class User {
         parentOf: json['parent_of'],
         phone: json['phone'],
         isActive: json['is_active'] ?? 1,
+        wardName: json['ward_name'],
+        wardCollegeId: json['ward_college_id'],
+        wardBusNumber: json['ward_bus_number'],
+        wardRouteName: json['ward_route_name'],
+        busNumber: json['bus_number'],
+        routeName: json['route_name'],
       );
 }
 

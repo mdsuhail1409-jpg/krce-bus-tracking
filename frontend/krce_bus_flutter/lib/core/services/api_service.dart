@@ -366,6 +366,26 @@ class ApiService {
     return (res.data as List).map((e) => Attendance.fromJson(e)).toList();
   }
 
+  Future<Map<String, dynamic>> getMyWard(String token) async {
+    if (token.startsWith('demo_token_')) {
+      return {
+        'has_ward': true,
+        'ward': {'id': 'stu01', 'name': 'Aravind Kumar (Demo)', 'college_id': '21CS001'},
+        'bus': {
+          'id': 'B01',
+          'number': 'TN-01',
+          'route_name': 'Route A — Woraiyur',
+          'driver_name': 'Rajan S.',
+          'driver_phone': '9840111111',
+          'live': {'lat': 10.7905, 'lon': 78.7047, 'speed': 34.0, 'status': 'in_transit'}
+        }
+      };
+    }
+    final res = await _dio.get('/api/my/ward',
+        options: Options(headers: _authHeader(token)));
+    return res.data as Map<String, dynamic>;
+  }
+
   // ── Admin ─────────────────────────────────────────────────
   Future<AdminStats> getAdminStats(String token) async {
     if (token.startsWith('demo_token_')) {
@@ -500,6 +520,7 @@ class ApiService {
     required String notes,
     String? rfidCard,
     String? busId,
+    String? parentChildId,
   }) async {
     if (token.startsWith('demo_token_')) {
       return GenericResponse(
@@ -512,8 +533,25 @@ class ApiService {
           'notes': notes,
           'rfid_card': rfidCard,
           'bus_id': busId,
+          'parent_child_id': parentChildId,
         },
         options: Options(headers: _authHeader(token)));
+    return GenericResponse.fromJson(res.data);
+  }
+
+  Future<GenericResponse> assignParentWard(
+    String token, {
+    required String parentId,
+    required String studentId,
+  }) async {
+    if (token.startsWith('demo_token_')) {
+      return GenericResponse(status: 'ok', message: 'Student ward successfully assigned (Demo)');
+    }
+    final res = await _dio.post(
+      '/api/admin/users/$parentId/assign-ward',
+      data: {'student_id': studentId},
+      options: Options(headers: _authHeader(token)),
+    );
     return GenericResponse.fromJson(res.data);
   }
 

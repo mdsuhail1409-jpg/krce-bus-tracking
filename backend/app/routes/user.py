@@ -39,10 +39,20 @@ async def child_attendance(u=Depends(current_user)):
     db = db_module.db
     child_cid = u.get("parent_of", "")
     if not child_cid:
-        raise HTTPException(403, "Not linked to any child")
-    child = await db.users.find_one({"college_id": child_cid}, {"_id": 0, "id": 1, "name": 1})
+        parent_usr = await db.users.find_one({"id": u["sub"]}, {"_id": 0, "parent_of": 1})
+        if parent_usr:
+            child_cid = parent_usr.get("parent_of", "")
+
+    if not child_cid:
+        return []
+
+    child = await db.users.find_one(
+        {"$or": [{"college_id": child_cid}, {"id": child_cid}]},
+        {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1}
+    )
     if not child:
-        raise HTTPException(404, "Child not found")
+        return []
+
     cursor = db.attendance.find(
         {"user_id": child["id"]}, {"_id": 0}
     ).sort("tap_time", -1).limit(40)
@@ -55,6 +65,91 @@ async def child_attendance(u=Depends(current_user)):
         rec["child_name"] = child["name"]
         result.append(rec)
     return result
+
+
+@router.get("/api/my/ward")
+async def get_my_ward(u=Depends(current_user)):
+    """
+    Get detailed profile of the assigned student ward and their live bus tracking details.
+    Accessible by parent accounts.
+    """
+    db = db_module.db
+    usr = await db.users.find_one({"id": u["sub"]})
+    if not usr or usr.get("role") != "parent":
+        raise HTTPException(400, "Only parent accounts can access student ward information")
+
+    parent_of = usr.get("parent_of")
+    if not parent_of:
+        return {
+            "has_ward": False,
+            "message": "No student linked to this parent account yet."
+        }
+
+    child = await db.users.find_one(
+        {"role": "student", "$or": [{"college_id": parent_of}, {"id": parent_of}]},
+        {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1, "rfid_card": 1, "phone": 1, "email": 1}
+    )
+    if not child:
+        return {
+            "has_ward": False,
+            "message": f"Student profile for ID '{parent_of}' was not found in the directory."
+        }
+
+    bus_id = child.get("bus_id") or usr.get("bus_id")
+    # Synchronize parent bus_id if missing
+    if bus_id and not usr.get("bus_id"):
+        await db.users.update_one({"id": usr["id"]}, {"$set": {"bus_id": bus_id}})
+
+    bus_info = None
+    if bus_id:
+        bus = await db.buses.find_one({"id": bus_id, "is_active": 1}, {"_id": 0})
+        if bus:
+            driver = None
+            if bus.get("driver_id"):
+                driver = await db.users.find_one({"id": bus["driver_id"]}, {"_id": 0, "name": 1, "phone": 1})
+
+            live = live_buses.get(bus_id)
+            live_clean = None
+            if live:
+                live_clean = {
+                    "lat": live.get("lat"),
+                    "lon": live.get("lon"),
+                    "speed": live.get("speed", 0.0),
+                    "status": live.get("status", "in_transit"),
+                    "last_updated": live.get("last_updated"),
+                    "passengers": live.get("passengers", 0)
+                }
+
+            bus_info = {
+                "id": bus["id"],
+                "number": bus["number"],
+                "route_name": bus.get("route_name"),
+                "driver_name": driver["name"] if driver else None,
+                "driver_phone": driver["phone"] if driver else None,
+                "stops": bus.get("stops", []),
+                "live": live_clean
+            }
+
+    # Fetch child's most recent attendance tap today
+    last_attendance = await db.attendance.find_one(
+        {"user_id": child["id"]},
+        {"_id": 0},
+        sort=[("tap_time", -1)]
+    )
+
+    return {
+        "has_ward": True,
+        "ward": {
+            "id": child["id"],
+            "name": child["name"],
+            "college_id": child.get("college_id"),
+            "rfid_card": child.get("rfid_card"),
+            "email": child.get("email"),
+            "phone": child.get("phone")
+        },
+        "bus": bus_info,
+        "last_attendance": last_attendance
+    }
 
 
 @router.post("/api/my/change-password")

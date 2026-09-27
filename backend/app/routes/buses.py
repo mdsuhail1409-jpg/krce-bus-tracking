@@ -17,8 +17,15 @@ async def check_parent_bus_access(db, u, bus_id: str):
     if u and u.get("role") == "parent":
         parent_of = u.get("parent_of")
         if not parent_of:
+            parent_usr = await db.users.find_one({"id": u["sub"]}, {"_id": 0, "parent_of": 1, "bus_id": 1})
+            if parent_usr:
+                parent_of = parent_usr.get("parent_of")
+                if parent_usr.get("bus_id") == bus_id:
+                    return
+
+        if not parent_of:
             raise HTTPException(403, "Access Denied: No child associated with your parent account.")
-        child = await db.users.find_one({"college_id": parent_of}, {"_id": 0, "bus_id": 1})
+        child = await db.users.find_one({"$or": [{"college_id": parent_of}, {"id": parent_of}]}, {"_id": 0, "bus_id": 1})
         if not child or child.get("bus_id") != bus_id:
             raise HTTPException(403, "Access Denied: You are not authorized to track this bus.")
 
@@ -32,8 +39,19 @@ async def get_buses(u=Depends(optional_user)):
     if u and u.get("role") == "parent":
         parent_of = u.get("parent_of")
         if not parent_of:
+            parent_usr = await db.users.find_one({"id": u["sub"]}, {"_id": 0, "parent_of": 1, "bus_id": 1})
+            if parent_usr:
+                parent_of = parent_usr.get("parent_of")
+                if parent_usr.get("bus_id"):
+                    cursor = db.buses.find({"id": parent_usr["bus_id"], "is_active": 1}, {"_id": 0})
+                    buses = await cursor.to_list(length=None)
+                    if buses:
+                        # Continue with standard processing
+                        pass
+
+        if not parent_of:
             return []
-        child = await db.users.find_one({"college_id": parent_of}, {"_id": 0, "bus_id": 1})
+        child = await db.users.find_one({"$or": [{"college_id": parent_of}, {"id": parent_of}]}, {"_id": 0, "bus_id": 1})
         if not child or not child.get("bus_id"):
             return []
         cursor = db.buses.find({"id": child["bus_id"], "is_active": 1}, {"_id": 0})

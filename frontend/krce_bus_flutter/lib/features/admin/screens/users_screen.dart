@@ -102,6 +102,185 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
     }
   }
 
+  Future<void> _openAssignWardDialog(User parent) async {
+    final students = _allUsers.where((u) => u.role == 'student').toList();
+    if (students.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No students found in the directory to assign.'), backgroundColor: AppColors.errorRed),
+      );
+      return;
+    }
+
+    String? selectedStudentId = parent.parentOf ?? (students.isNotEmpty ? (students.first.collegeId ?? students.first.id) : null);
+    if (!students.any((s) => s.collegeId == selectedStudentId || s.id == selectedStudentId)) {
+      selectedStudentId = students.first.collegeId ?? students.first.id;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final selectedStudent = students.firstWhere(
+            (s) => s.collegeId == selectedStudentId || s.id == selectedStudentId,
+            orElse: () => students.first,
+          );
+
+          return AlertDialog(
+            backgroundColor: AppColors.surfaceColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: const [
+                Icon(Icons.link, color: AppColors.indigoPrimary),
+                SizedBox(width: 8),
+                Text('Assign Student Ward', style: TextStyle(color: AppColors.textColor, fontSize: 17, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 18,
+                          backgroundColor: AppColors.surfaceColor,
+                          child: Icon(Icons.family_restroom, color: AppColors.indigoPrimary, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(parent.name, style: const TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold)),
+                              Text(parent.email, style: const TextStyle(color: AppColors.mutedText, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Select Student (Ward)', style: TextStyle(color: AppColors.mutedText, fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.borderColor),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        dropdownColor: AppColors.surfaceColor,
+                        value: selectedStudentId,
+                        isExpanded: true,
+                        items: students.map((s) {
+                          final id = s.collegeId ?? s.id;
+                          final busDisplay = s.busNumber ?? s.busId ?? 'No Bus';
+                          return DropdownMenuItem<String>(
+                            value: id,
+                            child: Text(
+                              '${s.name} ($id) • Bus: $busDisplay',
+                              style: const TextStyle(color: AppColors.textColor, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            selectedStudentId = val;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.indigoPrimary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.indigoPrimary.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Student Bus & Route Details', style: TextStyle(color: AppColors.indigoPrimary, fontWeight: FontWeight.bold, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.directions_bus, size: 14, color: AppColors.indigoPrimary),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Bus: ${selectedStudent.busNumber ?? selectedStudent.busId ?? "Unassigned"}',
+                              style: const TextStyle(color: AppColors.textColor, fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                        if (selectedStudent.routeName != null && selectedStudent.routeName!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Route: ${selectedStudent.routeName}',
+                            style: const TextStyle(color: AppColors.mutedText, fontSize: 12),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel', style: TextStyle(color: AppColors.mutedText)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.indigoPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () async {
+                  if (selectedStudentId == null) return;
+                  Navigator.pop(ctx);
+                  final auth = ref.read(authProvider);
+                  final api = ref.read(apiServiceProvider);
+                  try {
+                    final res = await api.assignParentWard(
+                      auth.token,
+                      parentId: parent.id,
+                      studentId: selectedStudentId!,
+                    );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(res.message ?? 'Ward assigned successfully'), backgroundColor: AppColors.successGreen),
+                      );
+                      _fetchUsers();
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to assign ward: $e'), backgroundColor: AppColors.errorRed),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Save Ward', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   List<User> _filteredUsers(String role) {
     return _allUsers.where((u) {
       final matchesRole = role == 'student' 
@@ -110,7 +289,11 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
       final query = _searchQuery.toLowerCase();
       final matchesSearch = u.name.toLowerCase().contains(query) ||
           u.email.toLowerCase().contains(query) ||
-          (u.collegeId?.toLowerCase().contains(query) ?? false);
+          (u.collegeId?.toLowerCase().contains(query) ?? false) ||
+          (u.wardName?.toLowerCase().contains(query) ?? false) ||
+          (u.wardCollegeId?.toLowerCase().contains(query) ?? false) ||
+          (u.parentOf?.toLowerCase().contains(query) ?? false) ||
+          (u.busNumber?.toLowerCase().contains(query) ?? false);
       return matchesRole && matchesSearch;
     }).toList();
   }
@@ -204,8 +387,12 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                             final user = users[idx];
                             final isActive = user.isActive == 1;
                             final canReassign = user.role == 'student' || user.role == 'staff';
+                            final isParent = user.role == 'parent';
+                            final isInteractive = canReassign || isParent;
                             return GestureDetector(
-                              onTap: canReassign ? () => _openReassignDialog(user) : null,
+                              onTap: canReassign
+                                  ? () => _openReassignDialog(user)
+                                  : (isParent ? () => _openAssignWardDialog(user) : null),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 180),
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -214,11 +401,11 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                                   color: AppColors.surfaceColor,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: canReassign
+                                    color: isInteractive
                                         ? AppColors.indigoPrimary.withOpacity(0.25)
                                         : AppColors.borderColor,
                                   ),
-                                  boxShadow: canReassign
+                                  boxShadow: isInteractive
                                       ? [BoxShadow(color: AppColors.indigoPrimary.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 3))]
                                       : [],
                                 ),
@@ -229,7 +416,9 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                                           ? AppColors.indigoPrimary.withOpacity(0.1)
                                           : AppColors.mutedText.withOpacity(0.1),
                                       child: Icon(
-                                        role == 'driver' ? Icons.directions_bus : Icons.person,
+                                        role == 'driver' 
+                                            ? Icons.directions_bus 
+                                            : (isParent ? Icons.family_restroom : Icons.person),
                                         color: isActive ? AppColors.indigoPrimary : AppColors.mutedText,
                                       ),
                                     ),
@@ -254,42 +443,91 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                                               fontSize: 12,
                                             ),
                                           ),
-                                          if (user.collegeId != null && user.collegeId!.isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'ID: ${user.collegeId}',
-                                              style: const TextStyle(
-                                                color: AppColors.mutedText,
-                                                fontSize: 12,
+                                          if (isParent) ...[
+                                            const SizedBox(height: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.indigoPrimary.withOpacity(0.08),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.school, size: 12, color: AppColors.indigoPrimary),
+                                                  const SizedBox(width: 4),
+                                                  Flexible(
+                                                    child: Text(
+                                                      user.wardName != null || user.parentOf != null
+                                                          ? 'Ward: ${user.wardName ?? "Student"} (${user.wardCollegeId ?? user.parentOf})'
+                                                          : 'No Ward Linked',
+                                                      style: TextStyle(
+                                                        color: user.wardName != null || user.parentOf != null
+                                                            ? AppColors.indigoPrimary
+                                                            : AppColors.mutedText,
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ],
-                                          if (user.busId != null && user.busId!.isNotEmpty) ...[
                                             const SizedBox(height: 4),
                                             Row(
                                               children: [
-                                                const Icon(Icons.directions_bus, size: 12, color: AppColors.indigoPrimary),
+                                                const Icon(Icons.directions_bus, size: 12, color: AppColors.mutedText),
                                                 const SizedBox(width: 4),
-                                                Text(
-                                                  user.busId!,
-                                                  style: const TextStyle(
-                                                    color: AppColors.indigoPrimary,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
+                                                Flexible(
+                                                  child: Text(
+                                                    user.wardBusNumber != null || user.busNumber != null || user.busId != null
+                                                        ? 'Bus ${user.wardBusNumber ?? user.busNumber ?? user.busId}${user.wardRouteName != null || user.routeName != null ? " • " + (user.wardRouteName ?? user.routeName!) : ""}'
+                                                        : 'No bus assigned',
+                                                    style: const TextStyle(color: AppColors.mutedText, fontSize: 12),
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                          ] else if (canReassign) ...[
-                                            const SizedBox(height: 4),
-                                            const Text(
-                                              'No bus assigned',
-                                              style: TextStyle(
-                                                color: AppColors.mutedText,
-                                                fontSize: 12,
-                                                fontStyle: FontStyle.italic,
+                                          ] else ...[
+                                            if (user.collegeId != null && user.collegeId!.isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'ID: ${user.collegeId}',
+                                                style: const TextStyle(
+                                                  color: AppColors.mutedText,
+                                                  fontSize: 12,
+                                                ),
                                               ),
-                                            ),
+                                            ],
+                                            if (user.busId != null && user.busId!.isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.directions_bus, size: 12, color: AppColors.indigoPrimary),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    user.busId!,
+                                                    style: const TextStyle(
+                                                      color: AppColors.indigoPrimary,
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ] else if (canReassign) ...[
+                                              const SizedBox(height: 4),
+                                              const Text(
+                                                'No bus assigned',
+                                                style: TextStyle(
+                                                  color: AppColors.mutedText,
+                                                  fontSize: 12,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            ],
                                           ],
                                         ],
                                       ),
@@ -303,6 +541,15 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                                               icon: const Icon(Icons.edit_note, size: 20),
                                               color: AppColors.indigoPrimary,
                                               onPressed: () => _openReassignDialog(user),
+                                            ),
+                                          ),
+                                        if (isParent)
+                                          Tooltip(
+                                            message: 'Assign / Change Student Ward',
+                                            child: IconButton(
+                                              icon: const Icon(Icons.link, size: 20),
+                                              color: AppColors.indigoPrimary,
+                                              onPressed: () => _openAssignWardDialog(user),
                                             ),
                                           ),
                                         Switch(

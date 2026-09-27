@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.auth import _hash, admin_only
-from app.models import BusUpsert, AlertCreate, RegAction, TempBusAssignment, BusReassignment
+from app.models import BusUpsert, AlertCreate, RegAction, TempBusAssignment, BusReassignment, AssignWardReq
 from app.state import live_buses, last_seen
 from app.utils import today, now_str
 from app.predictions import predict_occupancy
@@ -142,11 +142,92 @@ async def admin_users(role: str = "", u=Depends(admin_only)):
         bus = None
         if usr.get("bus_id"):
             bus = await db.buses.find_one({"id": usr["bus_id"]}, {"_id": 0, "number": 1, "route_name": 1})
-        usr["bus_number"] = bus["number"] if bus else None
-        usr["route_name"] = bus["route_name"] if bus else None
+        
+        # Enrich parent accounts with ward and student bus details
+        if usr.get("role") == "parent":
+            parent_of = usr.get("parent_of")
+            if parent_of:
+                child = await db.users.find_one(
+                    {"$or": [{"college_id": parent_of}, {"id": parent_of}]},
+                    {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1}
+                )
+                if child:
+                    usr["ward_name"] = child.get("name")
+                    usr["ward_college_id"] = child.get("college_id") or child.get("id")
+                    usr["ward_bus_id"] = child.get("bus_id")
+                    if child.get("bus_id"):
+                        ward_bus = await db.buses.find_one({"id": child["bus_id"]}, {"_id": 0, "number": 1, "route_name": 1})
+                        if ward_bus:
+                            usr["ward_bus_number"] = ward_bus.get("number")
+                            usr["ward_route_name"] = ward_bus.get("route_name")
+                            if not bus:
+                                bus = ward_bus
+                                if not usr.get("bus_id"):
+                                    usr["bus_id"] = child["bus_id"]
+                                    await db.users.update_one({"id": usr["id"]}, {"$set": {"bus_id": child["bus_id"]}})
+
+        usr["bus_number"] = bus["number"] if bus else usr.get("ward_bus_number")
+        usr["route_name"] = bus["route_name"] if bus else usr.get("ward_route_name")
         usr["is_online"] = usr["id"] in last_seen
         result.append(usr)
     return result
+
+
+@router.post("/api/admin/users/{uid}/assign-ward")
+async def assign_parent_ward(uid: str, req: AssignWardReq, u=Depends(admin_only)):
+    """
+    Assign a student (ward) to a parent account.
+    Automatically coordinates and synchronizes the parent's bus tracking with the student's bus.
+    """
+    db = db_module.db
+    parent = await db.users.find_one({"id": uid}, {"_id": 0})
+    if not parent:
+        raise HTTPException(404, "Parent user not found")
+    if parent.get("role") != "parent":
+        raise HTTPException(400, "Ward assignment is only available for parent accounts")
+
+    target_student_id = req.student_id.strip()
+    student = await db.users.find_one(
+        {"role": "student", "$or": [{"college_id": target_student_id}, {"id": target_student_id}]},
+        {"_id": 0}
+    )
+    if not student:
+        raise HTTPException(404, f"Student not found with ID/Register No: {target_student_id}")
+
+    student_cid = student.get("college_id") or student.get("id")
+    student_bus = student.get("bus_id")
+
+    await db.users.update_one({"id": uid}, {"$set": {
+        "parent_of": student_cid,
+        "bus_id": student_bus
+    }})
+
+    await db.audit_log.insert_one({
+        "user_id": u.get("sub", "admin"),
+        "action": "assign_parent_ward",
+        "parent_id": uid,
+        "parent_name": parent.get("name"),
+        "student_id": student.get("id"),
+        "student_name": student.get("name"),
+        "student_college_id": student_cid,
+        "bus_id": student_bus,
+        "ts": now_str()
+    })
+
+    bus_info = None
+    if student_bus:
+        bus_info = await db.buses.find_one({"id": student_bus}, {"_id": 0, "number": 1, "route_name": 1})
+
+    return {
+        "status": "ok",
+        "message": f"Successfully linked student {student.get('name')} to parent {parent.get('name')}",
+        "parent_id": uid,
+        "ward_name": student.get("name"),
+        "ward_college_id": student_cid,
+        "bus_id": student_bus,
+        "bus_number": bus_info.get("number") if bus_info else None,
+        "route_name": bus_info.get("route_name") if bus_info else None
+    }
 
 
 @router.post("/api/admin/users/{uid}/toggle")
@@ -459,7 +540,17 @@ async def reg_action(req: RegAction, u=Depends(admin_only)):
         
         assigned_rfid = req.rfid_card if req.rfid_card else (reg.get("rfid_card") or None)
         assigned_bus = req.bus_id if req.bus_id else (reg.get("requested_bus") or None)
-        parent_of = reg.get("parent_child_id") or None
+        parent_of = req.parent_child_id if req.parent_child_id else (reg.get("parent_child_id") or None)
+
+        if reg.get("role") == "parent" and parent_of:
+            child = await db.users.find_one(
+                {"role": "student", "$or": [{"college_id": parent_of.strip()}, {"id": parent_of.strip()}]},
+                {"_id": 0, "college_id": 1, "id": 1, "bus_id": 1}
+            )
+            if child:
+                parent_of = child.get("college_id") or child.get("id")
+                if not assigned_bus:
+                    assigned_bus = child.get("bus_id")
 
         await db.users.insert_one({
             "id": new_uid, "name": reg["name"], "email": reg["email"],

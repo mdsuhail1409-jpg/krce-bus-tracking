@@ -32,7 +32,11 @@ class AlertCreate(BaseModel):
 
 
 class RegAction(BaseModel):
-    reg_id: str; action: str; bus_id: str = ""; rfid_card: str = ""; notes: str = ""
+    reg_id: str; action: str; bus_id: str = ""; rfid_card: str = ""; notes: str = ""; parent_child_id: str = ""
+
+
+class AssignWardReq(BaseModel):
+    student_id: str
 
 
 class RfidTap(BaseModel):

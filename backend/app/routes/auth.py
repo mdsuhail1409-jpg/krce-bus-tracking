@@ -36,16 +36,28 @@ async def login(req: LoginReq, request: Request):
     if not u or not _check_hash(req.password, u["password_hash"]):
         raise HTTPException(401, "Invalid email or password")
 
+    bus_id = u.get("bus_id") or ""
+    parent_of = u.get("parent_of") or ""
+    if u.get("role") == "parent" and parent_of and not bus_id:
+        child = await db.users.find_one(
+            {"role": "student", "$or": [{"college_id": parent_of}, {"id": parent_of}]},
+            {"_id": 0, "bus_id": 1}
+        )
+        if child and child.get("bus_id"):
+            bus_id = child["bus_id"]
+            u["bus_id"] = bus_id
+            await db.users.update_one({"id": u["id"]}, {"$set": {"bus_id": bus_id}})
+
     extra = {
         "college_id": u.get("college_id") or "",
         "rfid_card":  u.get("rfid_card") or "",
-        "parent_of":  u.get("parent_of") or "",
+        "parent_of":  parent_of,
         "phone":      u.get("phone") or "",
     }
 
     # Access and Refresh tokens
-    token = make_token(u["id"], u["name"], u["role"], u.get("bus_id") or "", extra, expires_hours=1)
-    refresh_token = make_token(u["id"], u["name"], u["role"], u.get("bus_id") or "", {"is_refresh": True}, expires_hours=168)
+    token = make_token(u["id"], u["name"], u["role"], bus_id, extra, expires_hours=1)
+    refresh_token = make_token(u["id"], u["name"], u["role"], bus_id, {"is_refresh": True}, expires_hours=168)
 
     # Audit log
     await db.audit_log.insert_one({
