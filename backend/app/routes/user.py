@@ -90,15 +90,21 @@ async def get_my_ward(u=Depends(current_user)):
             "message": "No student linked to this parent account yet."
         }
 
+    query_conds = [
+        {"college_id": parent_of},
+        {"id": parent_of},
+        {"name": {"$regex": f"^{parent_of}$", "$options": "i"}},
+        {"name": {"$regex": parent_of, "$options": "i"}}
+    ]
     child = await db.users.find_one(
-        {"role": "student", "$or": [
-            {"college_id": parent_of},
-            {"id": parent_of},
-            {"name": {"$regex": f"^{parent_of}$", "$options": "i"}},
-            {"name": {"$regex": parent_of, "$options": "i"}}
-        ]},
+        {"role": "student", "is_active": 1, "$or": query_conds},
         {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1, "rfid_card": 1, "phone": 1, "email": 1}
     )
+    if not child:
+        child = await db.users.find_one(
+            {"role": "student", "$or": query_conds},
+            {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1, "rfid_card": 1, "phone": 1, "email": 1}
+        )
     if not child:
         return {
             "has_ward": False,
