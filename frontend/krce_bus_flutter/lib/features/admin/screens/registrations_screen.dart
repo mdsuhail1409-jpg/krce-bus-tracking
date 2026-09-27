@@ -62,9 +62,18 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
   void _showApproveDialog(Registration reg) {
     final isParent = reg.role == 'parent';
     String? selectedBusId = reg.busId ?? (_buses.isNotEmpty ? _buses.first.id : null);
-    String? selectedStudentId = reg.parentOf;
-    if (isParent && selectedStudentId == null && _students.isNotEmpty) {
-      selectedStudentId = _students.first.collegeId ?? _students.first.id;
+    // Build deduplicated map of unique value -> student
+    final Map<String, User> studentMap = {};
+    for (final s in _students) {
+      final key = (s.collegeId != null && s.collegeId!.trim().isNotEmpty)
+          ? s.collegeId!.trim()
+          : s.id;
+      studentMap[key] = s;
+    }
+
+    String? selectedStudentId = reg.parentOf?.trim();
+    if (isParent && (selectedStudentId == null || !studentMap.containsKey(selectedStudentId)) && studentMap.isNotEmpty) {
+      selectedStudentId = studentMap.keys.first;
     }
 
     final rfidController = TextEditingController(text: reg.rfidCard ?? '');
@@ -75,12 +84,26 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final selectedStudent = isParent && _students.isNotEmpty
-                ? _students.firstWhere(
-                    (s) => s.collegeId == selectedStudentId || s.id == selectedStudentId,
-                    orElse: () => _students.first,
-                  )
+            if (isParent && selectedStudentId != null && !studentMap.containsKey(selectedStudentId) && studentMap.isNotEmpty) {
+              selectedStudentId = studentMap.keys.first;
+            }
+            final selectedStudent = isParent && selectedStudentId != null
+                ? studentMap[selectedStudentId]
                 : null;
+
+            final dropdownItems = studentMap.entries.map((entry) {
+              final key = entry.key;
+              final s = entry.value;
+              final bDisplay = s.busNumber ?? s.busId ?? 'No Bus';
+              return DropdownMenuItem<String>(
+                value: key,
+                child: Text(
+                  '${s.name} ($key) • Bus: $bDisplay',
+                  style: const TextStyle(color: AppColors.textColor, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList();
 
             return AlertDialog(
               backgroundColor: AppColors.surfaceColor,
@@ -102,7 +125,7 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
                     if (isParent) ...[
                       const Text('Assign Student Ward', style: TextStyle(color: AppColors.mutedText, fontSize: 12, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
-                      if (_students.isNotEmpty)
+                      if (dropdownItems.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
@@ -115,22 +138,13 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
                               dropdownColor: AppColors.surfaceColor,
                               value: selectedStudentId,
                               isExpanded: true,
-                              items: _students.map((s) {
-                                final id = s.collegeId ?? s.id;
-                                final bDisplay = s.busNumber ?? s.busId ?? 'No Bus';
-                                return DropdownMenuItem<String>(
-                                  value: id,
-                                  child: Text(
-                                    '${s.name} ($id) • Bus: $bDisplay',
-                                    style: const TextStyle(color: AppColors.textColor, fontSize: 13),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                );
-                              }).toList(),
+                              items: dropdownItems,
                               onChanged: (val) {
-                                setDialogState(() {
-                                  selectedStudentId = val;
-                                });
+                                if (val != null) {
+                                  setDialogState(() {
+                                    selectedStudentId = val;
+                                  });
+                                }
                               },
                             ),
                           ),

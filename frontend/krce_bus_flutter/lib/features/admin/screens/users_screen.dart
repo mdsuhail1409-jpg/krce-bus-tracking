@@ -111,19 +111,58 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
       return;
     }
 
-    String? selectedStudentId = parent.parentOf ?? (students.isNotEmpty ? (students.first.collegeId ?? students.first.id) : null);
-    if (!students.any((s) => s.collegeId == selectedStudentId || s.id == selectedStudentId)) {
-      selectedStudentId = students.first.collegeId ?? students.first.id;
+    // Build deduplicated map of unique value -> student
+    final Map<String, User> studentMap = {};
+    for (final s in students) {
+      final key = (s.collegeId != null && s.collegeId!.trim().isNotEmpty)
+          ? s.collegeId!.trim()
+          : s.id;
+      studentMap[key] = s;
+    }
+
+    // Determine initial selected key safely
+    String selectedStudentId;
+    final parentWard = parent.parentOf?.trim();
+    if (parentWard != null && studentMap.containsKey(parentWard)) {
+      selectedStudentId = parentWard;
+    } else if (parentWard != null) {
+      final match = students.firstWhere(
+        (s) =>
+            s.id == parentWard ||
+            s.collegeId?.trim().toLowerCase() == parentWard.toLowerCase() ||
+            s.name.trim().toLowerCase() == parentWard.toLowerCase(),
+        orElse: () => students.first,
+      );
+      final matchKey = (match.collegeId != null && match.collegeId!.trim().isNotEmpty)
+          ? match.collegeId!.trim()
+          : match.id;
+      selectedStudentId = studentMap.containsKey(matchKey) ? matchKey : studentMap.keys.first;
+    } else {
+      selectedStudentId = studentMap.keys.first;
     }
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
-          final selectedStudent = students.firstWhere(
-            (s) => s.collegeId == selectedStudentId || s.id == selectedStudentId,
-            orElse: () => students.first,
-          );
+          if (!studentMap.containsKey(selectedStudentId)) {
+            selectedStudentId = studentMap.keys.first;
+          }
+          final selectedStudent = studentMap[selectedStudentId] ?? students.first;
+
+          final dropdownItems = studentMap.entries.map((entry) {
+            final key = entry.key;
+            final s = entry.value;
+            final busDisplay = s.busNumber ?? s.busId ?? 'No Bus';
+            return DropdownMenuItem<String>(
+              value: key,
+              child: Text(
+                '${s.name} ($key) • Bus: $busDisplay',
+                style: const TextStyle(color: AppColors.textColor, fontSize: 13),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList();
 
           return AlertDialog(
             backgroundColor: AppColors.surfaceColor,
@@ -181,22 +220,13 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                         dropdownColor: AppColors.surfaceColor,
                         value: selectedStudentId,
                         isExpanded: true,
-                        items: students.map((s) {
-                          final id = s.collegeId ?? s.id;
-                          final busDisplay = s.busNumber ?? s.busId ?? 'No Bus';
-                          return DropdownMenuItem<String>(
-                            value: id,
-                            child: Text(
-                              '${s.name} ($id) • Bus: $busDisplay',
-                              style: const TextStyle(color: AppColors.textColor, fontSize: 13),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
+                        items: dropdownItems,
                         onChanged: (val) {
-                          setDialogState(() {
-                            selectedStudentId = val;
-                          });
+                          if (val != null) {
+                            setDialogState(() {
+                              selectedStudentId = val;
+                            });
+                          }
                         },
                       ),
                     ),
