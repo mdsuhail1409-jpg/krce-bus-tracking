@@ -3896,9 +3896,9 @@
                                     <i data-lucide="link" style="width:12px;height:12px;"></i>${u.parent_of ? 'Edit Ward' : 'Assign Student'}
                                 </button>
                             ` : ''}
-                            ${(u.role === 'staff' || u.role === 'student') ? `
+                            ${(u.role === 'staff' || u.role === 'student' || u.role === 'passenger' || u.role === 'parent') ? `
                                 <button class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.75rem; display:inline-flex; align-items:center; gap:4px; border-color:rgba(16,185,129,0.4);" onclick="openAssignBusModal('${u.id}', '${(u.name || '').replace(/'/g, "\\'")}', '${u.bus_id || ''}', '${u.role}')">
-                                    <i data-lucide="bus" style="width:12px;height:12px;"></i>${u.bus_id ? 'Change Bus' : 'Assign Bus'}
+                                    <i data-lucide="bus" style="width:12px;height:12px;"></i>${(u.bus_id || u.ward_bus_number) ? 'Change Bus' : 'Assign Bus'}
                                 </button>
                             ` : ''}
                             <button class="btn ${u.is_active ? 'btn-danger' : 'btn-secondary'} btn-sm" style="padding: 4px 8px; font-size: 0.75rem;" onclick="toggleUserStatus('${u.id}')">

@@ -69,8 +69,8 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
   }
 
   Future<void> _openReassignDialog(User user) async {
-    // Only allow reassign for students and staff
-    if (user.role != 'student' && user.role != 'staff') return;
+    // Allow reassign for students, staff, and passenger role
+    if (user.role != 'student' && user.role != 'staff' && user.role != 'passenger') return;
     final result = await showReassignBusDialog(
       context,
       user: user,
@@ -415,7 +415,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                           itemBuilder: (context, idx) {
                             final user = users[idx];
                             final isActive = user.isActive == 1;
-                            final canReassign = user.role == 'student' || user.role == 'staff';
+                            final canReassign = user.role == 'student' || user.role == 'staff' || user.role == 'passenger';
                             final isParent = user.role == 'parent';
                             final isInteractive = canReassign || isParent;
                             return GestureDetector(

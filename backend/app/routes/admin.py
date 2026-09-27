@@ -275,34 +275,75 @@ async def reassign_bus(uid: str, req: BusReassignment, u=Depends(admin_only)):
     Permanently reassign a student/staff member to a different bus.
     Updates the user's bus_id field in the database.
     """
-    db = db_module.db
-    user = await db.users.find_one({"id": uid}, {"_id": 0, "name": 1, "role": 1, "bus_id": 1})
+    user = await db.users.find_one(
+        {"$or": [
+            {"id": uid},
+            {"college_id": uid},
+            {"email": uid},
+            {"name": {"$regex": f"^{uid}$", "$options": "i"}}
+        ]},
+        {"_id": 0, "id": 1, "name": 1, "role": 1, "bus_id": 1, "college_id": 1, "parent_of": 1}
+    )
     if not user:
-        raise HTTPException(404, "User not found")
-    if user.get("role") not in ["student", "staff"]:
-        raise HTTPException(400, "Bus reassignment is only allowed for students and staff")
-    bus = await db.buses.find_one({"id": req.bus_id, "is_active": 1}, {"_id": 0, "number": 1, "route_name": 1})
+        raise HTTPException(404, f"User '{uid}' not found in directory")
+    if user.get("role") not in ["student", "staff", "passenger", "parent"]:
+        raise HTTPException(400, "Bus assignment is only allowed for students, staff, and parents")
+
+    bus_query = (req.bus_id or "").strip()
+    bus = await db.buses.find_one(
+        {"is_active": 1, "$or": [
+            {"id": bus_query},
+            {"id": f"B0{bus_query}"},
+            {"id": f"B{bus_query}"},
+            {"number": bus_query},
+            {"number": f"TN-0{bus_query}"},
+            {"number": f"TN-{bus_query}"},
+            {"number": f"Bus-{bus_query}"},
+            {"number": f"Bus {bus_query}"}
+        ]},
+        {"_id": 0, "id": 1, "number": 1, "route_name": 1}
+    )
     if not bus:
-        raise HTTPException(404, "Bus not found or inactive")
+        raise HTTPException(404, f"Bus route not found: {req.bus_id}")
+
+    target_bus_id = bus["id"]
+    user_id = user.get("id") or uid
     old_bus_id = user.get("bus_id")
-    await db.users.update_one({"id": uid}, {"$set": {"bus_id": req.bus_id}})
-    if user.get("role") == "student":
-        student_cid = user.get("college_id") or uid
+
+    await db.users.update_one(
+        {"$or": [{"id": user_id}, {"college_id": user.get("college_id", user_id)}]},
+        {"$set": {"bus_id": target_bus_id}}
+    )
+
+    if user.get("role") in ["student", "passenger"]:
+        student_cid = user.get("college_id") or user_id
         await db.users.update_many(
             {"role": "parent", "$or": [
                 {"parent_of": student_cid},
-                {"parent_of": uid},
+                {"parent_of": user_id},
                 {"parent_of": user.get("name")},
                 {"parent_of": {"$regex": f"^{student_cid}$", "$options": "i"}},
                 {"parent_of": {"$regex": f"^{user.get('name')}$", "$options": "i"}}
             ]},
-            {"$set": {"bus_id": req.bus_id}}
+            {"$set": {"bus_id": target_bus_id}}
         )
+    elif user.get("role") == "parent":
+        parent_ward = user.get("parent_of")
+        if parent_ward:
+            await db.users.update_many(
+                {"role": {"$in": ["student", "passenger"]}, "$or": [
+                    {"college_id": parent_ward},
+                    {"id": parent_ward},
+                    {"name": {"$regex": f"^{parent_ward}$", "$options": "i"}}
+                ]},
+                {"$set": {"bus_id": target_bus_id}}
+            )
+
     await db.bus_reassignment_log.insert_one({
-        "user_id": uid,
+        "user_id": user_id,
         "user_name": user.get("name"),
         "old_bus_id": old_bus_id,
-        "new_bus_id": req.bus_id,
+        "new_bus_id": target_bus_id,
         "new_bus_number": bus["number"],
         "reason": req.reason,
         "reassigned_by": u["id"],
@@ -310,8 +351,8 @@ async def reassign_bus(uid: str, req: BusReassignment, u=Depends(admin_only)):
     })
     return {
         "status": "ok",
-        "user_id": uid,
-        "new_bus_id": req.bus_id,
+        "user_id": user_id,
+        "new_bus_id": target_bus_id,
         "new_bus_number": bus["number"],
         "new_route_name": bus["route_name"],
     }
