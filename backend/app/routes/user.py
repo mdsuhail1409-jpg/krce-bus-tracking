@@ -269,3 +269,91 @@ async def get_my_eta(u=Depends(current_user)):
         "distance": pred["distance"],
         "remaining_stops": remaining
     }
+
+
+@router.get("/api/my/bus-students")
+async def get_my_bus_students(u=Depends(current_user)):
+    """
+    Roster of students assigned to the logged-in user's bus.
+    Used by staff coordinators and drivers to see all students on their bus and real-time boarding status.
+    """
+    from datetime import date
+    db = db_module.db
+    usr = await db.users.find_one({"id": u["sub"]})
+    if not usr:
+        raise HTTPException(404, "User not found")
+
+    bus_id = usr.get("bus_id") or u.get("bus_id")
+    if not bus_id:
+        return {
+            "has_bus": False,
+            "bus_id": None,
+            "bus_number": None,
+            "route_name": None,
+            "total_students": 0,
+            "boarded_count": 0,
+            "students": [],
+            "message": "No bus assigned to your account yet. Contact administrator to assign your bus route."
+        }
+
+    bus = await db.buses.find_one({"id": bus_id}, {"_id": 0})
+    if not bus:
+        return {
+            "has_bus": False,
+            "bus_id": bus_id,
+            "bus_number": "Unknown",
+            "route_name": "Unknown",
+            "total_students": 0,
+            "boarded_count": 0,
+            "students": [],
+            "message": f"Assigned bus '{bus_id}' not found in active bus fleet."
+        }
+
+    driver = None
+    if bus.get("driver_id"):
+        driver = await db.users.find_one({"id": bus["driver_id"]}, {"_id": 0, "name": 1, "phone": 1})
+
+    today_str = date.today().isoformat()
+    cursor = db.users.find(
+        {"role": "student", "bus_id": bus_id, "is_active": 1},
+        {"_id": 0, "id": 1, "name": 1, "college_id": 1, "phone": 1, "email": 1, "rfid_card": 1, "bus_stop": 1}
+    ).sort("name", 1)
+    students = await cursor.to_list(length=None)
+
+    boarded_count = 0
+    students_list = []
+    for s in students:
+        att = await db.attendance.find_one(
+            {"user_id": s["id"], "bus_id": bus_id, "tap_time": {"$regex": f"^{today_str}"}},
+            {"_id": 0, "tap_time": 1, "status": 1, "stop_name": 1}
+        )
+        is_boarded = att is not None
+        if is_boarded:
+            boarded_count += 1
+
+        students_list.append({
+            "id": s["id"],
+            "name": s["name"],
+            "college_id": s.get("college_id") or "—",
+            "phone": s.get("phone") or "",
+            "email": s.get("email") or "",
+            "rfid_card": s.get("rfid_card") or "—",
+            "bus_stop": s.get("bus_stop") or "General Route",
+            "is_boarded": is_boarded,
+            "boarded_at": att.get("tap_time") if att else None,
+            "boarded_stop": att.get("stop_name") if att else None,
+        })
+
+    return {
+        "has_bus": True,
+        "bus_id": bus_id,
+        "bus_number": bus.get("number"),
+        "route_name": bus.get("route_name"),
+        "capacity": bus.get("capacity", 0),
+        "driver_name": driver.get("name") if driver else None,
+        "driver_phone": driver.get("phone") if driver else None,
+        "total_students": len(students_list),
+        "boarded_count": boarded_count,
+        "students": students_list,
+    }
+

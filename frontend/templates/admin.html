@@ -2263,6 +2263,41 @@
         </div>
     </div>
 
+    <!-- 4c. ASSIGN BUS MODAL FOR STAFF & STUDENTS -->
+    <div class="modal-overlay" id="assign-bus-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title" style="color: var(--brand-primary);"><i data-lucide="bus" style="width:20px;height:20px;display:inline-block;vertical-align:middle;margin-right:8px;"></i>Assign Bus Route</h3>
+                <button class="close-modal-btn" onclick="closeAssignBusModal()"><i data-lucide="x"></i></button>
+            </div>
+            <form id="assign-bus-form">
+                <input type="hidden" id="assign-bus-user-id">
+                <div class="form-group">
+                    <label class="form-label">User Profile</label>
+                    <div id="assign-bus-user-info" style="padding:10px 14px; background:var(--bg-elevated); border:1px solid var(--border-color); border-radius:8px; font-weight:600; font-size:0.9rem;"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="assign-bus-select">Select Bus Route</label>
+                    <select id="assign-bus-select" class="form-control" required onchange="onAssignBusChange()">
+                        <option value="">-- Choose Bus Route --</option>
+                    </select>
+                </div>
+                <div id="assign-bus-preview" style="display:none; padding:12px 14px; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:8px; margin-bottom:16px;">
+                    <div style="font-weight:600; color:var(--brand-primary); margin-bottom:4px; font-size:0.85rem;" id="assign-bus-preview-name">Route Name</div>
+                    <div style="font-size:0.78rem; color:var(--text-secondary);" id="assign-bus-preview-stops">Stops</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="assign-bus-reason">Assignment Remarks (Optional)</label>
+                    <input type="text" id="assign-bus-reason" class="form-control" placeholder="e.g. Assigned as bus staff coordinator">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeAssignBusModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm" style="background: var(--brand-primary);">Save Bus Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- 5. BROADCAST ALERT MODAL -->
     <div class="modal-overlay" id="alert-modal">
         <div class="modal-card">
@@ -3858,6 +3893,11 @@
                                     <i data-lucide="link" style="width:12px;height:12px;"></i>${u.parent_of ? 'Edit Ward' : 'Assign Student'}
                                 </button>
                             ` : ''}
+                            ${(u.role === 'staff' || u.role === 'student') ? `
+                                <button class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.75rem; display:inline-flex; align-items:center; gap:4px; border-color:rgba(16,185,129,0.4);" onclick="openAssignBusModal('${u.id}', '${(u.name || '').replace(/'/g, "\\'")}', '${u.bus_id || ''}', '${u.role}')">
+                                    <i data-lucide="bus" style="width:12px;height:12px;"></i>${u.bus_id ? 'Change Bus' : 'Assign Bus'}
+                                </button>
+                            ` : ''}
                             <button class="btn ${u.is_active ? 'btn-danger' : 'btn-secondary'} btn-sm" style="padding: 4px 8px; font-size: 0.75rem;" onclick="toggleUserStatus('${u.id}')">
                                 ${u.is_active ? 'Deactivate' : 'Activate'}
                             </button>
@@ -4288,6 +4328,91 @@
             } catch (err) {
                 console.error(err);
                 alert('Failed to assign student due to network error.');
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  STAFF & STUDENT BUS ASSIGNMENT
+        // ═══════════════════════════════════════════════════════════════════
+        function openAssignBusModal(userId, userName, currentBusId, userRole) {
+            document.getElementById('assign-bus-user-id').value = userId;
+            document.getElementById('assign-bus-reason').value = '';
+            document.getElementById('assign-bus-user-info').innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><strong>${userName}</strong></span>
+                    <span class="pill pill-role-${userRole}">${userRole.toUpperCase()}</span>
+                </div>
+            `;
+
+            const select = document.getElementById('assign-bus-select');
+            select.innerHTML = '<option value="">-- Choose Bus Route --</option>';
+
+            const busesList = (typeof buses !== 'undefined' && buses.length) ? buses : (typeof mockBuses !== 'undefined' ? mockBuses : []);
+            busesList.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.id;
+                opt.textContent = `Bus ${b.number} — ${b.route_name || 'Route'}`;
+                opt.dataset.name = b.route_name || '';
+                opt.dataset.stops = Array.isArray(b.stops) ? b.stops.join(' → ') : '';
+                if (currentBusId === b.id) {
+                    opt.selected = true;
+                }
+                select.appendChild(opt);
+            });
+
+            onAssignBusChange();
+            document.getElementById('assign-bus-modal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        function closeAssignBusModal() {
+            document.getElementById('assign-bus-modal').style.display = 'none';
+        }
+
+        function onAssignBusChange() {
+            const select = document.getElementById('assign-bus-select');
+            const preview = document.getElementById('assign-bus-preview');
+            const selected = select.options[select.selectedIndex];
+
+            if (selected && selected.value) {
+                document.getElementById('assign-bus-preview-name').textContent = selected.textContent;
+                document.getElementById('assign-bus-preview-stops').textContent = selected.dataset.stops ? `Stops: ${selected.dataset.stops}` : 'Assigned Route';
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        document.getElementById('assign-bus-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById('assign-bus-user-id').value;
+            const busId = document.getElementById('assign-bus-select').value;
+            const reason = document.getElementById('assign-bus-reason').value || 'Assigned by Administrator';
+            if (!busId) {
+                alert('Please select a bus route.');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/users/${userId}/assign-bus`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ bus_id: busId, reason: reason })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    closeAssignBusModal();
+                    await loadUsers();
+                    filterUsers(true);
+                } else {
+                    alert(data.detail || 'Failed to assign bus');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to assign bus due to network error.');
             }
         });
 

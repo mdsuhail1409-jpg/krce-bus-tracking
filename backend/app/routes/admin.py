@@ -258,6 +258,7 @@ async def assign_temp_bus(uid: str, req: TempBusAssignment, u=Depends(admin_only
     return {"status": "ok", "temp_bus_id": req.temp_bus_id, "expiry": expiry_date.isoformat()}
 
 
+@router.post("/api/admin/users/{uid}/assign-bus")
 @router.put("/api/admin/users/{uid}/reassign-bus")
 async def reassign_bus(uid: str, req: BusReassignment, u=Depends(admin_only)):
     """

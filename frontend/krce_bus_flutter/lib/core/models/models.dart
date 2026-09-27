@@ -534,3 +534,87 @@ class EmergencyAssignmentResponse {
         etaMinutes: json['eta_minutes'],
       );
 }
+
+class BusStudent {
+  final String id;
+  final String name;
+  final String collegeId;
+  final String phone;
+  final String email;
+  final String rfidCard;
+  final String busStop;
+  final bool isBoarded;
+  final String? boardedAt;
+  final String? boardedStop;
+
+  BusStudent({
+    required this.id,
+    required this.name,
+    required this.collegeId,
+    this.phone = '',
+    this.email = '',
+    this.rfidCard = '—',
+    this.busStop = 'General Route',
+    this.isBoarded = false,
+    this.boardedAt,
+    this.boardedStop,
+  });
+
+  factory BusStudent.fromJson(Map<String, dynamic> json) => BusStudent(
+        id: json['id'] ?? '',
+        name: json['name'] ?? '',
+        collegeId: json['college_id'] ?? '—',
+        phone: json['phone'] ?? '',
+        email: json['email'] ?? '',
+        rfidCard: json['rfid_card'] ?? '—',
+        busStop: json['bus_stop'] ?? 'General Route',
+        isBoarded: json['is_boarded'] == true,
+        boardedAt: json['boarded_at'],
+        boardedStop: json['boarded_stop'],
+      );
+}
+
+class BusStudentsRoster {
+  final bool hasBus;
+  final String? busId;
+  final String? busNumber;
+  final String? routeName;
+  final int capacity;
+  final String? driverName;
+  final String? driverPhone;
+  final int totalStudents;
+  final int boardedCount;
+  final List<BusStudent> students;
+  final String? message;
+
+  BusStudentsRoster({
+    required this.hasBus,
+    this.busId,
+    this.busNumber,
+    this.routeName,
+    this.capacity = 0,
+    this.driverName,
+    this.driverPhone,
+    this.totalStudents = 0,
+    this.boardedCount = 0,
+    required this.students,
+    this.message,
+  });
+
+  factory BusStudentsRoster.fromJson(Map<String, dynamic> json) => BusStudentsRoster(
+        hasBus: json['has_bus'] == true,
+        busId: json['bus_id'],
+        busNumber: json['bus_number'],
+        routeName: json['route_name'],
+        capacity: json['capacity'] ?? 0,
+        driverName: json['driver_name'],
+        driverPhone: json['driver_phone'],
+        totalStudents: json['total_students'] ?? 0,
+        boardedCount: json['boarded_count'] ?? 0,
+        students: (json['students'] as List<dynamic>?)
+                ?.map((s) => BusStudent.fromJson(s as Map<String, dynamic>))
+                .toList() ??
+            [],
+        message: json['message'],
+      );
+}

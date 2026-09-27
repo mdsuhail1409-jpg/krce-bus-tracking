@@ -21,7 +21,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  final List<String> _roles = ['student', 'driver', 'parent', 'committee'];
+  final List<String> _roles = ['student', 'staff', 'driver', 'parent', 'committee'];
 
   @override
   void initState() {
@@ -283,9 +283,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
 
   List<User> _filteredUsers(String role) {
     return _allUsers.where((u) {
-      final matchesRole = role == 'student' 
-          ? (u.role == 'student' || u.role == 'staff')
-          : (u.role == role);
+      final matchesRole = (u.role == role);
       final query = _searchQuery.toLowerCase();
       final matchesSearch = u.name.toLowerCase().contains(query) ||
           u.email.toLowerCase().contains(query) ||
@@ -317,6 +315,7 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
           indicatorColor: AppColors.indigoPrimary,
           tabs: const [
             Tab(text: 'Students'),
+            Tab(text: 'Staff'),
             Tab(text: 'Drivers'),
             Tab(text: 'Parents'),
             Tab(text: 'Admins'),
@@ -507,12 +506,15 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                                                 children: [
                                                   const Icon(Icons.directions_bus, size: 12, color: AppColors.indigoPrimary),
                                                   const SizedBox(width: 4),
-                                                  Text(
-                                                    user.busId!,
-                                                    style: const TextStyle(
-                                                      color: AppColors.indigoPrimary,
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.w600,
+                                                  Flexible(
+                                                    child: Text(
+                                                      'Bus ${user.busNumber ?? user.busId}${user.routeName != null ? " • " + user.routeName! : ""}',
+                                                      style: const TextStyle(
+                                                        color: AppColors.indigoPrimary,
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
                                                     ),
                                                   ),
                                                 ],

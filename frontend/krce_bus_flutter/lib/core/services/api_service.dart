@@ -555,6 +555,49 @@ class ApiService {
     return GenericResponse.fromJson(res.data);
   }
 
+  Future<GenericResponse> assignUserBus(
+    String token, {
+    required String userId,
+    required String busId,
+    String reason = 'Assigned by Admin',
+  }) async {
+    if (token.startsWith('demo_token_')) {
+      return GenericResponse(status: 'ok', message: 'Bus assigned successfully (Demo)');
+    }
+    final res = await _dio.post(
+      '/api/admin/users/$userId/assign-bus',
+      data: {'bus_id': busId, 'reason': reason},
+      options: Options(headers: _authHeader(token)),
+    );
+    return GenericResponse.fromJson(res.data);
+  }
+
+  Future<BusStudentsRoster> getMyBusStudents(String token) async {
+    if (token.startsWith('demo_token_')) {
+      return BusStudentsRoster(
+        hasBus: true,
+        busId: 'B01',
+        busNumber: 'TN-01',
+        routeName: 'Route A — Woraiyur',
+        capacity: 50,
+        driverName: 'Rajan S.',
+        driverPhone: '9840111111',
+        totalStudents: 3,
+        boardedCount: 2,
+        students: [
+          BusStudent(id: 'stu01', name: 'Aravind Kumar', collegeId: '21CS001', phone: '9841100001', rfidCard: 'RF001', busStop: 'Samayapuram', isBoarded: true, boardedAt: '07:45 AM', boardedStop: 'Samayapuram'),
+          BusStudent(id: 'stu04', name: 'Nandhini R', collegeId: '21CS004', phone: '9841100004', rfidCard: 'RF004', busStop: 'Woraiyur Town', isBoarded: true, boardedAt: '08:02 AM', boardedStop: 'Woraiyur Town'),
+          BusStudent(id: 'stu08', name: 'Karthikeyan M', collegeId: '21CS009', phone: '9841100008', rfidCard: 'RF009', busStop: 'Gandhi Market', isBoarded: false),
+        ],
+      );
+    }
+    final res = await _dio.get(
+      '/api/my/bus-students',
+      options: Options(headers: _authHeader(token)),
+    );
+    return BusStudentsRoster.fromJson(res.data);
+  }
+
   // ── Admin Alerts ──────────────────────────────────────────
   Future<GenericResponse> sendAlert(
     String token, {
