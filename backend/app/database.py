@@ -366,6 +366,14 @@ class MockDatabase:
         self.live_bus_positions_history = MockCollection("live_bus_positions_history", self)
         self.sessions = MockCollection("sessions", self)
         self.emergencies = MockCollection("emergencies", self)
+        self.bus_reassignment_log = MockCollection("bus_reassignment_log", self)
+
+    def __getattr__(self, name):
+        if name.startswith("_"):
+            raise AttributeError(name)
+        col = MockCollection(name, self)
+        setattr(self, name, col)
+        return col
 
     def __getitem__(self, name):
         return getattr(self, name)
