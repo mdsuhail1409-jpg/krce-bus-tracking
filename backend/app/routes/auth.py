@@ -22,6 +22,7 @@ router = APIRouter()
 @router.post("/api/auth/login")
 @limiter.limit("15/minute")
 async def login(req: LoginReq, request: Request):
+    db = db_module.db
     clean_email = req.email.strip().lower()
     queries = [
         {"email": clean_email},
