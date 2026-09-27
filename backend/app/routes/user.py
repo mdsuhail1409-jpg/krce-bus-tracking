@@ -47,7 +47,12 @@ async def child_attendance(u=Depends(current_user)):
         return []
 
     child = await db.users.find_one(
-        {"$or": [{"college_id": child_cid}, {"id": child_cid}]},
+        {"$or": [
+            {"college_id": child_cid},
+            {"id": child_cid},
+            {"name": {"$regex": f"^{child_cid}$", "$options": "i"}},
+            {"name": {"$regex": child_cid, "$options": "i"}}
+        ]},
         {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1}
     )
     if not child:
@@ -86,7 +91,12 @@ async def get_my_ward(u=Depends(current_user)):
         }
 
     child = await db.users.find_one(
-        {"role": "student", "$or": [{"college_id": parent_of}, {"id": parent_of}]},
+        {"role": "student", "$or": [
+            {"college_id": parent_of},
+            {"id": parent_of},
+            {"name": {"$regex": f"^{parent_of}$", "$options": "i"}},
+            {"name": {"$regex": parent_of, "$options": "i"}}
+        ]},
         {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1, "rfid_card": 1, "phone": 1, "email": 1}
     )
     if not child:

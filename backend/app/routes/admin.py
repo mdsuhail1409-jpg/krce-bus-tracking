@@ -148,7 +148,12 @@ async def admin_users(role: str = "", u=Depends(admin_only)):
             parent_of = usr.get("parent_of")
             if parent_of:
                 child = await db.users.find_one(
-                    {"$or": [{"college_id": parent_of}, {"id": parent_of}]},
+                    {"$or": [
+                        {"college_id": parent_of},
+                        {"id": parent_of},
+                        {"name": {"$regex": f"^{parent_of}$", "$options": "i"}},
+                        {"name": {"$regex": parent_of, "$options": "i"}}
+                    ]},
                     {"_id": 0, "id": 1, "name": 1, "college_id": 1, "bus_id": 1}
                 )
                 if child:
@@ -188,7 +193,12 @@ async def assign_parent_ward(uid: str, req: AssignWardReq, u=Depends(admin_only)
 
     target_student_id = req.student_id.strip()
     student = await db.users.find_one(
-        {"role": "student", "$or": [{"college_id": target_student_id}, {"id": target_student_id}]},
+        {"role": "student", "$or": [
+            {"college_id": target_student_id},
+            {"id": target_student_id},
+            {"name": {"$regex": f"^{target_student_id}$", "$options": "i"}},
+            {"name": {"$regex": target_student_id, "$options": "i"}}
+        ]},
         {"_id": 0}
     )
     if not student:
