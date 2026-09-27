@@ -282,6 +282,7 @@ async def reassign_bus(uid: str, req: BusReassignment, u=Depends(admin_only)):
     Permanently reassign a student/staff member to a different bus.
     Updates the user's bus_id field in the database.
     """
+    db = db_module.db
     user = await db.users.find_one(
         {"$or": [
             {"id": uid},
