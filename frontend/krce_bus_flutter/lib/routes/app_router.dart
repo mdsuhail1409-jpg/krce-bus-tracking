@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
+import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/student/screens/student_dashboard.dart';
 import '../features/student/screens/staff_dashboard.dart';
 import '../features/parent/screens/parent_dashboard.dart';
@@ -23,7 +24,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: auth.isAuthenticated ? _homeRoute(auth.role) : '/login',
     redirect: (context, state) {
       final isLoggedIn = auth.isAuthenticated;
-      final isAuthPage = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      final isAuthPage = state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register' ||
+          state.matchedLocation == '/forgot-password';
 
       if (!isLoggedIn && !isAuthPage) return '/login';
       if (isLoggedIn && isAuthPage) return _homeRoute(auth.role);
@@ -37,6 +40,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) =>

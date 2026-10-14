@@ -1,22 +1,36 @@
-"""
-KRCE Bus Tracking System — RFID routes.
-POST /api/rfid/tap
-"""
-
+import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 
-from app.auth import current_user
+from app.auth import optional_user
 from app.models import RfidTap
 from app.state import live_buses
 from app.utils import today, now_str
+from app.config import HW_API_KEY
 from app import database as db_module
 
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 
 @router.post("/api/rfid/tap")
-async def rfid_tap(req: RfidTap):
+@limiter.limit("60/minute")
+async def rfid_tap(
+    req: RfidTap,
+    request: Request,
+    u: Optional[dict] = Depends(optional_user),
+    x_device_key: str = Header(default=""),
+    x_api_key: str = Header(default="")
+):
+    # Verify caller is an authorized hardware device or authenticated driver/admin
+    key = x_device_key or x_api_key
+    if HW_API_KEY and key != HW_API_KEY:
+        if not u or u.get("role") not in ("driver", "admin", "committee"):
+            raise HTTPException(403, "Access Denied: Valid hardware key or driver authorization required")
     db = db_module.db
     raw_card = req.rfid_card.replace(":", "").replace(" ", "").upper() if req.rfid_card else ""
     formatted_card = f"{raw_card[0:2]}:{raw_card[2:4]}:{raw_card[4:6]}:{raw_card[6:8]}" if len(raw_card) == 8 else raw_card

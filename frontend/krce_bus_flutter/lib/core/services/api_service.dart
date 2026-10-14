@@ -17,13 +17,17 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
     ));
 
-    // Dynamic base URL interceptor
+    // Dynamic base URL interceptor with SSRF & protocol validation
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         final prefs = await SharedPreferences.getInstance();
-        final customUrl = prefs.getString('custom_api_url') ?? '';
+        final customUrl = (prefs.getString('custom_api_url') ?? '').trim();
         if (customUrl.isNotEmpty) {
-          options.baseUrl = customUrl;
+          final uri = Uri.tryParse(customUrl);
+          // Security: Enforce valid HTTP/HTTPS protocol, block file/data/javascript schemes
+          if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http') && uri.host.isNotEmpty) {
+            options.baseUrl = customUrl;
+          }
         }
         return handler.next(options);
       },
@@ -49,11 +53,17 @@ class ApiService {
       },
     ));
 
-    _dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      logPrint: (o) => print(o),
-    ));
+    // Security: Never log passwords, tokens, or PII payloads to system logs/Logcat
+    const bool isRelease = bool.fromEnvironment('dart.vm.product');
+    if (!isRelease) {
+      _dio.interceptors.add(LogInterceptor(
+        requestHeader: true,
+        requestBody: false,   // Never log auth credentials/payloads
+        responseBody: false,  // Never log user PII responses
+        responseHeader: false,
+        logPrint: (o) => print(o),
+      ));
+    }
   }
 
   Map<String, String> _authHeader(String token) => {
@@ -65,6 +75,81 @@ class ApiService {
     final res = await _dio
         .post('/api/auth/login', data: {'email': email, 'password': password});
     return LoginRes.fromJson(res.data);
+  }
+
+  Future<Map<String, dynamic>> forgotPassword(String identifier) async {
+    final res = await _dio.post(
+      '/api/auth/forgot-password',
+      data: {'email': identifier},
+    );
+    return res.data is Map<String, dynamic> ? Map<String, dynamic>.from(res.data) : {'status': 'ok'};
+  }
+
+  Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String newPassword,
+    String? otp,
+    String? phone,
+    String? collegeId,
+  }) async {
+    final res = await _dio.post(
+      '/api/auth/reset-password',
+      data: {
+        'email': email,
+        'new_password': newPassword,
+        'otp': otp ?? '',
+        'phone': phone ?? '',
+        'college_id': collegeId ?? '',
+      },
+    );
+    return res.data is Map<String, dynamic> ? Map<String, dynamic>.from(res.data) : {'status': 'ok'};
+  }
+
+  Future<Map<String, dynamic>> submitPasswordResetRequest({
+    required String name,
+    required String email,
+    String rollNo = '',
+  }) async {
+    final res = await _dio.post(
+      '/api/auth/password-reset-request',
+      data: {
+        'name': name,
+        'email': email,
+        'roll_no': rollNo,
+      },
+    );
+    return res.data is Map<String, dynamic> ? Map<String, dynamic>.from(res.data) : {'status': 'ok'};
+  }
+
+  Future<List<dynamic>> getAdminPasswordResets(String token, {String status = 'pending'}) async {
+    final res = await _dio.get(
+      '/api/admin/password-resets',
+      queryParameters: {'status': status},
+      options: Options(headers: _authHeader(token)),
+    );
+    return res.data is List ? List<dynamic>.from(res.data) : [];
+  }
+
+  Future<Map<String, dynamic>> actionAdminPasswordReset({
+    required String token,
+    required String reqId,
+    required String action,
+    String tempPassword = '',
+  }) async {
+    final res = await _dio.post(
+      '/api/admin/password-resets/$reqId/action',
+      data: {'action': action, 'temp_password': tempPassword},
+      options: Options(headers: _authHeader(token)),
+    );
+    return res.data is Map<String, dynamic> ? Map<String, dynamic>.from(res.data) : {'status': 'ok'};
+  }
+
+  Future<Map<String, dynamic>> deleteUser(String token, String uid) async {
+    final res = await _dio.delete(
+      '/api/admin/users/$uid',
+      options: Options(headers: _authHeader(token)),
+    );
+    return res.data is Map<String, dynamic> ? Map<String, dynamic>.from(res.data) : {'status': 'ok'};
   }
 
   // ── Buses ─────────────────────────────────────────────────

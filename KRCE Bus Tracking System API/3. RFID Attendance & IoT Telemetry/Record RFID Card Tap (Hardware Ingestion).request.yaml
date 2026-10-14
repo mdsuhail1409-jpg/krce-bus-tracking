@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/api/rfid/tap"
+method: POST
+headers:
+  X-Device-Key: "{{hw_api_key}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "rfid_card": "RF001",
+      "bus_id": "B01",
+      "stop_name": "Woraiyur Bus Stand",
+      "lat": 10.7905,
+      "lon": 78.7047
+    }
+order: 1000

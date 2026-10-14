@@ -155,8 +155,9 @@ async def hardware_status(bus_id: str = "B07"):
 #  GPS LOCATION — via bus_id path param
 # ─────────────────────────────────────────────────────────────
 @router.post("/api/buses/{bus_id}/live")
-async def hardware_bus_live_post(bus_id: str, req: GpsUpdate):
+async def hardware_bus_live_post(bus_id: str, req: GpsUpdate, x_device_key: str = Header(default=""), x_api_key: str = Header(default="")):
     """Handle hardware GPS location broadcast from ESP32 / SIM900A."""
+    await _verify_hw_key(x_device_key, x_api_key)
     db = db_module.db
     bus = await db.buses.find_one({"id": bus_id}) if db is not None else None
     driver_name = "Hardware ESP32"

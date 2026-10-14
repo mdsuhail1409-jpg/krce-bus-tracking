@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.auth import _hash, admin_only
-from app.models import BusUpsert, AlertCreate, RegAction, TempBusAssignment, BusReassignment, AssignWardReq
+from app.models import BusUpsert, AlertCreate, RegAction, TempBusAssignment, BusReassignment, AssignWardReq, PasswordResetAdminAction
 from app.state import live_buses, last_seen
 from app.utils import today, now_str
 from app.predictions import predict_occupancy
@@ -256,6 +256,51 @@ async def toggle_user(uid: str, u=Depends(admin_only)):
     new_val = 0 if user["is_active"] else 1
     await db.users.update_one({"id": uid}, {"$set": {"is_active": new_val}})
     return {"status": "ok", "is_active": new_val}
+
+
+@router.delete("/api/admin/users/{uid}")
+async def delete_user(uid: str, u=Depends(admin_only)):
+    db = db_module.db
+    user = await db.users.find_one({"id": uid}, {"_id": 0})
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    user_name = user.get("name", uid)
+    role = user.get("role", "")
+
+    # If the user is a driver, unassign from the bus
+    if role == "driver":
+        await db.buses.update_many({"driver_id": uid}, {"$set": {"driver_id": ""}})
+
+    # If the user is a student, unlink from any parent
+    if role == "student":
+        cid = user.get("college_id") or uid
+        await db.users.update_many(
+            {"role": "parent", "parent_of": cid},
+            {"$set": {"parent_of": None, "bus_id": None}}
+        )
+
+    # Permanently delete user
+    await db.users.delete_one({"id": uid})
+
+    # Delete related sessions and pending reset requests
+    await db.sessions.delete_many({"user_id": uid})
+    await db.password_resets.delete_many({"user_id": uid})
+    await db.password_reset_requests.delete_many({"user_id": uid})
+
+    # Log deletion in audit log
+    await db.audit_log.insert_one({
+        "user_id": u.get("sub", "admin"),
+        "action": f"delete_user: {user_name} ({uid})",
+        "ip": "",
+        "ts": now_str()
+    })
+
+    return {
+        "status": "ok",
+        "message": f"User '{user_name}' ({uid}) has been permanently deleted from the system."
+    }
+
 
 
 @router.post("/api/admin/users/{uid}/temp-bus")
@@ -638,6 +683,74 @@ async def reg_action(req: RegAction, u=Depends(admin_only)):
 
     msg = "approved" if req.action == "approved" else "rejected"
     return {"status": "ok", "message": f"Registration {msg}"}
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  PASSWORD RESET REQUESTS
+# ═══════════════════════════════════════════════════════════════════
+@router.get("/api/admin/password-resets")
+async def list_password_resets(status: str = "pending", u=Depends(admin_only)):
+    db = db_module.db
+    query = {"status": status} if status and status != "all" else {}
+    cursor = db.password_reset_requests.find(query, {"_id": 0}).sort("requested_at", -1)
+    return await cursor.to_list(length=None)
+
+
+@router.post("/api/admin/password-resets/{req_id}/action")
+async def action_password_reset(req_id: str, req: PasswordResetAdminAction, u=Depends(admin_only)):
+    db = db_module.db
+    reset_req = await db.password_reset_requests.find_one({"id": req_id}, {"_id": 0})
+    if not reset_req:
+        raise HTTPException(404, "Password reset request not found")
+
+    action = req.action.lower()
+    if action not in ["approved", "rejected"]:
+        raise HTTPException(400, "Action must be 'approved' or 'rejected'")
+
+    user_id = reset_req.get("user_id")
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        # Check by email
+        user = await db.users.find_one({"email": reset_req.get("email")})
+
+    temp_pwd = None
+    if action == "approved":
+        if not user:
+            raise HTTPException(404, "Corresponding user account not found to reset password")
+
+        # Determine temp password (custom or role-based default)
+        role = user.get("role", "student")
+        default_pwd = f"{role}@123" if role in ["student", "parent", "driver", "staff"] else "krce@123"
+        temp_pwd = req.temp_password.strip() if req.temp_password and req.temp_password.strip() else default_pwd
+
+        new_hash = _hash(temp_pwd)
+        await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": new_hash}})
+        await db.password_resets.delete_many({"user_id": user["id"]})
+
+        # Also terminate existing sessions to force login with new temp password
+        await db.sessions.delete_many({"user_id": user["id"]})
+
+    await db.password_reset_requests.update_one(
+        {"id": req_id},
+        {"$set": {
+            "status": action,
+            "temp_password": temp_pwd if action == "approved" else None,
+            "reviewed_by": u.get("sub", "admin"),
+            "reviewed_at": now_str()
+        }}
+    )
+
+    msg = f"Password reset request {action}."
+    if action == "approved":
+        msg += f" Temporary password set to: {temp_pwd}"
+
+    return {
+        "status": "ok",
+        "message": msg,
+        "action": action,
+        "temp_password": temp_pwd
+    }
+
 
 
 # ═══════════════════════════════════════════════════════════════════

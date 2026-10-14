@@ -192,6 +192,12 @@ class MockCollection:
                 self.data.remove(doc)
                 break
 
+    async def delete_many(self, query):
+        to_del = [doc for doc in self.data if self._matches(doc, query)]
+        for doc in to_del:
+            self.data.remove(doc)
+        return len(to_del)
+
     async def distinct(self, key, query=None):
         query = query or {}
         vals = set()

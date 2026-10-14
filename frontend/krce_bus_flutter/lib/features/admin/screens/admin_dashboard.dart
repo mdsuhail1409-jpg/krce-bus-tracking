@@ -8,6 +8,7 @@ import '../../../widgets/glass_card.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'users_screen.dart';
 import 'registrations_screen.dart';
+import 'password_resets_screen.dart';
 import '../widgets/send_alert_dialog.dart';
 
 class AdminDashboard extends ConsumerStatefulWidget {
@@ -128,7 +129,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                               MaterialPageRoute(builder: (_) => const UsersScreen()),
                             ),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                               decoration: BoxDecoration(
                                 color: AppColors.surfaceColor,
                                 borderRadius: BorderRadius.circular(16),
@@ -136,16 +137,16 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                               ),
                               child: const Column(
                                 children: [
-                                  Icon(Icons.supervised_user_circle, color: AppColors.accentCyan, size: 28),
-                                  SizedBox(height: 8),
-                                  Text('Users', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                                  Text('Manage roles', style: TextStyle(color: AppColors.mutedText, fontSize: 10), textAlign: TextAlign.center),
+                                  Icon(Icons.supervised_user_circle, color: AppColors.accentCyan, size: 26),
+                                  SizedBox(height: 6),
+                                  Text('Users', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text('Manage / Delete', style: TextStyle(color: AppColors.mutedText, fontSize: 9), textAlign: TextAlign.center, maxLines: 1),
                                 ],
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: InkWell(
                             onTap: () async {
@@ -157,7 +158,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                               }
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                               decoration: BoxDecoration(
                                 color: AppColors.surfaceColor,
                                 borderRadius: BorderRadius.circular(16),
@@ -165,16 +166,40 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                               ),
                               child: const Column(
                                 children: [
-                                  Icon(Icons.how_to_reg, color: AppColors.accentPurple, size: 28),
-                                  SizedBox(height: 8),
-                                  Text('Approvals', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                                  Text('Review pending', style: TextStyle(color: AppColors.mutedText, fontSize: 10), textAlign: TextAlign.center),
+                                  Icon(Icons.how_to_reg, color: AppColors.accentPurple, size: 26),
+                                  SizedBox(height: 6),
+                                  Text('Approvals', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text('Registrations', style: TextStyle(color: AppColors.mutedText, fontSize: 9), textAlign: TextAlign.center, maxLines: 1),
                                 ],
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const PasswordResetsScreen()),
+                            ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceColor,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.warningYellow.withOpacity(0.4)),
+                              ),
+                              child: const Column(
+                                children: [
+                                  Icon(Icons.lock_reset, color: AppColors.warningYellow, size: 26),
+                                  SizedBox(height: 6),
+                                  Text('Resets', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text('Passwords', style: TextStyle(color: AppColors.mutedText, fontSize: 9), textAlign: TextAlign.center, maxLines: 1),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: InkWell(
                             onTap: () async {
@@ -187,7 +212,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                               }
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                               decoration: BoxDecoration(
                                 color: AppColors.surfaceColor,
                                 borderRadius: BorderRadius.circular(16),
@@ -195,10 +220,10 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                               ),
                               child: const Column(
                                 children: [
-                                  Icon(Icons.campaign, color: AppColors.errorRed, size: 28),
-                                  SizedBox(height: 8),
-                                  Text('Broadcast', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                                  Text('Send alerts', style: TextStyle(color: AppColors.mutedText, fontSize: 10), textAlign: TextAlign.center),
+                                  Icon(Icons.campaign, color: AppColors.errorRed, size: 26),
+                                  SizedBox(height: 6),
+                                  Text('Broadcast', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text('Send alerts', style: TextStyle(color: AppColors.mutedText, fontSize: 9), textAlign: TextAlign.center, maxLines: 1),
                                 ],
                               ),
                             ),

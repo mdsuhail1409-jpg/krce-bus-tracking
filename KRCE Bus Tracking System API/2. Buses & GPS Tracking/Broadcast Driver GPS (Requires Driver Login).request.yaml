@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{base_url}}/api/driver/gps"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "lat": 10.927669,
+      "lon": 78.741000,
+      "speed": 38.5,
+      "heading": 90.0,
+      "passengers": 14
+    }
+order: 4000

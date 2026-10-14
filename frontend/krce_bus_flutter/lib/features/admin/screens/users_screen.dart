@@ -102,6 +102,64 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
     }
   }
 
+  Future<void> _deleteUser(User user) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: AppColors.errorRed),
+            SizedBox(width: 8),
+            Text('Delete User', style: TextStyle(color: AppColors.textColor, fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete "${user.name}" (${user.email})?\n\nThis will remove their profile, delete active sessions, and unlink any assigned buses or wards. This action CANNOT be undone.',
+          style: const TextStyle(color: AppColors.mutedText, fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.mutedText)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.errorRed,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete Permanently', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final auth = ref.read(authProvider);
+      final api = ref.read(apiServiceProvider);
+      try {
+        final res = await api.deleteUser(auth.token, user.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res['message']?.toString() ?? 'User deleted successfully'),
+              backgroundColor: AppColors.successGreen,
+            ),
+          );
+          _fetchUsers();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete user: $e'), backgroundColor: AppColors.errorRed),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _openAssignWardDialog(User parent) async {
     final students = _allUsers.where((u) => u.role == 'student').toList();
     if (students.isEmpty) {
@@ -612,11 +670,23 @@ class _UsersScreenState extends ConsumerState<UsersScreen> with SingleTickerProv
                                               onPressed: () => _openAssignWardDialog(user),
                                             ),
                                           ),
-                                        Switch(
-                                          value: isActive,
-                                          activeColor: AppColors.successGreen,
-                                          inactiveThumbColor: AppColors.mutedText,
-                                          onChanged: (_) => _toggleUserStatus(user),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Switch(
+                                              value: isActive,
+                                              activeColor: AppColors.successGreen,
+                                              inactiveThumbColor: AppColors.mutedText,
+                                              onChanged: (_) => _toggleUserStatus(user),
+                                            ),
+                                            Tooltip(
+                                              message: 'Delete User Permanently',
+                                              child: IconButton(
+                                                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.errorRed),
+                                                onPressed: () => _deleteUser(user),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                         Text(
                                           isActive ? 'Active' : 'Inactive',

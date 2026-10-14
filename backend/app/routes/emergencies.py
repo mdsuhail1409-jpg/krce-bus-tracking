@@ -30,12 +30,11 @@ class AssignmentApproval(BaseModel):
 
 
 @router.post("/api/driver/breakdown")
-async def report_breakdown(req: BreakdownReport, u: Optional[dict] = Depends(security)):
-    bus_id = req.bus_id or "B01"
-    driver_name = "Hardware Driver / Driver"
-    if u and isinstance(u, dict):
-        bus_id = u.get("bus_id") or bus_id
-        driver_name = u.get("name", driver_name)
+async def report_breakdown(req: BreakdownReport, u=Depends(current_user)):
+    if u["role"] not in ("driver", "admin", "committee"):
+        raise HTTPException(403, "Access Denied: Drivers or administrators only")
+    bus_id = u.get("bus_id") or req.bus_id or "B01"
+    driver_name = u.get("name", "Driver")
 
     db = db_module.db
     bus = await db.buses.find_one({"id": bus_id})

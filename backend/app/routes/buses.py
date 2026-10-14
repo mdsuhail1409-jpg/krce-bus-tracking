@@ -31,12 +31,12 @@ async def check_parent_bus_access(db, u, bus_id: str):
 
 
 @router.get("/api/buses")
-async def get_buses(u=Depends(optional_user)):
+async def get_buses(u=Depends(current_user)):
     db = db_module.db
     td = today()
 
     # Role-based bus filtering: each role sees only their assigned bus
-    if u and u.get("role") == "parent":
+    if u.get("role") == "parent":
         parent_of = u.get("parent_of")
         if not parent_of:
             parent_usr = await db.users.find_one({"id": u["sub"]}, {"_id": 0, "parent_of": 1, "bus_id": 1})
@@ -55,7 +55,7 @@ async def get_buses(u=Depends(optional_user)):
         if not child or not child.get("bus_id"):
             return []
         cursor = db.buses.find({"id": child["bus_id"], "is_active": 1}, {"_id": 0})
-    elif u and u.get("role") in ("student", "driver"):
+    elif u.get("role") in ("student", "driver"):
         bus_id = u.get("bus_id") or ""
         if not bus_id:
             return []
@@ -115,6 +115,11 @@ async def bus_live(bus_id: str, u=Depends(current_user)):
 @router.get("/api/buses/{bus_id}/passengers")
 async def bus_passengers(bus_id: str, u=Depends(current_user)):
     db = db_module.db
+    # Security: Restrict passenger list to Admin, Committee, and assigned Driver
+    if u["role"] not in ("admin", "committee", "driver"):
+        raise HTTPException(403, "Access Denied: Only Admin, Committee, and authorized drivers can view passenger rosters.")
+    if u["role"] == "driver" and (u.get("bus_id") or "") != bus_id:
+        raise HTTPException(403, "Access Denied: Drivers can only view passengers on their assigned bus.")
     await check_parent_bus_access(db, u, bus_id)
 
     td = today()

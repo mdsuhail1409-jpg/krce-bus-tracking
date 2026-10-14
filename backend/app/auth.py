@@ -10,7 +10,7 @@ import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from app.config import SECRET_KEY, ALGORITHM, TOKEN_HOURS
+from app.config import SECRET_KEY, ALGORITHM, TOKEN_HOURS, ENVIRONMENT, ENABLE_DEMO_TOKENS
 
 security = HTTPBearer(auto_error=False)
 
@@ -40,6 +40,8 @@ def make_token(uid: str, name: str, role: str, bus_id: str = "", extra: dict = N
 def verify_token(token: str) -> dict:
     """Decode and verify a JWT token."""
     if token and token.startswith("demo_token_"):
+        if ENVIRONMENT == "production" or not ENABLE_DEMO_TOKENS:
+            raise HTTPException(401, "Demo tokens are disabled for security. Please authenticate with valid credentials.")
         if "driver7" in token:
             return {"sub": "drv07", "name": "Ganesh K.", "role": "driver", "bus_id": "B07"}
         elif "driver" in token:

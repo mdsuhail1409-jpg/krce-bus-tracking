@@ -5,10 +5,11 @@ GET  /api/my/sessions
 """
 
 import uuid
+import random
 from fastapi import APIRouter, HTTPException, Request, Depends
 
 from app.auth import _hash, _check_hash, make_token, verify_token, current_user
-from app.models import LoginReq, RegisterReq, RefreshReq
+from app.models import LoginReq, RegisterReq, RefreshReq, ForgotPasswordReq, ResetPasswordReq, PasswordResetRequestCreate
 from app.utils import now_str
 from app import database as db_module
 
@@ -142,3 +143,193 @@ async def get_my_sessions(u=Depends(current_user)):
     db = db_module.db
     cursor = db.sessions.find({"user_id": u["sub"], "is_active": 1}, {"_id": 0})
     return await cursor.to_list(length=None)
+
+
+@router.post("/api/auth/forgot-password")
+@limiter.limit("10/minute")
+async def forgot_password(req: ForgotPasswordReq, request: Request):
+    db = db_module.db
+    ident = req.email.strip()
+    clean_ident = ident.lower()
+    queries = [
+        {"email": clean_ident},
+        {"email": ident},
+        {"phone": ident},
+        {"college_id": ident},
+        {"college_id": clean_ident},
+        {"id": ident}
+    ]
+    u = await db.users.find_one({"$or": queries, "is_active": 1})
+    if not u:
+        reg = await db.registrations.find_one({"$or": queries, "status": "approved"})
+        if reg:
+            u = await db.users.find_one({"email": reg.get("email"), "is_active": 1})
+
+    if not u:
+        raise HTTPException(404, "No active account found for that email, phone, or ID")
+
+    otp = f"{random.randint(100000, 999999)}"
+
+    # Save to password_resets collection
+    await db.password_resets.delete_many({"user_id": u["id"]})
+    await db.password_resets.insert_one({
+        "user_id": u["id"],
+        "email": u.get("email", ""),
+        "phone": u.get("phone", ""),
+        "otp": otp,
+        "created_at": now_str(),
+    })
+
+    email_str = u.get("email") or ""
+    masked_email = ""
+    if "@" in email_str:
+        parts = email_str.split("@", 1)
+        user_p = parts[0]
+        masked_email = f"{user_p[0]}***{user_p[-1] if len(user_p) > 1 else ''}@{parts[1]}"
+
+    phone_str = u.get("phone") or ""
+    masked_phone = f"******{phone_str[-4:]}" if len(phone_str) >= 4 else phone_str
+
+    return {
+        "status": "ok",
+        "message": f"Verification code generated for {u.get('name')}",
+        "otp": otp,
+        "user_id": u["id"],
+        "name": u.get("name"),
+        "role": u.get("role"),
+        "email": u.get("email"),
+        "masked_email": masked_email,
+        "masked_phone": masked_phone,
+    }
+
+
+@router.post("/api/auth/reset-password")
+@limiter.limit("10/minute")
+async def reset_password(req: ResetPasswordReq, request: Request):
+    db = db_module.db
+    ident = req.email.strip()
+    clean_ident = ident.lower()
+    queries = [
+        {"email": clean_ident},
+        {"email": ident},
+        {"phone": ident},
+        {"college_id": ident},
+        {"id": ident}
+    ]
+    u = await db.users.find_one({"$or": queries, "is_active": 1})
+    if not u:
+        raise HTTPException(404, "User account not found")
+
+    is_verified = False
+
+    # 1. Verify via OTP
+    if req.otp and req.otp.strip():
+        rec = await db.password_resets.find_one({
+            "user_id": u["id"],
+            "otp": req.otp.strip()
+        })
+        if rec:
+            is_verified = True
+
+    # 2. Verify via Phone match
+    if not is_verified and req.phone and req.phone.strip():
+        user_phone = (u.get("phone") or "").strip()
+        if user_phone and user_phone == req.phone.strip():
+            is_verified = True
+
+    # 3. Verify via College ID match
+    if not is_verified and req.college_id and req.college_id.strip():
+        user_cid = (u.get("college_id") or "").strip()
+        if user_cid and user_cid.upper() == req.college_id.strip().upper():
+            is_verified = True
+
+    if not is_verified:
+        raise HTTPException(400, "Invalid verification code or security details")
+
+    # Update password
+    new_hash = _hash(req.new_password)
+    await db.users.update_one({"id": u["id"]}, {"$set": {"password_hash": new_hash}})
+    await db.password_resets.delete_many({"user_id": u["id"]})
+
+    # Log action
+    await db.audit_log.insert_one({
+        "user_id": u["id"],
+        "action": "password_reset",
+        "ip": request.client.host if request.client else "",
+        "ts": now_str()
+    })
+
+    return {
+        "status": "ok",
+        "message": f"Password reset successfully for {u.get('name')}. Please log in with your new password.",
+        "email": u.get("email")
+    }
+
+
+@router.post("/api/auth/password-reset-request")
+@limiter.limit("5/minute")
+async def submit_password_reset_request(req: PasswordResetRequestCreate, request: Request):
+    db = db_module.db
+    email_clean = req.email.strip().lower()
+    roll_clean = req.roll_no.strip()
+
+    queries = [
+        {"email": email_clean},
+        {"email": req.email.strip()}
+    ]
+    if roll_clean:
+        queries.extend([
+            {"college_id": roll_clean},
+            {"college_id": roll_clean.upper()}
+        ])
+
+    u = await db.users.find_one({"$or": queries, "is_active": 1})
+    if not u:
+        # Check approved registrations as well
+        reg = await db.registrations.find_one({"$or": queries, "status": "approved"})
+        if reg:
+            u = await db.users.find_one({"email": reg.get("email"), "is_active": 1})
+
+    if not u:
+        raise HTTPException(404, "No matching account found with the provided details.")
+
+    # Check if a pending request already exists
+    existing = await db.password_reset_requests.find_one({
+        "user_id": u["id"],
+        "status": "pending"
+    })
+    if existing:
+        return {
+            "status": "ok",
+            "message": "A password reset request is already pending Admin review. Please await Admin approval.",
+            "request_id": existing["id"],
+            "user_name": u.get("name"),
+            "role": u.get("role")
+        }
+
+    rid = str(uuid.uuid4())[:8]
+    await db.password_reset_requests.insert_one({
+        "id": rid,
+        "user_id": u["id"],
+        "name": req.name.strip() or u.get("name"),
+        "email": u.get("email", email_clean),
+        "roll_no": roll_clean or u.get("college_id", ""),
+        "role": u.get("role", "student"),
+        "bus_id": u.get("bus_id", ""),
+        "phone": u.get("phone", ""),
+        "status": "pending",
+        "temp_password": None,
+        "requested_at": now_str(),
+        "reviewed_by": None,
+        "reviewed_at": None,
+    })
+
+    return {
+        "status": "ok",
+        "message": f"Password reset request submitted for {u.get('name')}. The Admin has been notified.",
+        "request_id": rid,
+        "user_name": u.get("name"),
+        "role": u.get("role")
+    }
+
+

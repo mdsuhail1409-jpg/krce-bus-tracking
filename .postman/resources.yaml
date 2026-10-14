@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: 9fd4b6f3-4ccd-42c1-8324-a0106c761189
+
+localResources:
+  collections:
+    - ../KRCE Bus Tracking System API
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../KRCE Bus Tracking System API: krce-bus-tracking-api-v3

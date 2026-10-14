@@ -132,7 +132,9 @@ interface ApiService {
         private val BASE_URL get() = BuildConfig.API_BASE_URL
 
         fun create(): ApiService {
-            val logger = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+            val logger = HttpLoggingInterceptor().apply {
+                level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.HEADERS else HttpLoggingInterceptor.Level.NONE
+            }
             val client = OkHttpClient.Builder()
                 .addInterceptor(logger)
                 .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)

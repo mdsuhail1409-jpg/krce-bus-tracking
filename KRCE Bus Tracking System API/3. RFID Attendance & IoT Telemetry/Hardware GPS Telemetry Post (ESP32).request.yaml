@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/api/hardware/gps"
+method: POST
+headers:
+  X-Device-Key: "{{hw_api_key}}"
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "bus_id": "B07",
+      "lat": 10.8250,
+      "lon": 78.6920,
+      "speed": 42.0,
+      "satellites": 9,
+      "hdop": 1.2
+    }
+order: 2000

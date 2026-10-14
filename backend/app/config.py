@@ -41,9 +41,15 @@ COLLEGE_LON   = 78.7410
 SECRET_KEY = os.getenv("JWT_SECRET", "super-secret-key-for-local-dev-mode-32-chars-long")
 ALGORITHM  = "HS256"
 TOKEN_HOURS = 24
+ENABLE_DEMO_TOKENS = os.getenv("ENABLE_DEMO_TOKENS", "false").lower() in ("true", "1")
 
-if IS_RENDER and (not SECRET_KEY or len(SECRET_KEY) < 32):
+if (IS_RENDER or ENVIRONMENT == "production") and (not SECRET_KEY or SECRET_KEY == "super-secret-key-for-local-dev-mode-32-chars-long" or len(SECRET_KEY) < 32):
     raise RuntimeError("JWT_SECRET must be set and at least 32 characters in production")
+
+# ═══════════════════════════════════════════════════════════════════
+#  HARDWARE AUTHENTICATION
+# ═══════════════════════════════════════════════════════════════════
+HW_API_KEY = os.getenv("HW_API_KEY", "")
 
 # ═══════════════════════════════════════════════════════════════════
 #  MONGODB
@@ -52,10 +58,19 @@ MONGO_URI = os.getenv("MONGO_URI", "mock")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "krce_bus")
 
 # ═══════════════════════════════════════════════════════════════════
-#  CORS
+#  CORS SECURITY HARDENING
 # ═══════════════════════════════════════════════════════════════════
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
-ALLOWED_ORIGINS: List[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "")
+if not _raw_origins or _raw_origins.strip() == "*":
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8080",
+        "https://krce-bus-tracking.onrender.com",
+    ]
+else:
+    ALLOWED_ORIGINS: List[str] = [o.strip() for o in _raw_origins.split(",") if o.strip() and o.strip() != "*"]
 
 # ═══════════════════════════════════════════════════════════════════
 #  SENTRY (optional)

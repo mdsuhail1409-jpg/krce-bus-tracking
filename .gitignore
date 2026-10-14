@@ -52,3 +52,10 @@ obj/
 .agents/
 /krce_bus_flutter/
 generate_summary.py
+check_users.py
+do_assign.py
+set_bus07.py
+security_audit.py
+security_audit_report.json
+*.jpeg
+*.jpg

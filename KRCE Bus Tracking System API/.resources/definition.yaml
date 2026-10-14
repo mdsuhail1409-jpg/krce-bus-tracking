@@ -1,0 +1,6 @@
+$kind: collection
+description: Complete Postman testing collection for KRCE Bus Tracking FastAPI backend, IoT telemetry, attendance, and role-based access control.
+variables:
+  base_url: http://localhost:8000
+  token: ""
+  hw_api_key: krce_esp32_hardware_secret_key_2026

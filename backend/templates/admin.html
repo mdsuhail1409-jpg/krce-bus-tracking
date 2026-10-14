@@ -1561,6 +1561,13 @@
                 </span>
                 <span class="nav-badge" id="sidebar-reg-badge" style="display: none;">0</span>
             </a>
+            <a class="nav-item" onclick="switchSection('sect-passwords', this)">
+                <span class="nav-item-link">
+                    <i data-lucide="key-round" style="width: 18px; height: 18px;"></i>
+                    <span>Password Resets</span>
+                </span>
+                <span class="nav-badge" id="sidebar-passwords-badge" style="display: none; background: #eab308; color: #000;">0</span>
+            </a>
             <a class="nav-item" onclick="switchSection('sect-emergencies', this)">
                 <span class="nav-item-link">
                     <i data-lucide="shield-alert" style="width: 18px; height: 18px; color: var(--status-danger);"></i>
@@ -2005,6 +2012,47 @@
                 </div>
 
                 <!-- SECTION 7: ATTENDANCE -->
+                <!-- SECTION: PASSWORD RESETS -->
+                <div class="sect-pane" id="sect-passwords">
+                    <div class="section-header-row">
+                        <div class="section-header-title">
+                            <h2>Password Reset Requests</h2>
+                            <p>Review user password reset requests and approve temporary passwords</p>
+                        </div>
+                        <button class="btn btn-secondary" onclick="loadPasswordResets()">
+                            <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+
+                    <div class="tab-switcher">
+                        <button class="tab-btn active" id="tab-pass-pending" onclick="switchPasswordResetTab('pending')">Pending Requests</button>
+                        <button class="tab-btn" id="tab-pass-approved" onclick="switchPasswordResetTab('approved')">Approved</button>
+                        <button class="tab-btn" id="tab-pass-all" onclick="switchPasswordResetTab('all')">All History</button>
+                    </div>
+
+                    <div class="card" style="margin-top: 16px;">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name & Email</th>
+                                        <th>Roll No / College ID</th>
+                                        <th>Role</th>
+                                        <th>Requested Time</th>
+                                        <th>Status</th>
+                                        <th>Assigned Password</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="password-resets-table-body">
+                                    <tr><td colspan="7" class="empty-state"><p>Loading reset requests...</p></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="sect-pane" id="sect-attendance">
                     <div class="section-header-row">
                         <div class="section-header-title">
@@ -2658,6 +2706,7 @@
                 'sect-drivers': 'Drivers Directory',
                 'sect-users': 'Students & Staff Directory',
                 'sect-regs': 'Registration Approvals Center',
+                'sect-passwords': 'Password Reset Requests',
                 'sect-attendance': 'Daily Attendance Logs',
                 'sect-alerts': 'Transit Alerts Feed',
                 'sect-emergencies': 'Emergency Breakdown Control'
@@ -2669,6 +2718,8 @@
                 setTimeout(initMap, 200);
             } else if (sectId === 'sect-emergencies') {
                 loadEmergencies();
+            } else if (sectId === 'sect-passwords') {
+                loadPasswordResets();
             }
         }
 
@@ -3904,6 +3955,9 @@
                             <button class="btn ${u.is_active ? 'btn-danger' : 'btn-secondary'} btn-sm" style="padding: 4px 8px; font-size: 0.75rem;" onclick="toggleUserStatus('${u.id}')">
                                 ${u.is_active ? 'Deactivate' : 'Activate'}
                             </button>
+                            <button class="btn btn-danger btn-sm" style="padding: 4px 8px; font-size: 0.75rem; background:#dc2626; color:#fff; border-color:#b91c1c; display:inline-flex; align-items:center; gap:3px;" onclick="deleteUserPermanently('${u.id}', '${(u.name || '').replace(/'/g, "\\'")}')">
+                                <i data-lucide="trash-2" style="width:12px;height:12px;"></i>Delete
+                            </button>
                         </div>
                     </td>
                 `;
@@ -3994,6 +4048,33 @@
                         }
                         await loadUsers();
                         filterUsers(true);
+                    }
+                }
+            );
+        }
+
+        function deleteUserPermanently(uid, userName) {
+            showConfirmDialog(
+                'Permanently Delete User',
+                `Are you sure you want to permanently delete user "${userName}" (${uid})? All active sessions and assignments will be removed. This action cannot be undone.`,
+                'Delete User',
+                true,
+                async () => {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/admin/users/${uid}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            showToast(data.message || 'User deleted successfully', 'success');
+                            await loadUsers();
+                            filterUsers(true);
+                        } else {
+                            showToast(data.detail || 'Failed to delete user', 'error');
+                        }
+                    } catch (e) {
+                        showToast('Error connecting to server to delete user', 'error');
                     }
                 }
             );
@@ -4251,6 +4332,120 @@
                 refreshAllData();
             }
         });
+
+        // ═══════════════════════════════════════════════════════════════════
+        //  PASSWORD RESET REQUESTS
+        // ═══════════════════════════════════════════════════════════════════
+        let activePasswordResetTab = 'pending';
+        let currentPasswordResets = [];
+
+        function switchPasswordResetTab(tab) {
+            activePasswordResetTab = tab;
+            document.querySelectorAll('#sect-passwords .tab-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById(`tab-pass-${tab}`);
+            if (btn) btn.classList.add('active');
+            loadPasswordResets();
+        }
+
+        async function loadPasswordResets() {
+            const body = document.getElementById('password-resets-table-body');
+            if (!body) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/password-resets?status=${activePasswordResetTab}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Failed to load password resets');
+                currentPasswordResets = await res.json();
+                renderPasswordResets(currentPasswordResets);
+
+                // Update badge if pending
+                if (activePasswordResetTab === 'pending') {
+                    const badge = document.getElementById('sidebar-passwords-badge');
+                    if (badge) {
+                        badge.innerText = currentPasswordResets.length;
+                        badge.style.display = currentPasswordResets.length > 0 ? 'inline-block' : 'none';
+                    }
+                }
+            } catch (e) {
+                body.innerHTML = `<tr><td colspan="7" class="empty-state"><p>Error loading password reset requests.</p></td></tr>`;
+            }
+        }
+
+        function renderPasswordResets(list) {
+            const body = document.getElementById('password-resets-table-body');
+            if (!body) return;
+            body.innerHTML = '';
+            if (!list || list.length === 0) {
+                body.innerHTML = `<tr><td colspan="7" class="empty-state"><p>No ${activePasswordResetTab} password reset requests.</p></td></tr>`;
+                return;
+            }
+
+            list.forEach(item => {
+                const tr = document.createElement('tr');
+                const defaultPass = `${item.role || 'student'}@123`;
+                const isPending = item.status === 'pending';
+                const statusBadge = item.status === 'approved' 
+                    ? '<span class="pill pill-status-active" style="background:#22c55e;color:#fff;">Approved</span>'
+                    : (item.status === 'rejected'
+                        ? '<span class="pill pill-status-offline" style="background:#ef4444;color:#fff;">Rejected</span>'
+                        : '<span class="pill" style="background:#eab308;color:#000;font-weight:700;">Pending</span>');
+
+                tr.innerHTML = `
+                    <td><strong>${item.name}</strong><br><small style="color:var(--text-secondary);">${item.email}</small></td>
+                    <td><code>${item.roll_no || '—'}</code></td>
+                    <td><span class="pill pill-role-${item.role}">${item.role}</span></td>
+                    <td>${item.requested_at ? item.requested_at.replace('T', ' ').slice(0, 19) : '—'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${item.temp_password ? `<strong style="color:var(--primary); font-family:monospace; background:rgba(99,102,241,0.1); padding:2px 6px; border-radius:4px;">${item.temp_password}</strong>` : '—'}</td>
+                    <td>
+                        ${isPending ? `
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-primary btn-sm" style="padding:4px 8px; font-size:0.75rem;" onclick="actionPasswordReset('${item.id}', 'approved', '${defaultPass}', '${item.name.replace(/'/g, "\\'")}')">
+                                    <i data-lucide="check" style="width:12px;height:12px;"></i> Approve
+                                </button>
+                                <button class="btn btn-secondary btn-sm" style="padding:4px 8px; font-size:0.75rem;" onclick="actionPasswordReset('${item.id}', 'rejected', '', '${item.name.replace(/'/g, "\\'")}')">
+                                    <i data-lucide="x" style="width:12px;height:12px;"></i> Reject
+                                </button>
+                            </div>
+                        ` : '<span style="color:var(--text-secondary); font-size:0.8rem;">Reviewed</span>'}
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        async function actionPasswordReset(reqId, action, defaultPass, userName) {
+            let tempPassword = defaultPass;
+            if (action === 'approved') {
+                const input = prompt(`Approve password reset for ${userName}?\nEnter the temporary password to assign (default: ${defaultPass}):`, defaultPass);
+                if (input === null) return;
+                tempPassword = input.trim() || defaultPass;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/password-resets/${reqId}/action`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        temp_password: tempPassword
+                    })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message || `Password reset ${action}!`, 'success');
+                    await loadPasswordResets();
+                } else {
+                    showToast(data.detail || 'Failed to process request', 'error');
+                }
+            } catch (e) {
+                showToast('Network error while processing request', 'error');
+            }
+        }
 
         // ═══════════════════════════════════════════════════════════════════
         //  PARENT WARD ASSIGNMENT

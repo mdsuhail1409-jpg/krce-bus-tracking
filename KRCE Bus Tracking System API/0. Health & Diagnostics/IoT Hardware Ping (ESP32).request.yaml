@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{base_url}}/api/hardware/ping?bus_id=B07"
+method: GET
+headers:
+  X-Device-Key: "{{hw_api_key}}"
+queryParams:
+  bus_id: B07
+order: 2000

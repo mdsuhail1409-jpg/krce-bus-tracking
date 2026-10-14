@@ -1,0 +1,23 @@
+$kind: http-request
+name: Login - Driver (Ganesh / Bus 07)
+url: "{{base_url}}/api/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "ganesh@krce.ac.in",
+      "password": "driver@123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      var jsonData = pm.response.json();
+      if (jsonData.token) {
+          pm.collectionVariables.set('token', jsonData.token);
+          console.log('Saved Driver JWT Token to {{token}}');
+      }
+    language: text/javascript
+order: 1000
