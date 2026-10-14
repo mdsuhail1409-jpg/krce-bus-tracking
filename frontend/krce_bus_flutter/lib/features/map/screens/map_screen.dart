@@ -1070,9 +1070,14 @@ class _RouteInfoPanel extends StatelessWidget {
     final coveredDist = (totalDist - remainingDist).clamp(0, totalDist);
     final progress = (coveredDist / totalDist).clamp(0.0, 1.0);
     final live = bus.live;
-    final remaining = live?.remainingStops ?? [];
-    final nextStop = remaining.isNotEmpty ? remaining[0] : null;
-    final destStop = live?.destinationStop;
+    final remaining = (live?.remainingStops != null && live!.remainingStops!.isNotEmpty)
+        ? live.remainingStops!
+        : bus.stops;
+    final nextStop = remaining.isNotEmpty
+        ? remaining.first
+        : (bus.stops.isNotEmpty ? bus.stops.first : null);
+    final destStop = live?.destinationStop ??
+        (remaining.isNotEmpty ? remaining.last : (bus.stops.isNotEmpty ? bus.stops.last : null));
 
     return Container(
       padding: const EdgeInsets.all(16),

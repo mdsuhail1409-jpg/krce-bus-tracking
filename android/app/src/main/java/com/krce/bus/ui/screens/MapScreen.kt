@@ -98,17 +98,18 @@ fun LiveMapScreen(authToken: String, busId: String?) {
             "Mannarpuram" to LatLng(10.8182, 78.7030),
             "Rockfort" to LatLng(10.8300, 78.6970),
             "Chinthamani" to LatLng(10.8350, 78.7020),
-            "TVS Tollgate" to LatLng(10.8015, 78.6890),
-            "SIT" to LatLng(10.8055, 78.6912),
-            "Ambigapuram" to LatLng(10.7985, 78.7050),
-            "Manjathidal" to LatLng(10.7950, 78.7110),
-            "Armory Gate" to LatLng(10.7915, 78.7180),
-            "Panjayat Office" to LatLng(10.7880, 78.7240),
-            "Kalkandar Kottai" to LatLng(10.7850, 78.7310),
-            "BVM Trichy" to LatLng(10.8100, 78.6950),
-            "Kadai Veethi" to LatLng(10.8050, 78.7000),
-            "Mandabam" to LatLng(10.8000, 78.7080),
-            "Aathupalam" to LatLng(10.7930, 78.7150)
+            "TVS Tollgate" to LatLng(10.7893, 78.6964),
+            "SIT" to LatLng(10.8073, 78.7270),
+            "Ambigapuram" to LatLng(10.7994, 78.7297),
+            "Manjathidal" to LatLng(10.7928, 78.7323),
+            "Armory Gate" to LatLng(10.790024, 78.733300),
+            "Panjayat Office" to LatLng(10.7863, 78.7348),
+            "Allathur" to LatLng(10.780318, 78.741374),
+            "Kalkandar Kottai" to LatLng(10.780318, 78.741374),
+            "BVM Trichy" to LatLng(10.802561, 78.728175),
+            "Kadai Veethi" to LatLng(10.787890, 78.734590),
+            "Mandabam" to LatLng(10.784858, 78.737944),
+            "Aathupalam" to LatLng(10.780539, 78.741340)
         )
     }
 
