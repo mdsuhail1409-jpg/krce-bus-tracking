@@ -2451,7 +2451,7 @@
         let globalAttendanceLogs = [];
 
         const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
-        const API_BASE = IS_LOCAL ? (window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin) : 'https://krce-bus-tracking.onrender.com';
+        let API_BASE = IS_LOCAL ? (window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin) : 'https://krce-bus-tracking.onrender.com';
 
         // Fallback Mock Data for Premium Frontend Feel
         const mockStats = {
@@ -5086,12 +5086,35 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="btn-spinner"></span><span>Authenticating...</span>';
 
+            let res;
             try {
-                const res = await fetch(`${API_BASE}/api/auth/login`, {
+                res = await fetch(`${API_BASE}/api/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
+            } catch (localErr) {
+                if (API_BASE !== 'https://krce-bus-tracking.onrender.com') {
+                    try {
+                        res = await fetch('https://krce-bus-tracking.onrender.com/api/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, password })
+                        });
+                        if (res) {
+                            API_BASE = 'https://krce-bus-tracking.onrender.com';
+                        }
+                    } catch (cloudErr) {
+                        showAuthError('Could not reach backend server (localhost:8000 or Cloud). Please verify server.py is running.');
+                        return;
+                    }
+                } else {
+                    showAuthError('Could not reach backend server. Please verify your connection or that server.py is running.');
+                    return;
+                }
+            }
+
+            try {
                 const data = await res.json();
                 const tokenVal = data.token || data.access_token;
 
@@ -5109,8 +5132,7 @@
                     showAuthError(data.detail || 'Incorrect admin email or password.');
                 }
             } catch (e) {
-                // If backend is not running or unreachable, display error
-                showAuthError('Could not reach backend server. Please verify server.py is running.');
+                showAuthError('Invalid response from backend server.');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<span>Sign In</span><i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>';
