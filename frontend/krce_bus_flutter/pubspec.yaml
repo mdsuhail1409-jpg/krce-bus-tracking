@@ -49,6 +49,9 @@ dependencies:
   # Cupertino Icons
   cupertino_icons: ^1.0.6
 
+  # Supabase Auth & OTP
+  supabase_flutter: ^2.8.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

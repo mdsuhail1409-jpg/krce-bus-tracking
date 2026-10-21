@@ -9,7 +9,7 @@ import random
 from fastapi import APIRouter, HTTPException, Request, Depends
 
 from app.auth import _hash, _check_hash, make_token, verify_token, current_user
-from app.models import LoginReq, RegisterReq, RefreshReq, ForgotPasswordReq, ResetPasswordReq, PasswordResetRequestCreate
+from app.models import LoginReq, RegisterReq, RefreshReq, ForgotPasswordReq, ResetPasswordReq, PasswordResetRequestCreate, SupabaseVerifyReq
 from app.utils import now_str
 from app import database as db_module
 
@@ -331,5 +331,62 @@ async def submit_password_reset_request(req: PasswordResetRequestCreate, request
         "user_name": u.get("name"),
         "role": u.get("role")
     }
+
+
+@router.post("/api/auth/supabase-verify")
+@limiter.limit("15/minute")
+async def verify_supabase_session(req: SupabaseVerifyReq, request: Request):
+    """
+    Validates Supabase-verified email and issues active KRCE access token with MongoDB role & bus details.
+    """
+    db = db_module.db
+    email_clean = req.email.strip().lower()
+
+    # Query verified user from MongoDB
+    user = await db.users.find_one({"email": email_clean, "is_active": 1})
+    if not user:
+        raise HTTPException(
+            status_code=403,
+            detail="Your email is verified by Supabase, but is not registered in the KRCE directory. Contact the transport administrator."
+        )
+
+    # Extract user metadata
+    bus_id = user.get("bus_id", "")
+    role = user.get("role", "student")
+    parent_of = user.get("parent_of", "")
+
+    # Generate KRCE JWT Access & Refresh Tokens
+    token = make_token(
+        uid=user["id"],
+        name=user["name"],
+        role=role,
+        bus_id=bus_id,
+        extra={
+            "college_id": user.get("college_id", ""),
+            "parent_of": parent_of,
+            "rfid_card": user.get("rfid_card", ""),
+            "phone": user.get("phone", "")
+        }
+    )
+    refresh_token = make_token(
+        uid=user["id"],
+        name=user["name"],
+        role=role,
+        expires_hours=168,
+        extra={"is_refresh": True}
+    )
+
+    return {
+        "status": "ok",
+        "token": token,
+        "refresh_token": refresh_token,
+        "user_id": user["id"],
+        "name": user["name"],
+        "role": role,
+        "bus_id": bus_id,
+        "college_id": user.get("college_id", ""),
+        "email": user.get("email", email_clean)
+    }
+
 
 

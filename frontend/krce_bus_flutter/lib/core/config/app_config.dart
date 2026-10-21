@@ -2,9 +2,13 @@
 // App Configuration — Server URL, WS URL
 // ============================================================
 class AppConfig {
-  // Change this to your server IP / domain
+  // Server URLs
   static const String apiBaseUrl = 'https://krce-bus-tracking.onrender.com';
   static const String wsBaseUrl = 'wss://krce-bus-tracking.onrender.com';
+
+  // Supabase Auth (Email OTP)
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://placeholder.supabase.co');
+  static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'placeholder-anon-key');
 
   // KRCE Campus coordinates
   static const double collegeLat = 10.927669;

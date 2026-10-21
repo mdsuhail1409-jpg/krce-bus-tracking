@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'core/config/app_config.dart';
 import 'core/services/notification_service.dart';
 import 'routes/app_router.dart';
@@ -19,6 +21,18 @@ void main() async {
 
   // Init local notifications
   await NotificationService.init();
+
+  // Init Supabase Auth
+  try {
+    if (!AppConfig.supabaseUrl.contains('placeholder')) {
+      await Supabase.initialize(
+        url: AppConfig.supabaseUrl,
+        anonKey: AppConfig.supabaseAnonKey,
+      );
+    }
+  } catch (e) {
+    debugPrint('Supabase Auth init deferred: $e');
+  }
 
   runApp(
     const ProviderScope(

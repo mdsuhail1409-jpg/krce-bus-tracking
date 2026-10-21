@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../config/app_config.dart';
 import '../models/models.dart';
 
@@ -103,6 +104,38 @@ class ApiService {
       },
     );
     return res.data is Map<String, dynamic> ? Map<String, dynamic>.from(res.data) : {'status': 'ok'};
+  }
+
+  Future<void> sendSupabaseOtp(String email) async {
+    await Supabase.instance.client.auth.signInWithOtp(
+      email: email.trim(),
+      shouldCreateUser: false,
+    );
+  }
+
+  Future<Map<String, dynamic>> verifySupabaseOtpAndLogin({
+    required String email,
+    required String otp,
+  }) async {
+    final res = await Supabase.instance.client.auth.verifyOTP(
+      email: email.trim(),
+      token: otp.trim(),
+      type: OtpType.email,
+    );
+
+    if (res.session == null) {
+      throw Exception('Verification failed. Invalid or expired OTP.');
+    }
+
+    final response = await _dio.post(
+      '/api/auth/supabase-verify',
+      data: {
+        'email': email.trim(),
+        'supabase_token': res.session!.accessToken,
+      },
+    );
+
+    return Map<String, dynamic>.from(response.data);
   }
 
   Future<Map<String, dynamic>> submitPasswordResetRequest({

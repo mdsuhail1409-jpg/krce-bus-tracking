@@ -313,3 +313,17 @@ class PasswordResetAdminAction(BaseModel):
     temp_password: str = ""
 
 
+class SupabaseVerifyReq(BaseModel):
+    email: str
+    supabase_token: str = ""
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        cleaned = _sanitize_text(v, 128).lower()
+        if not cleaned:
+            raise ValueError("Email is required")
+        return cleaned
+
+
+

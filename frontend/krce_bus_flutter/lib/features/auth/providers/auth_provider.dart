@@ -141,6 +141,50 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> loginWithSupabaseOtp(String email, String otp) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final res = await _api.verifySupabaseOtpAndLogin(email: email, otp: otp);
+      final rawToken = res['token']?.toString() ?? '';
+      final token = rawToken.startsWith('Bearer ') ? rawToken : 'Bearer $rawToken';
+      final refreshToken = res['refresh_token']?.toString() ?? '';
+      final role = res['role']?.toString() ?? 'student';
+      final name = res['name']?.toString() ?? 'User';
+      final busId = res['bus_id']?.toString();
+      final collegeId = res['college_id']?.toString();
+      final parentOf = res['parent_of']?.toString();
+      final phone = res['phone']?.toString();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', token);
+      await prefs.setString('refresh_token', refreshToken);
+      await prefs.setString('user_role', role);
+      await prefs.setString('user_name', name);
+      if (busId != null) await prefs.setString('bus_id', busId);
+      if (collegeId != null) await prefs.setString('college_id', collegeId);
+      if (parentOf != null) await prefs.setString('parent_of', parentOf);
+      if (phone != null) await prefs.setString('phone', phone);
+
+      state = state.copyWith(
+        token: token,
+        refreshToken: refreshToken,
+        role: role,
+        name: name,
+        busId: busId,
+        collegeId: collegeId,
+        parentOf: parentOf,
+        phone: phone,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceAll('Exception:', '').trim(),
+      );
+      rethrow;
+    }
+  }
+
   /// Refresh the access token using the stored refresh token.
   /// Called automatically when a 401 is received.
   Future<bool> refreshSession() async {
